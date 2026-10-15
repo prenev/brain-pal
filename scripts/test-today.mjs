@@ -5,6 +5,9 @@ const base = { hasEntryToday: true, anchorsLeft: 0, openWorries: 0 }
 assert.deepEqual(nextAction({ ...base, hasEntryToday: false, anchorsLeft: 3, openWorries: 2 }), { kind: 'mood' }, 'check in comes first')
 assert.deepEqual(nextAction({ ...base, anchorsLeft: 2, openWorries: 5 }), { kind: 'anchors', left: 2 })
 assert.deepEqual(nextAction({ ...base, openWorries: 5 }), { kind: 'worries', count: 5 })
+assert.deepEqual(nextAction({ ...base, openWorries: 5, plannedSteps: 2 }), { kind: 'step', count: 2 }, 'a plan you already made beats reviewing more worries')
+assert.deepEqual(nextAction({ ...base, anchorsLeft: 1, plannedSteps: 2 }), { kind: 'anchors', left: 1 }, 'anchors still come first')
+assert.deepEqual(nextAction({ ...base, plannedSteps: 0 }), { kind: 'done' })
 assert.deepEqual(nextAction(base), { kind: 'done' })
 
 const opts = ['happy', 'excited', 'grateful', 'tired', 'anxious', 'sad', 'stressed']

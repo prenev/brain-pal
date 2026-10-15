@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { activeAnchors, anchorStreak, anchorsOnDay, activityFrom, canAdd, checkKey, cleanLabel, dayProgress, MAX_ANCHORS, reorder } from '../src/lib/anchors.ts'
 
 const A = (id, createdAt = '2026-10-01T09:00:00', extra = {}) => ({ id, label: id, emoji: 'sun', link: null, order: Number(id.replace(/\D/g, '')) || 0, createdAt, archivedAt: null, ...extra })
-const none = { checkin: new Set(), breathing: new Set(), journal: new Set(), worry: new Set() }
+const none = { checkin: new Set(), breathing: new Set(), journal: new Set(), worry: new Set(), focus: new Set() }
 const ck = (...pairs) => new Set(pairs.map(([id, d]) => checkKey(id, d)))
 
 // cap
@@ -21,6 +21,11 @@ p = dayProgress(a, '2026-10-06', ck(['a1', '2026-10-06']), act)
 assert.deepEqual([p.done, p.complete], [1, false], 'auto links only count on the day they happened')
 assert.deepEqual(dayProgress([], '2026-10-06', new Set(), none), { done: 0, total: 0, complete: false, items: [] }, 'no anchors is never "complete"')
 assert.equal(activityFrom({ thoughts: [], sessions: [], journal: [{ createdAt: '2026-10-05T10:00:00' }], worries: [{ reviewedAt: '2026-10-05T10:00:00' }] }).worry.has('2026-10-05'), true)
+
+// a finished small step ticks a 'focus' anchor; an unfinished one does not
+const fa = [A('a1', undefined, { link: 'focus' })]
+const factivity = activityFrom({ thoughts: [], sessions: [], worries: [], focus: [{ createdAt: '2026-10-05T10:00:00', completed: true }, { createdAt: '2026-10-06T10:00:00', completed: false }] })
+assert.equal(dayProgress(fa, '2026-10-05', new Set(), factivity).complete, true); assert.equal(dayProgress(fa, '2026-10-06', new Set(), factivity).complete, false)
 
 // history is not rewritten: an anchor added/archived later doesn't affect earlier days
 const hist = [A('a1', '2026-10-01T09:00:00'), A('a2', '2026-10-10T09:00:00', { archivedAt: '2026-10-12T09:00:00' })]

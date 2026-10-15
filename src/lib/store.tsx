@@ -12,8 +12,9 @@ import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadJournal, saveAnchors, saveChecks, saveJournal } from './extras'
+import { loadAnchors, loadChecks, loadFocus, loadJournal, saveAnchors, saveChecks, saveFocus, saveJournal } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
+import type { FocusSession } from './focus.ts'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
 
 interface Ctx {
@@ -36,6 +37,8 @@ interface Ctx {
   addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
+  focusSessions: FocusSession[]
+  addFocus(d: Omit<FocusSession, 'id' | 'createdAt'>): FocusSession
   journal: JournalEntry[]
   addJournal(d: { title: string; body: string; mood: number | null; tags: string[]; prompt: string | null }): JournalEntry
   updateJournal(id: string, d: { title: string; body: string; mood: number | null; tags: string[] }): void
@@ -67,6 +70,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [anchors, setAnchors] = useState<Anchor[]>(loadAnchors)
   const [checks, setChecks] = useState<Set<string>>(loadChecks)
   const [journal, setJournal] = useState<JournalEntry[]>(loadJournal)
+  const [focusSessions, setFocusSessions] = useState<FocusSession[]>(loadFocus)
   const updateJournalList = (next: JournalEntry[]) => { const sorted = [...next].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); setJournal(sorted); saveJournal(sorted) }
   const [today, setToday] = useState(() => dayKey(new Date()))
   useEffect(() => { // roll "today" over at midnight, and when the app comes back to the foreground
@@ -102,11 +106,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return computeStreak(days)
   }, [thoughts, sessions])
 
-  const act = useMemo(() => activityFrom({ thoughts, sessions, worries, journal }), [thoughts, sessions, worries, journal])
+  const act = useMemo(() => activityFrom({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
   const anchorsToday = useMemo(() => dayProgress(anchors, today, checks, act), [anchors, today, checks, act])
   const anchorStreakVal = useMemo(() => anchorStreak(anchors, checks, act, new Date()), [anchors, checks, act, today])
   const anchorHistory = useMemo(() => Array.from({ length: 60 }, (_, i) => shift(today, i - 59)).map(day => { const p = dayProgress(anchors, day, checks, act); return { day, done: p.done, total: p.total } }), [anchors, checks, act, today])
-  const levels = useMemo(() => skillLevels({ thoughts, sessions, worries, journal }), [thoughts, sessions, worries, journal])
+  const levels = useMemo(() => skillLevels({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
   const updateAnchors = (next: Anchor[]) => { setAnchors(next); saveAnchors(next) }
 
   // iPhone app: keep on-device reminders in step with your activity (drops today's nudge once you've checked in).
@@ -157,6 +161,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
+    focusSessions,
+    addFocus(d) {
+      const f: FocusSession = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...d, step: d.step.trim().slice(0, 140) }
+      const next = [f, ...focusSessions]; setFocusSessions(next); saveFocus(next); return f
+    },
     journal,
     addJournal(d) {
       const c = cleanText(d.title, d.body, d.tags), now = new Date().toISOString()

@@ -14,7 +14,7 @@ import EntryCard from '../components/EntryCard'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
-export default function Entries({ onSos, onSupport, onAllAnchors, onCompose, onWorry, onBreathe }: { onSos: () => void; onSupport: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onBreathe: () => void }) {
+export default function Entries({ onSos, onSupport, onAllAnchors, onCompose, onWorry, onBreathe, onStep }: { onSos: () => void; onSupport: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onBreathe: () => void; onStep: () => void }) {
   const { thoughts, deleteThought, streak, anchors } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
@@ -48,7 +48,7 @@ export default function Entries({ onSos, onSupport, onAllAnchors, onCompose, onW
           <Emoji name="fire" size={32} /><span>Your {streak.current}-day streak ends tonight — log a mood or a breathing session to keep it.</span>
         </div>
       )}
-      <TodayCard onDetails={onCompose} onWorry={onWorry} onBreathe={onBreathe} />
+      <TodayCard onDetails={onCompose} onWorry={onWorry} onBreathe={onBreathe} onStep={onStep} />
       {activeAnchors(anchors).length === 0 && <DailyGoal />}
       <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
       <button className="sos-card" onClick={onSos}>

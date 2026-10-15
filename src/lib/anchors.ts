@@ -1,7 +1,7 @@
 import { dayKey, shift } from './dates.ts'
 
 /** Daily anchors: a few small non-negotiables that make a day "count". Capped on purpose — this is not a todo list. */
-export type AnchorLink = 'checkin' | 'breathing' | 'journal' | 'worry'
+export type AnchorLink = 'checkin' | 'breathing' | 'journal' | 'worry' | 'focus'
 export interface Anchor {
   id: string
   label: string
@@ -20,6 +20,7 @@ export const STARTERS: { label: string; emoji: string; link: AnchorLink | null }
   { label: 'Slow breathing', emoji: 'wind', link: 'breathing' },
   { label: 'Log a mood', emoji: 'memo', link: 'checkin' },
   { label: 'Write one line', emoji: 'notebook', link: 'journal' },
+  { label: 'One small step', emoji: 'rocket', link: 'focus' },
   { label: 'Walk 10 minutes', emoji: 'walk', link: null },
   { label: 'Get some sunlight', emoji: 'sun', link: null },
   { label: 'Drink water', emoji: 'water', link: null },
@@ -35,14 +36,15 @@ export const canAdd = (all: Anchor[]): boolean => activeAnchors(all).length < MA
 export const cleanLabel = (s: string): string => s.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL)
 
 /** Which days had something done for each link kind (built once from the app's data). */
-export interface Activity { checkin: Set<string>; breathing: Set<string>; journal: Set<string>; worry: Set<string> }
+export interface Activity { checkin: Set<string>; breathing: Set<string>; journal: Set<string>; worry: Set<string>; focus: Set<string> }
 export function activityFrom(d: {
-  thoughts: { createdAt: string }[]; sessions: { createdAt: string }[]; journal?: { createdAt: string }[]; worries: { reviewedAt: string | null }[]
+  thoughts: { createdAt: string }[]; sessions: { createdAt: string }[]; journal?: { createdAt: string }[]; focus?: { createdAt: string; completed: boolean }[]; worries: { reviewedAt: string | null }[]
 }): Activity {
   const days = (xs: (string | null)[]) => new Set(xs.filter((x): x is string => !!x).map(x => dayKey(x)))
   return {
     checkin: days(d.thoughts.map(t => t.createdAt)), breathing: days(d.sessions.map(s => s.createdAt)),
     journal: days((d.journal ?? []).map(j => j.createdAt)), worry: days(d.worries.map(w => w.reviewedAt)),
+    focus: days((d.focus ?? []).filter(f => f.completed).map(f => f.createdAt)),
   }
 }
 

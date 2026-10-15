@@ -16,6 +16,7 @@ import Sos from './components/Sos'
 import WorryTime from './components/WorryTime'
 import ParkWorry from './components/ParkWorry'
 import { JournalEditor } from './components/Journal'
+import FocusFlow from './components/FocusFlow'
 import type { JournalEntry } from './lib/journal.ts'
 
 type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
@@ -40,6 +41,7 @@ function Shell() {
   const [moreView, setMoreView] = useState<'support' | 'journal' | null>(null)
   const [composeMood, setComposeMood] = useState<number | null>(null)
   const [cel, setCel] = useState<Celebration | null>(null)
+  const [focusOpen, setFocusOpen] = useState(false)
   const [journalOpen, setJournalOpen] = useState<{ entry?: JournalEntry } | null>(null)
 
   // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
@@ -68,7 +70,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -98,6 +100,7 @@ function Shell() {
           </> : <>
             <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setFocusOpen(true) }}><span className="ic"><Emoji name="rocket" size={30} /></span>Start a small step</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Write in journal</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Emoji name="wind" size={30} /></span>Start breathing</button>
             <div className="sheet-label">Create Entry</div>
@@ -107,8 +110,9 @@ function Shell() {
           </>}
         </Sheet>
       )}
-      {sos && <Sos onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
+      {sos && <Sos onStep={() => setFocusOpen(true)} onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}

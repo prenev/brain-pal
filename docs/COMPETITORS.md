@@ -26,14 +26,14 @@
 | Panic / SOS flow with before→after relief score | – | – | – | ✅ | – | – | ✅ |
 | Guided breathing with haptics | ◐ | – | ✅ | ✅ | – | ✅ | ✅ (Taptic) |
 | **Worry time** (park a worry → scheduled review → let go / make a plan) | – | – | – | – | – | – | ✅ **unique** |
-| **Worry → one tiny next step → focus timer** (anxiety-to-action bridge) | ◐ task breakdown + Pomodoro | ◐ focus timer | – | – | – | ◐ Pomodoro | 🛠 P14 **unique link** |
-| Journaling | ✅ | ✅ | ✅ | ✅ | ✅ | – | 🛠 P8 |
+| **Worry → one tiny next step → focus timer** (anxiety-to-action bridge) | ◐ task breakdown + Pomodoro | ◐ focus timer | – | – | – | ◐ Pomodoro | ✅ P14 **unique link** |
+| Journaling | ✅ | ✅ | ✅ | ✅ | ✅ | – | ✅ P8 |
 | Voice memo → transcript → pre-filled thought record | – | – | – | – | – | – | ✅ (opt-in AI) **unique** |
 | Capped daily "non-negotiables" (anchors) | ◐ habits | ◐ habits | ◐ habits | – | ◐ habits | ◐ habits | ✅ P7 (max 5, by design) |
 | Habit/streak without shame | ? | ? | ◐ | – | ◐ | ? | ✅ (no loss mechanics) |
 | Sleep from Apple Watch ↔ mood link | – | – | – | – | – | – | 🛠 P10 **unique** |
-| Plain-language summaries (daily / weekly / monthly) | – | – | ◐ | – | ◐ stats | – | 🛠 P15 |
-| **Evidence you're levelling up** (skill levels backed by *your own* before/after data) | – streak/score | – streaks | ◐ pet growth (cosmetic) | – | – | – | 🛠 P16 **unique** |
+| Plain-language summaries (daily / weekly / monthly) | – | – | ◐ | – | ◐ stats | – | ✅ P15 |
+| **Evidence you're levelling up** (skill levels backed by *your own* before/after data) | – streak/score | – streaks | ◐ pet growth (cosmetic) | – | – | – | ✅ P16 **unique** |
 | Reward loop that isn't cosmetic-only or manipulative | – | – | ✅ pet (energy-gated) | – | – | – | 🛠 P11 |
 | Works fully without an account; data stays on device | ? | ? | ? | ? | ? | ? | ✅ local-first |
 | Optional sync (own private account), export, delete-account | ? | ? | ? | ? | ◐ paid backup | ? | ✅ / 🛠 P12 |

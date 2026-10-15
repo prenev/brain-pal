@@ -47,6 +47,11 @@ assert.ok(sentences(j).includes('You wrote 2 journal entries.')); assert.ok(!sen
 assert.ok(sentences(summarize({ thoughts: [], sessions: [], worries: [], journal: [{ createdAt: at('2026-10-15') }] }, '2026-10-15', 1)).includes('You wrote 1 journal entry.'))
 assert.equal(summarize({ thoughts: [], sessions: [], worries: [] }, '2026-10-15', 7).journalEntries, 0)
 
+// finished small steps count (unfinished ones don't) and show minutes
+const fsum = summarize({ thoughts: [], sessions: [], worries: [], focus: [{ createdAt: at('2026-10-15'), completed: true, actualSec: 300 }, { createdAt: at('2026-10-14'), completed: true, actualSec: 640 }, { createdAt: at('2026-10-14'), completed: false, actualSec: 900 }] }, '2026-10-15', 7)
+assert.deepEqual([fsum.focusSteps, fsum.focusMinutes, fsum.activeDays], [2, 16, 2]); assert.ok(sentences(fsum).includes('You finished 2 small steps (16 minutes of focus).'))
+assert.ok(sentences(summarize({ thoughts: [], sessions: [], worries: [], focus: [{ createdAt: at('2026-10-15'), completed: true, actualSec: 60 }] }, '2026-10-15', 1)).includes('You finished 1 small step (1 minute of focus).'))
+
 // wording edge cases
 const one = summarize({ thoughts: [th('2026-10-15', 3)], sessions: [ses('2026-10-15', 1)], worries: [wor('2026-10-15', 'open')] }, '2026-10-15', 1)
 const s1 = sentences(one, 'today')

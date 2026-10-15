@@ -161,6 +161,14 @@ await session('http://localhost:4173', true, async (p, snap) => {   // journal
   await p.click('.tab >> text=More'); await p.click('.li >> text=Journal'); await snap('journal-list')
 })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // one small step
+  await p.clock.install()
+  await p.click('.fab'); await p.click('.sheet-item >> text=Start a small step'); await snap('step-choose')
+  await p.click('.chip:has-text("Write one sentence")'); await p.click('button:has-text("Start")'); await p.waitForSelector('.orb'); await snap('step-calm')
+  await p.click('button:has-text("Skip — start now")'); await p.waitForSelector('[role=timer]'); await p.clock.fastForward('01:30'); await snap('step-focus')
+  await p.clock.fastForward('04:00'); await p.waitForSelector('text=Done — nice.'); await snap('step-done')
+})
+
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')

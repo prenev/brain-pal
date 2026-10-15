@@ -3,15 +3,17 @@
 export type NextAction =
   | { kind: 'mood' }
   | { kind: 'anchors'; left: number }
+  | { kind: 'step'; count: number }
   | { kind: 'worries'; count: number }
   | { kind: 'done' }
 
-export interface TodayState { hasEntryToday: boolean; anchorsLeft: number; openWorries: number }
+export interface TodayState { hasEntryToday: boolean; anchorsLeft: number; openWorries: number; plannedSteps?: number }
 
-/** The single most useful thing to offer right now. Order: check in → finish anchors → review parked worries → all set. */
+/** The single most useful thing to offer right now. Order: check in → finish anchors → a planned small step → review parked worries → all set. */
 export function nextAction(s: TodayState): NextAction {
   if (!s.hasEntryToday) return { kind: 'mood' }
   if (s.anchorsLeft > 0) return { kind: 'anchors', left: s.anchorsLeft }
+  if ((s.plannedSteps ?? 0) > 0) return { kind: 'step', count: s.plannedSteps! }
   if (s.openWorries > 0) return { kind: 'worries', count: s.openWorries }
   return { kind: 'done' }
 }

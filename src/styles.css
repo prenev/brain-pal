@@ -300,5 +300,10 @@ select.input { appearance: none; }
 
 /* Journal */
 .prompt-card { display: flex; align-items: center; gap: 12px; width: 100%; background: rgba(255,211,107,.08); border-color: rgba(255,211,107,.45); }
-.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
+textarea.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
 .jentry { display: block; width: 100%; text-align: left; margin-bottom: 10px; }
+
+/* Focus */
+.focus-clock { font-size: 72px; font-weight: 900; text-align: center; margin: 18px 0 6px; font-variant-numeric: tabular-nums; }
+.step-choice { display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 8px; }
+.step-choice.on { border-color: var(--accent); background: rgba(53,208,127,.12); }

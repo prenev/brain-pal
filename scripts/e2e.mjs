@@ -458,6 +458,45 @@ test('journal: crisis wording shows support, corrupted journal data is ignored, 
 })
 
 
+const plan = (id, text, n = 0) => ({ id, createdAt: ago(n), text: 'worry ' + id, status: 'actionable', action: text, reviewedAt: ago(n) })
+const todayEntry = () => rec('today', 0)
+
+test('small step: pick a step from your worry plan, settle, focus (pause is free), finish — it counts everywhere', async () => {
+  const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.worries': [plan('w1', 'Email the landlord'), plan('w2', 'Book the dentist', 1)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  await p.clock.install()
+  await p.waitForSelector('.today >> text=A small step is waiting: Book the dentist'.replace('Book the dentist', 'Email the landlord'))   // newest plan first
+  await p.click('.today .linklike'); await p.waitForSelector('[aria-label="One small step"]')
+  assert.equal(await p.locator('.step-choice').count(), 2); await p.click('.step-choice:has-text("Email the landlord")')
+  await p.click('[role=radio]:has-text("5 min")'); await p.click('button:has-text("Start")')
+  await p.waitForSelector('button:has-text("Skip — start now")'); await p.click('button:has-text("Skip — start now")')   // the minute of calm is optional
+  const clock = p.locator('[role=timer]'); await clock.waitFor(); assert.match(await clock.innerText(), /0[45]:[0-5]\d/)
+  await p.clock.fastForward('02:00'); await p.waitForFunction(() => /0[23]:[0-5]\d/.test(document.querySelector('[role=timer]').textContent))
+  await p.click('button:has-text("Pause")'); await p.waitForSelector('text=Paused — take as long as you need.')
+  const frozen = await clock.innerText(); await p.clock.fastForward('30:00'); assert.equal(await clock.innerText(), frozen, 'a paused timer does not move, however long you wait')
+  await p.click('button:has-text("Resume")'); await p.clock.fastForward('04:00')
+  await p.waitForSelector('text=Done — nice.'); assert.match(await p.locator('[aria-label="One small step"] .card').innerText(), /“Email the landlord”/)
+  await p.click('button:has-text("Close")')
+  await p.waitForSelector('.today >> text=Book the dentist'); assert.equal(await p.locator('.today >> text=Email the landlord').count(), 0, 'a finished step leaves the list')
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Small steps: level 1"]')
+  await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=/You finished 1 small step \\(\\d+ minutes? of focus\\)\\./')
+  await done(s)
+})
+
+test('small step: stopping early is neutral and never counts as finished; your own step works', async () => {
+  const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  assert.equal(await p.locator('.today >> text=small step').count(), 0, 'nothing is suggested without a plan')
+  await p.click('.fab'); await p.click('.sheet-item >> text=Start a small step'); await p.waitForSelector('.chip:has-text("Write one sentence")')
+  assert.equal(await p.isDisabled('button:has-text("Start")'), true, 'needs a step first'); await p.fill('input[placeholder^="e.g. Open"]', 'Open the tax form'); await p.click('button:has-text("Start")')
+  await p.click('button:has-text("Skip — start now")'); await p.waitForSelector('[role=timer]'); await p.waitForSelector('h1:has-text("Open the tax form")')
+  await p.click('button:has-text("Stop for now")'); await p.waitForSelector('text=That’s okay.'); await p.waitForSelector('text=Starting is the hard part')
+  await p.click('button:has-text("Another small step")'); await p.waitForSelector('text=What’s the tiniest next step?'); await p.click('[aria-label=Close]')
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Calming: level 0"]')
+  assert.equal(await p.locator('.skill:has-text("Small steps")').count(), 0, 'an unfinished step earns nothing — and costs nothing')
+  await reload(p); assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.focus')).length), 1); assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.focus'))[0].completed), false)
+  await done(s)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow
@@ -466,6 +505,7 @@ test('SOS flow records relief and Stats reflects it; breathing session logs', as
   await p.click('.sos-card'); await p.fill('input[type=range]', '8'); await p.click('text=Continue'); await p.click('.tool >> text=Slow breathing')
   await p.waitForTimeout(11000); await p.click('text=End session')
   await p.fill('input[type=range]', '3'); await p.click('button:has-text("Save")'); await p.waitForSelector('text=Down 5 points')
+  await p.click('button:has-text("One small step")'); await p.waitForSelector('text=What’s the tiniest next step?'); await p.click('[aria-label="One small step"] [aria-label=Close]'); await p.waitForSelector('text=Down 5 points')   // offered after relief, result kept
   await p.click('button:has-text("Done")'); await tab(p, 'Stats')
   await p.waitForSelector('text=/−5/'); await reload(p)
   await done(s)
