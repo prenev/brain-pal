@@ -1,5 +1,6 @@
 // npm run screens  ->  builds the app, drives every screen, writes screenshots/*.png + screenshots/_all.png
 import { chromium } from 'playwright-core'
+import { chromiumPath } from './chromium.mjs'
 import { preview } from 'vite'
 import { execSync } from 'node:child_process'
 import { nativeStub } from './native-stub.mjs'
@@ -16,7 +17,7 @@ sh('npx vite build --outDir node_modules/.dist-auth', { VITE_SUPABASE_URL: 'http
 const local = await preview({ root, preview: { port: 4173, strictPort: true }, build: { outDir: 'dist' } })
 const cloud = await preview({ root, preview: { port: 4174, strictPort: true }, build: { outDir: 'node_modules/.dist-auth' } })
 
-const exe = process.env.CHROMIUM_PATH || readdirSync('/opt/pw-browsers').filter(d => d.startsWith('chromium-')).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0]
+const exe = chromiumPath()
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] })
 const errors = []
 const names = []

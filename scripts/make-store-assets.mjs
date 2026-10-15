@@ -1,8 +1,9 @@
 // Renders assets/icon-only.png (1024) + assets/splash.png (2732, dark) from public/icon.svg for `capacitor-assets`.
 import { chromium } from 'playwright-core'
+import { chromiumPath } from './chromium.mjs'
 import { readFileSync, readdirSync } from 'node:fs'
 const svg = readFileSync(new URL('../public/icon.svg', import.meta.url), 'utf8')
-const exe = process.env.CHROMIUM_PATH || readdirSync('/opt/pw-browsers').filter(d => d.startsWith('chromium-')).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0]
+const exe = chromiumPath()
 const browser = await chromium.launch({ executablePath: exe })
 const shot = async (name, size, html) => {
   const p = await browser.newPage({ viewport: { width: size, height: size } })

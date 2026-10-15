@@ -1,6 +1,7 @@
 // npm run test:e2e [-- --no-build]
 // Drives the built app in headless Chromium (fake microphone, mocked Gemini network) and checks real user flows.
 import { chromium } from 'playwright-core'
+import { chromiumPath } from './chromium.mjs'
 import { preview } from 'vite'
 import { execSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
@@ -11,7 +12,7 @@ const root = new URL('..', import.meta.url).pathname
 if (!process.argv.includes('--no-build')) execSync('npx vite build', { cwd: root, stdio: 'pipe' })
 const server = await preview({ root, preview: { port: 4175, strictPort: true }, build: { outDir: 'dist' } })
 const URL_ = 'http://localhost:4175'
-const exe = process.env.CHROMIUM_PATH || readdirSync('/opt/pw-browsers').filter(d => d.startsWith('chromium-')).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0]
+const exe = chromiumPath()
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] })
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')

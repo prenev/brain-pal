@@ -18,5 +18,3 @@ jobs:
         run: npx playwright-core install --with-deps chromium
       - name: End-to-end tests
         run: npm run test:e2e -- --no-build
-        env:
-          CHROMIUM_PATH: ''
