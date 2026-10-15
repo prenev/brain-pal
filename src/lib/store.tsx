@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { cloudRepo, localRepo, type Repo } from './repo'
 import { supabase } from './supabase'
@@ -17,6 +17,10 @@ import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
 import { balance as coinBalance, canBuy, earnings as computeEarnings, itemById, ownedThemes, restDays, type BuyCheck, type Earning, type Purchase } from './rewards.ts'
 import { applyTheme } from './theme.ts'
+import { detectLocal, dirtyCount, keyOf, markSynced, reconcile, uniqueDocs, type Meta } from './sync.ts'
+import { applyDocs, collectItems, unchangedSince, type Extras } from './syncItems.ts'
+import { pullDocs, pushDocs } from './cloudDocs'
+import { normalizeRituals, DEFAULT_RITUALS } from './rituals.ts'
 import { manualNight, mergeNights, type Night } from './sleep.ts'
 import { connectSleep, disconnectSleep, lastSleepSync, readNights, sleepConnected, type ConnectResult } from './sleepHealth'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
@@ -41,6 +45,8 @@ interface Ctx {
   addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
+  sync: { status: 'idle' | 'syncing' | 'ok' | 'error'; at: number | null; pending: number }
+  syncNow(): Promise<void>
   coins: number
   earned: Earning[]
   purchases: Purchase[]
@@ -72,7 +78,8 @@ interface Ctx {
   removeAnchor(id: string): void
   moveAnchor(id: string, dir: -1 | 1): void
   toggleAnchor(id: string): void
-  signOut(): Promise<void>
+  /** Signs out. In cloud mode it first syncs; returns how many changes could not be saved to the account (0 = clean). Pass force to sign out anyway. */
+  signOut(force?: boolean): Promise<number>
 }
 
 const StoreCtx = createContext<Ctx>(null!)
@@ -159,6 +166,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const coins = coinBalance(earned, purchases)
   // Apply the chosen accent theme (only if you actually own it).
   useEffect(() => { const item = themeId && ownedThemes(purchases).includes(themeId) ? itemById(themeId) : null; applyTheme(item?.color ?? null) }, [themeId, purchases])
+
+  /* ---------------- account sync for the extras (journal, anchors, focus, hand-logged sleep, purchases, rituals, theme) ---------------- */
+  const [syncState, setSyncState] = useState<{ status: 'idle' | 'syncing' | 'ok' | 'error'; at: number | null; pending: number }>({ status: 'idle', at: null, pending: 0 })
+  const extrasRef = useRef<Extras>(null!)
+  extrasRef.current = { journal, anchors, checks, focus: focusSessions, manualNights, purchases, rituals, themeId }
+  const syncing = useRef(false)
+  const loadMeta = (): Meta => { try { const m = JSON.parse(localStorage.getItem('bp.sync.meta') ?? '{}'); return m && typeof m === 'object' ? m : {} } catch { return {} } }
+  const saveMeta = (m: Meta) => { try { localStorage.setItem('bp.sync.meta', JSON.stringify(m)) } catch { /* ignore */ } }
+  const applyExtras = (x: Extras) => {
+    setJournal(x.journal); saveJournal(x.journal); setAnchors(x.anchors); saveAnchors(x.anchors); setChecks(x.checks); saveChecks(x.checks)
+    setFocusSessions(x.focus); saveFocus(x.focus); setManualNights(x.manualNights); saveManualNights(x.manualNights)
+    setPurchases(x.purchases); savePurchases(x.purchases); setRitualsState(x.rituals); saveRituals(x.rituals); setThemeId(x.themeId); saveTheme(x.themeId)
+  }
+  const syncNow = useCallback(async () => {
+    if (!supabase || !authSession || syncing.current) return
+    syncing.current = true; setSyncState(s => ({ ...s, status: 'syncing' }))
+    try {
+      const items0 = collectItems(extrasRef.current)
+      const l = detectLocal(loadMeta(), items0, Date.now())
+      const remote = await pullDocs()
+      if (!remote) { saveMeta(l.meta); setSyncState(s => ({ ...s, status: 'error', pending: dirtyCount(l.meta) })); return }
+      const rec = reconcile(l.meta, items0, remote)
+      const safe = unchangedSince(rec.apply, collectItems(extrasRef.current), l.meta)   // never overwrite something edited while we were pulling
+      if (safe.length) applyExtras(applyDocs(extrasRef.current, safe))
+      const toSend = uniqueDocs([...l.dirty, ...rec.push]).filter(d => { const m = rec.meta[keyOf(d.kind, d.id)]; return m && !m.synced && m.updatedAt === d.updatedAt })
+      const ok = await pushDocs(toSend)
+      const meta = ok ? markSynced(rec.meta, toSend) : rec.meta
+      saveMeta(meta); setSyncState({ status: ok ? 'ok' : 'error', at: ok ? Date.now() : null, pending: dirtyCount(meta) })
+    } catch (e) { console.warn('sync failed', e); setSyncState(s => ({ ...s, status: 'error' })) }
+    finally { syncing.current = false }
+  }, [authSession])
+  // Sync on sign-in, shortly after you change something, when the app returns to the foreground, and when the network comes back.
+  useEffect(() => {
+    if (!supabase || !authSession || !loaded) return
+    const t = setTimeout(() => { void syncNow() }, 1200)
+    return () => clearTimeout(t)
+  }, [authSession, loaded, syncNow, journal, anchors, checks, focusSessions, manualNights, purchases, rituals, themeId])
+  useEffect(() => {
+    if (!supabase || !authSession || !loaded) return
+    let last = Date.now()
+    const again = () => { if (document.visibilityState !== 'hidden' && Date.now() - last > 60_000) { last = Date.now(); void syncNow() } }
+    const online = () => { last = Date.now(); void syncNow() }
+    document.addEventListener('visibilitychange', again); window.addEventListener('online', online)
+    return () => { document.removeEventListener('visibilitychange', again); window.removeEventListener('online', online) }
+  }, [authSession, loaded, syncNow])
 
   // iPhone app: keep on-device rituals in step with what you've already done today (a ritual is dropped for today once it's redundant).
   const doneKey = useMemo(() => {
@@ -261,7 +313,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (next.has(k)) next.delete(k); else next.add(k)
       setChecks(next); saveChecks(next)
     },
-    async signOut() { await supabase?.auth.signOut() },
+    sync: syncState, syncNow,
+    async signOut(force = false) {
+      if (!supabase) return 0
+      if (authSession) {
+        await syncNow()
+        const pending = dirtyCount(loadMeta())
+        if (pending > 0 && !force) return pending
+      }
+      // The account is the source of truth in cloud mode: clear this device's copies so the next person on this browser never sees them.
+      for (const k of ['bp.anchors', 'bp.anchorChecks', 'bp.journal', 'bp.journal.draft', 'bp.focus', 'bp.sleep.nights', 'bp.sleep.manual', 'bp.sleep.health', 'bp.sleep.synced', 'bp.purchases', 'bp.theme', 'bp.rituals', 'bp.sync.meta', 'bp.levels.seen'])
+        try { localStorage.removeItem(k) } catch { /* ignore */ }
+      setJournal([]); setAnchors([]); setChecks(new Set()); setFocusSessions([]); setManualNights([]); setHealthNights([]); setSleepOn(false)
+      setPurchases([]); setRitualsState(normalizeRituals(DEFAULT_RITUALS)); setThemeId(null); setSyncState({ status: 'idle', at: null, pending: 0 })
+      await supabase.auth.signOut()
+      return 0
+    },
   }
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>
 }

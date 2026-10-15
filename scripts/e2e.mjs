@@ -31,8 +31,9 @@ const STRUCTURED = { situation: 'Presentation tomorrow', thought: 'I will mess i
 /** Fresh browser context + page with error capture and a mocked Gemini API. */
 const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filter(c => c.plugin === a && (!b || c.method === b)), [plugin, method])
 
-async function open(seed, { native = false } = {}) {
+async function open(seed, { native = false, time = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
+  if (time) await ctx.clock.install({ time })      // for tests whose outcome depends on the time of day: pin it so they don't flake near midnight
   const gemini = { calls: [], mode: 'ok' }
   await ctx.route('https://generativelanguage.googleapis.com/**', async route => {
     const req = route.request(), url = req.url(), body = req.postData() ?? ''
@@ -461,10 +462,10 @@ test('journal: crisis wording shows support, corrupted journal data is ignored, 
 const plan = (id, text, n = 0) => ({ id, createdAt: ago(n), text: 'worry ' + id, status: 'actionable', action: text, reviewedAt: ago(n) })
 const todayEntry = () => rec('today', 0)
 
+const middayToday = () => { const d = new Date(); d.setHours(12, 0, 0, 0); return d }
 test('small step: pick a step from your worry plan, settle, focus (pause is free), finish — it counts everywhere', async () => {
-  const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.worries': [plan('w1', 'Email the landlord'), plan('w2', 'Book the dentist', 1)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
-  await p.clock.install()
-  await p.waitForSelector('.today >> text=A small step is waiting: Book the dentist'.replace('Book the dentist', 'Email the landlord'))   // newest plan first
+  const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.worries': [plan('w1', 'Email the landlord'), plan('w2', 'Book the dentist', 1)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }, { time: middayToday() }); const p = s.page
+    await p.waitForSelector('.today >> text=A small step is waiting: Book the dentist'.replace('Book the dentist', 'Email the landlord'))   // newest plan first
   await p.click('.today .linklike'); await p.waitForSelector('[aria-label="One small step"]')
   assert.equal(await p.locator('.step-choice').count(), 2); await p.click('.step-choice:has-text("Email the landlord")')
   await p.click('[role=radio]:has-text("5 min")'); await p.click('button:has-text("Start")')
@@ -619,6 +620,82 @@ test('coins: a treat you name yourself, and a quiet +N when you earn', async () 
 })
 
 
+const until = async (fn, ms = 12000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return; await new Promise(r => setTimeout(r, 100)) } throw new Error(`timed out waiting for: ${fn}`) }
+const hasDoc = (acct, kind) => [...acct.rows.keys()].some(k => k.startsWith(kind + '|'))
+const bodyOf = (acct, kind) => [...acct.rows.values()].find(r => r.kind === kind && !r.deleted)?.data?.body
+const moreRoot = async p => { await tab(p, 'More'); if (await p.locator('.topbar [aria-label=Back]').count()) await p.click('.topbar [aria-label=Back]') }
+const syncNowUi = async p => { await moreRoot(p); await p.click('.li >> text=Account'); await p.click('button:has-text("Sync now")'); await p.waitForSelector('[aria-label="Sync status"] >> text=/Everything is saved|Couldn’t reach/') }
+const openJournalList = async p => { await moreRoot(p); await p.click('.li >> text=Journal') }
+
+test('cloud sync: what you write on one device appears on another; edits and deletes follow', async () => {
+  const account = fakeAccount()
+  const A = await openCloud({ signedIn: true, account, seed: seenAll }); const a = A.page
+  await openJournal(a); await a.fill('[aria-label=Title]', 'From my phone'); await a.fill('[aria-label="Journal entry"]', 'Written on device A'); await saveJournalEntry(a)
+  await a.click('text=Choose your daily anchors'); await a.click('.sheet .chip >> text=Drink water'); await a.click('button:has-text("Done")')
+  await until(() => hasDoc(account, 'journal') && hasDoc(account, 'anchor'))
+  assert.ok(account.rows.has('rituals|all'), 'settings sync too')
+  for (const r of account.rows.values()) assert.equal(r.deleted, r.data === null, 'the shape the real table accepts')
+
+  const B = await openCloud({ signedIn: true, account, seed: seenAll }); const b = B.page      // a second device, empty
+  await tab(b, 'More'); await b.waitForSelector('.li:has-text("Journal") >> text=1')
+  await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("Written on device A")'); await b.click('[aria-label=Back]')
+  await tab(b, 'Entries'); await b.waitForSelector('[role=checkbox][aria-label="Drink water"]')
+
+  await openJournalList(a); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'Edited on device A'); await a.click('button:has-text("Save")')
+  await until(() => bodyOf(account, 'journal') === 'Edited on device A')
+  await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("Edited on device A")')
+  assert.equal(await b.locator('.jentry').count(), 1, 'edited, not duplicated')
+
+  a.once('dialog', d => d.accept()); await a.click('.jentry'); await a.click('button:has-text("Delete entry")')
+  await until(() => [...account.rows.values()].some(r => r.kind === 'journal' && r.deleted))
+  await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('text=Nothing here yet')
+  await done(A); await done(B)
+})
+
+test('cloud sync: offline changes wait safely and sync later; the later edit wins a conflict', async () => {
+  const account = fakeAccount()
+  const A = await openCloud({ signedIn: true, account, seed: seenAll }), B = await openCloud({ signedIn: true, account, seed: seenAll }); const a = A.page, b = B.page
+  await openJournal(a); await a.fill('[aria-label="Journal entry"]', 'first draft'); await saveJournalEntry(a)
+  await until(() => bodyOf(account, 'journal') === 'first draft')
+  await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("first draft")')
+
+  account.down = true                                                                  // device A loses its connection
+  await openJournalList(a); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'A edit while offline'); await a.click('button:has-text("Save")')
+  await moreRoot(a); await a.click('.li >> text=Account')
+  await a.waitForSelector('[aria-label="Sync status"] >> text=/safe on this device/', { timeout: 15000 })
+  assert.equal(bodyOf(account, 'journal'), 'first draft', 'nothing reached the server')
+  await a.click('[aria-label=Back]'); await a.click('.li >> text=Journal'); await a.waitForSelector('.jentry:has-text("A edit while offline")')   // still there, still works
+  account.down = false; await syncNowUi(a)
+  await until(() => bodyOf(account, 'journal') === 'A edit while offline')
+
+  await b.waitForTimeout(30)                                                           // B edits later, from its older copy
+  await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.click('.jentry'); await b.fill('[aria-label="Journal entry"]', 'B edit, made later'); await b.click('button:has-text("Save")')
+  await syncNowUi(b); await until(() => bodyOf(account, 'journal') === 'B edit, made later')
+  await syncNowUi(a); await a.click('[aria-label=Back]'); await a.click('.li >> text=Journal'); await a.waitForSelector('.jentry:has-text("B edit, made later")')
+  assert.equal(await a.locator('.jentry').count(), 1, 'one entry on both, the later edit won')
+  await done(A); await done(B)
+})
+
+test('cloud sync: data that predates sync is pushed on first sign-in; sign-out clears this device (and warns about unsynced changes)', async () => {
+  const account = fakeAccount()
+  const entry = { id: 'old-j', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Older entry', body: 'written before sync existed', mood: null, tags: [], prompt: null }
+  const A = await openCloud({ signedIn: true, account, seed: { ...seenAll, 'bp.journal': [entry], 'bp.purchases': [{ id: 'p-old', itemId: 'treat', at: new Date().toISOString(), cost: 25, note: 'tea' }] } }); const a = A.page
+  await until(() => hasDoc(account, 'journal') && hasDoc(account, 'purchase')); assert.equal(account.rows.get('journal|old-j').data.title, 'Older entry')
+
+  account.down = true; await openJournal(a); await a.fill('[aria-label="Journal entry"]', 'not synced yet'); await saveJournalEntry(a)
+  await moreRoot(a); await a.click('.li >> text=Account'); await a.waitForSelector('[aria-label="Sync status"] >> text=/safe on this device/', { timeout: 15000 })
+  let message = ''; a.once('dialog', d => { message = d.message(); d.dismiss() }); await a.click('button:has-text("Sign out")')
+  await until(() => message !== ''); assert.match(message, /haven’t been saved|hasn’t been saved/); await a.waitForSelector('.topbar')
+  assert.ok(await a.evaluate(() => (JSON.parse(localStorage.getItem('bp.journal') ?? '[]')).length) >= 2, 'declining keeps your data on the device')
+
+  account.down = false; await a.click('[aria-label="Sync status"] >> button:has-text("Sync now")'); await a.waitForSelector('[aria-label="Sync status"] >> text=Everything is saved')
+  await a.click('button:has-text("Sign out")'); await a.waitForSelector('form.card')
+  for (const k of ['bp.journal', 'bp.purchases', 'bp.sync.meta', 'bp.anchors', 'bp.rituals']) assert.equal(await a.evaluate(key => localStorage.getItem(key), k), null, `${k} is cleared on sign-out`)
+  assert.equal(await a.evaluate(() => document.documentElement.style.getPropertyValue('--accent')), '', 'theme reset')
+  await done(A)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow
@@ -748,7 +825,7 @@ test('iPhone app: a ritual is skipped for today once you have done it (check-in,
   const afternoon = new Date(); afternoon.setHours(14, 0, 0, 0)                       // an afternoon session today -> the evening ritual is redundant, the morning one is not
   const every = [0, 1, 2, 3, 4, 5, 6]
   const s = await open({ 'bp.thoughts': [rec('t', 0)], 'bp.sessions': [{ ...calm('s', 0, 6, 3), createdAt: afternoon.toISOString() }],
-    'bp.rituals': [{ id: 'anchors', hour: 23, minute: 56, days: every, enabled: true }, { id: 'evening-breathe', hour: 23, minute: 58, days: every, enabled: true }, { id: 'checkin', hour: 23, minute: 59, days: every, enabled: true }] }, { native: true }); const p = s.page
+    'bp.rituals': [{ id: 'anchors', hour: 23, minute: 56, days: every, enabled: true }, { id: 'evening-breathe', hour: 23, minute: 58, days: every, enabled: true }, { id: 'checkin', hour: 23, minute: 59, days: every, enabled: true }] }, { native: true, time: (() => { const t = new Date(); t.setHours(10, 0, 0, 0); return t })() }); const p = s.page
   await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule'))
   const batch = await scheduled(p), slot = i => batch.filter(n => n.id >= 8000 + i * 20 && n.id < 8020 + i * 20)
   // slots follow the default order: morning 0, evening 1, check-in 2, anchors 3
@@ -814,7 +891,10 @@ const JWT = `${b64u({ alg: 'HS256', typ: 'JWT' })}.${b64u({ sub: 'u1', role: 'au
 const USER = { id: 'u1', aud: 'authenticated', role: 'authenticated', email: 'a@b.co', app_metadata: {}, user_metadata: { name: 'Ada' }, created_at: '2026-01-01T00:00:00Z' }
 const SESSION = { access_token: JWT, refresh_token: 'rt', token_type: 'bearer', expires_in: 3600, expires_at: 4102444800, user: USER }
 
-async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply } = {}) {
+const DOC_KINDS = ['journal', 'anchor', 'anchor_check', 'focus', 'manual_night', 'purchase', 'rituals', 'theme']
+/** A fake `user_docs` table shared by every "device" that is given the same object. It enforces the same rules as the real table. */
+const fakeAccount = () => ({ rows: new Map(), down: false, posts: 0 })
+async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply, signedIn = false, account = null, seed = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const seen = { token: [], authorize: [] }
   await ctx.route('http://127.0.0.1:9/**', route => {
@@ -826,6 +906,20 @@ async function openCloud({ providers = { email: true, google: true, apple: true 
     if (url.pathname === '/auth/v1/authorize') { seen.authorize.push(url.searchParams); return route.fulfill({ status: 200, headers: cors, contentType: 'text/html', body: 'provider page' }) }
     if (url.pathname === '/auth/v1/token') { seen.token.push({ grant: url.searchParams.get('grant_type'), body: JSON.parse(req.postData() ?? '{}') }); return json(SESSION) }
     if (url.pathname === '/auth/v1/user') return json(USER)
+    if (url.pathname === '/auth/v1/logout') return route.fulfill({ status: 204, headers: cors })
+    if (url.pathname === '/rest/v1/user_docs' && account) {
+      if (account.down) return route.abort('failed')
+      if (req.method() === 'GET') return json([...account.rows.values()])
+      if (req.method() === 'POST') {
+        const rows = JSON.parse(req.postData() ?? '[]'); account.posts++
+        for (const r of rows) {                       // mirror the table's CHECK constraints
+          if (!DOC_KINDS.includes(r.kind) || !r.id || r.id.length > 100 || r.deleted !== (r.data === null) || (r.data !== null && JSON.stringify(r.data).length >= 32768) || r.user_id !== USER.id)
+            return json({ code: '23514', message: 'violates check constraint' }, 400)
+        }
+        for (const r of rows) account.rows.set(`${r.kind}|${r.id}`, r)
+        return route.fulfill({ status: 201, headers: cors, contentType: 'application/json', body: '' })
+      }
+    }
     if (url.pathname.startsWith('/rest/v1/')) return json([])
     return json({})
   })
@@ -833,10 +927,12 @@ async function openCloud({ providers = { email: true, google: true, apple: true 
     await ctx.addInitScript(nativeStub)
     if (reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
   }
+  if (signedIn) await ctx.addInitScript(sess => { if (!localStorage.getItem('sb-127-auth-token')) localStorage.setItem('sb-127-auth-token', JSON.stringify(sess)) }, SESSION)
+  if (seed) await ctx.addInitScript(v => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, seed)
   const page = await ctx.newPage(); const errors = []
   page.on('pageerror', e => errors.push('pageerror: ' + e.message))
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push('console: ' + m.text()) })
-  await page.goto('http://localhost:4177'); await page.waitForSelector('form.card')
+  await page.goto('http://localhost:4177'); await page.waitForSelector(signedIn ? '.topbar' : 'form.card')
   opened.push(page)
   return { ctx, page, errors, seen }
 }

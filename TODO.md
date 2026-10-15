@@ -10,6 +10,9 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] **Signed-in round trip:** make a throwaway account, then `CHECK_EMAIL=… CHECK_PASSWORD=… npm run check:supabase` — proves signed-in users can save data/photos (not yet verified; if it says *permission denied for table*, tables need `grant select, insert, update, delete … to authenticated`).
 - [ ] **Run on your iPhone** and tell the agent what Apple/Google sign-in did (errors verbatim).
 
+- [ ] **Two-device sync check (Phase 12):** sign in on the iPhone and in the browser with the same account; write a journal entry on one, open the other → it should appear within a few seconds (More → Account → *Sync now* forces it). Report any error text.
+- [ ] **Supabase → Authentication → Sign In / Providers → Email → enable "Prevent use of leaked passwords"** (Advisor warning; a dashboard-only setting).
+
 ## Soon
 - [ ] Custom SMTP (Resend/Postmark) before inviting other people — Supabase's built-in email sender is heavily rate-limited.
 - [ ] Web push reminders (optional): generate VAPID keys, add `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` as Edge Function secrets, deploy `send-reminders`, run `supabase/cron.sql`.

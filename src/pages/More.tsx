@@ -28,7 +28,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 }
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
-  const { mode, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins } = useStore()
+  const { mode, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
   const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
@@ -70,11 +70,15 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         : STATUS[r])
     } catch (e: any) { setMsg(e.message) }
   }
+  async function doSignOut() {
+    const pending = await signOut()
+    if (pending > 0 && confirm(`${pending} ${pending === 1 ? 'change hasn’t' : 'changes haven’t'} been saved to your account yet (are you offline?). Sign out anyway and lose ${pending === 1 ? 'it' : 'them'} from this device?`)) await signOut(true)
+  }
   async function deleteAccount() {
     if (!confirm('Permanently delete your account and ALL entries and photos? This cannot be undone.')) return
     const { error } = await supabase!.functions.invoke('delete-account')
     if (error) { setAcctMsg(`Could not delete: ${error.message}`); return }
-    localStorage.removeItem('bp.reminder'); await signOut()
+    localStorage.removeItem('bp.reminder'); await signOut(true)
   }
 
   function exportJson() {
@@ -108,6 +112,14 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'support' && <Support />}
       {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
+        <div className="card" aria-label="Sync status">
+          <div className="row spread"><b>Sync</b><button className="linkbtn" disabled={sync.status === 'syncing'} onClick={() => void syncNow()}>Sync now</button></div>
+          <p className="muted small" role="status" style={{ margin: '6px 0 0' }}>
+            {sync.status === 'syncing' ? 'Syncing your journal, anchors, coins and more…'
+              : sync.status === 'error' ? `Couldn’t reach your account just now${sync.pending ? ` — ${sync.pending} ${sync.pending === 1 ? 'change is' : 'changes are'} safe on this device and will sync when you’re back online` : ''}.`
+              : sync.at ? `Everything is saved to your account (${new Date(sync.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}).` : 'Your journal, anchors, focus sessions, hand-logged sleep, coins and settings sync to your account.'}
+          </p>
+        </div>
         <div className="card">
           <p className="muted small" style={{ marginTop: 0 }}>Signed in as {session?.user.email}</p>
           <label className="field"><span>Display name</span><input className="input" value={nick} onChange={e => setNick(e.target.value)} /></label>
@@ -122,7 +134,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
           <button className="btn primary" onClick={doImport}>Import into my account</button>
         </div>}
         {acctMsg && <p className="small" role="status" style={{ textAlign: 'center' }}>{acctMsg}</p>}
-        <button className="btn danger block" onClick={signOut}>Sign out</button>
+        <button className="btn danger block" onClick={doSignOut}>Sign out</button>
         <button className="btn block" style={{ marginTop: 10, color: 'var(--danger)', background: 'none' }} onClick={deleteAccount}>Delete account…</button>
       </>}
       {view === 'health' && (isNative() ? <div className="card">
@@ -169,7 +181,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       <div className="list">
         <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
-        {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={signOut} />}
+        {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={doSignOut} />}
       </div>
       <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal 0.1 · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>

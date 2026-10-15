@@ -119,6 +119,43 @@ select t.eq((select public from storage.buckets where id = 'photos'), false, 'bu
 select t.eq((select file_size_limit from storage.buckets where id = 'photos'), 26214400::bigint, 'bucket size limit');
 select t.eq((select 'audio/webm' = any(allowed_mime_types) and 'image/jpeg' = any(allowed_mime_types) and not 'text/html' = any(allowed_mime_types) from storage.buckets where id = 'photos'), true, 'mime allow-list');
 
+-- ---------------------------------------------------------------- user_docs (journal / anchors / purchases … sync)
+select t.as_user('aaaaaaaa-0000-0000-0000-000000000001');
+insert into public.user_docs (kind, id, data) values ('journal', 'j1', '{"title":"A private entry"}'), ('purchase', 'p1', '{"itemId":"theme-ocean"}');
+select t.eq((select user_id from public.user_docs where id = 'j1'), 'aaaaaaaa-0000-0000-0000-000000000001'::uuid, 'user_docs.user_id defaults to the signed-in user');
+select t.eq((select count(*) from public.user_docs), 2::bigint, 'A sees own docs');
+-- upsert (what the app does): same (user, kind, id) updates in place
+insert into public.user_docs (kind, id, data, updated_at) values ('journal', 'j1', '{"title":"Edited"}', now()) on conflict (user_id, kind, id) do update set data = excluded.data, updated_at = excluded.updated_at;
+select t.eq((select count(*) from public.user_docs where kind = 'journal'), 1::bigint, 'upsert does not duplicate');
+select t.eq((select data->>'title' from public.user_docs where id = 'j1'), 'Edited', 'upsert updates');
+-- a delete is a tombstone: deleted = true with no data
+update public.user_docs set deleted = true, data = null where id = 'p1';
+select t.eq((select deleted from public.user_docs where id = 'p1'), true, 'tombstone stored');
+select t.fails($$update public.user_docs set deleted = true where id = 'j1'$$, '23514', 'deleted rows must carry no data');
+select t.fails($$update public.user_docs set data = null where id = 'j1'$$, '23514', 'live rows must carry data');
+-- validation
+select t.fails($$insert into public.user_docs (kind, id, data) values ('nonsense', 'x', '{}')$$, '23514', 'unknown kind');
+select t.fails($$insert into public.user_docs (kind, id, data) values ('journal', '', '{}')$$, '23514', 'empty id');
+select t.fails($$insert into public.user_docs (kind, id, data) values ('journal', repeat('x', 101), '{}')$$, '23514', 'id too long');
+select t.fails($$insert into public.user_docs (kind, id, data) values ('journal', 'big', jsonb_build_object('t', repeat('x', 40000)))$$, '23514', 'doc over 32 KB');
+select t.fails($$insert into public.user_docs (kind, id, data, updated_at) values ('journal', 'future', '{}', now() + interval '3 days')$$, '23514', 'timestamp far in the future');
+insert into public.user_docs (kind, id, data, updated_at) values ('journal', 'skew', '{}', now() + interval '1 hour');   -- small clock skew is fine
+select t.eq((select count(*) from public.user_docs where id = 'skew'), 1::bigint, 'small clock skew tolerated');
+
+select t.as_user('bbbbbbbb-0000-0000-0000-000000000002');
+select t.eq((select count(*) from public.user_docs), 0::bigint, 'B sees none of A''s docs');
+select t.fails($$insert into public.user_docs (user_id, kind, id, data) values ('aaaaaaaa-0000-0000-0000-000000000001', 'journal', 'planted', '{}')$$, '42501', 'B cannot write into A''s docs');
+with u as (update public.user_docs set data = '{"hacked":true}' where id = 'j1' returning 1) select t.eq((select count(*) from u), 0::bigint, 'B cannot update A''s doc');
+with d as (delete from public.user_docs where id = 'j1' returning 1) select t.eq((select count(*) from d), 0::bigint, 'B cannot delete A''s doc');
+insert into public.user_docs (kind, id, data) values ('journal', 'j1', '{"title":"B has the same id"}');   -- ids are per user, no clash
+select t.eq((select count(*) from public.user_docs), 1::bigint, 'B has its own j1');
+
+select t.as_anon();
+select t.fails($$select * from public.user_docs$$, '42501', 'anon cannot read user_docs');
+select t.fails($$insert into public.user_docs (user_id, kind, id, data) values ('aaaaaaaa-0000-0000-0000-000000000001', 'journal', 'anon', '{}')$$, '42501', 'anon cannot write user_docs');
+select t.as_admin();
+select t.eq((select data->>'title' from public.user_docs where id = 'j1' and user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 'Edited', 'A''s doc untouched by B');
+
 -- ---------------------------------------------------------------- deleting an account removes all of its rows (delete-account relies on this)
 select t.as_admin();
 delete from auth.users where id = 'aaaaaaaa-0000-0000-0000-000000000001';
@@ -126,6 +163,8 @@ select t.eq((select count(*) from public.thoughts where user_id = 'aaaaaaaa-0000
 select t.eq((select count(*) from public.breath_sessions where user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0::bigint, 'cascade sessions');
 select t.eq((select count(*) from public.worries where user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0::bigint, 'cascade worries');
 select t.eq((select count(*) from public.push_subscriptions where user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0::bigint, 'cascade push');
+select t.eq((select count(*) from public.user_docs where user_id = 'aaaaaaaa-0000-0000-0000-000000000001'), 0::bigint, 'cascade user_docs');
+select t.eq((select count(*) from public.user_docs where user_id = 'bbbbbbbb-0000-0000-0000-000000000002'), 1::bigint, 'B docs untouched');
 select t.eq((select count(*) from public.thoughts where user_id = 'bbbbbbbb-0000-0000-0000-000000000002'), 3::bigint, 'B rows untouched');
 
 -- ---------------------------------------------------------------- structural guarantees

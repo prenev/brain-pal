@@ -3,7 +3,8 @@ import { useStore } from '../lib/store'
 import { enablePush, isStandalone } from '../lib/push'
 
 export default function Settings() {
-  const { mode, session, signOut, thoughts, sessions } = useStore()
+  const { mode, session, signOut: signOutNow, thoughts, sessions } = useStore()
+  const signOut = async () => { const n = await signOutNow(); if (n > 0 && confirm(`${n} change${n === 1 ? '' : 's'} not saved to your account yet. Sign out anyway?`)) await signOutNow(true) }
   const [hour, setHour] = useState(20)
   const [msg, setMsg] = useState('')
 

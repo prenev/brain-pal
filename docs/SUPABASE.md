@@ -67,6 +67,9 @@ That means the link's redirect target wasn't on the allow-list, so Supabase fell
 3. Links in already-sent emails keep the old target: request a new one (*Sign in → Email me a link*, or sign up again) after fixing the settings. Or, to test quickly, turn *Confirm email* off under Providers → Email.
 (The allow-list isn't visible through Supabase's public API, so `npm run check:supabase` can't verify it — check it in the dashboard.)
 
+## Sync table: `user_docs` (Phase 12)
+One row per synced item: `(user_id, kind, id)` primary key, `data jsonb`, `deleted boolean`, `updated_at timestamptz`. `kind` is allow-listed (journal, anchor, anchor_check, focus, manual_night, purchase, rituals, theme); `deleted` ⇔ `data is null`; a document must be < 32 KB; `updated_at` may be at most a day in the future (stops a wrong clock from "winning" forever). RLS: `to authenticated`, `auth.uid() = user_id` for all commands; `anon` revoked; deleting the account cascades. Migration `20261015234220_user_docs.sql` (applied to the live project; the advisor run afterwards showed only the pre-existing *leaked password protection* warning, which is an Auth dashboard toggle).
+
 ## GitHub integration
 Supabase watches `supabase/` on the production branch: `migrations/*.sql` are applied in order, functions deploy per `config.toml`.
 - The four existing migration files have the **same version numbers and names** as the project's history — keep them untouched.

@@ -41,7 +41,7 @@ Order of work (changed after the competitor analysis in [`docs/COMPETITORS.md`](
 | 7 | 9 | **Rituals & reminders** — breathe at 07:00 and at night | Reminders that *do* something | ✅ iPhone: 4 rituals with times/weekdays, tap-to-open, skip-when-done, migration; delivery on a real phone not verified; web multi-time needs `send-reminders` deployed |
 | 8 | 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood | ✅ pure logic (mutation-checked), Swift read-only query (compiles on macOS CI), Sleep view, manual log, weekly-summary line; real Watch data not verified (see TODO.md) |
 | 9 | 11 | **Coins & rewards** | Showing up feels good, no shame mechanics | ✅ derived earnings with caps, wallet, accent themes, rest days (extend the streak), self-named treats, +N toast; Pal outfits / confetti styles not built |
-| 10 | 12 | **Cloud sync for the new data** | Everything on every device | ⏳ |
+| 10 | 12 | **Cloud sync for the new data** | Everything on every device | ✅ `user_docs` migration applied to the live project (RLS verified, advisors clean apart from the pre-existing leaked-password setting), pure sync engine, store wiring, 3 two-device e2e; not yet exercised against the live API from here |
 | 11 | 13 | **Reflection extras** — theme picker, optional AI "reflect with me" | Polish | ⏳ |
 | – | 17+ | Idea backlog (bottom of this file) | | 💡 |
 

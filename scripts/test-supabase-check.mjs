@@ -41,7 +41,7 @@ assert.equal(keyRole(PUB), 'publishable'); assert.equal(keyRole(ANON), 'anon'); 
 
 /* healthy project, no test account */
 { const res = await run({}); assert.deepEqual(summarize(res), { fail: 0, warn: 3 })   // warns: email confirmation, optional reminders fn, skipped round trip
-  for (const t of ['thoughts', 'breath_sessions', 'worries', 'push_subscriptions']) assert.equal(level(res, `Table ${t}`), 'ok')
+  for (const t of ['thoughts', 'breath_sessions', 'worries', 'push_subscriptions', 'user_docs']) assert.equal(level(res, `Table ${t}`), 'ok')
   assert.equal(level(res, 'Function delete-account'), 'ok'); assert.equal(level(res, 'Function send-reminders'), 'warn'); assert.equal(level(res, 'Signed-in round trip'), 'warn')
   assert.ok(!res.calls.some(c => c.startsWith('POST /rest')), 'without a test account nothing is written') }
 
@@ -54,7 +54,7 @@ assert.equal(keyRole(PUB), 'publishable'); assert.equal(keyRole(ANON), 'anon'); 
 { const res = await run({ autoconfirm: true, worryBoom: true }, { email: 'e@x.test', password: 'right' }); assert.equal(level(res, 'Save a worry'), 'fail'); assert.ok(res.calls.includes('DELETE /rest/v1/thoughts')) }
 
 /* each way the setup can be wrong is reported clearly */
-{ const res = await run({ noTables: true }); assert.equal(res.filter(r => r.level === 'fail').length, 4); assert.match(res.find(r => r.level === 'fail').detail, /migrations/) }
+{ const res = await run({ noTables: true }); assert.equal(res.filter(r => r.level === 'fail').length, 5); assert.match(res.find(r => r.level === 'fail').detail, /migrations/) }
 { const res = await run({ leak: true }); assert.equal(level(res, 'Table thoughts'), 'fail'); assert.match(res.find(r => r.level === 'fail').detail, /ANONYMOUS VISITORS CAN READ/) }
 { const res = await run({ anonOpen: true }); assert.equal(level(res, 'Table thoughts'), 'warn') }
 { const res = await run({ noDelFn: true }); assert.equal(level(res, 'Function delete-account'), 'fail') }

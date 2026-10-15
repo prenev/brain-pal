@@ -1,5 +1,5 @@
 // Logic for `npm run check:supabase` (network injected so it can be unit-tested). Returns [{ level: 'ok'|'warn'|'fail', name, detail }].
-export const TABLES = ['thoughts', 'breath_sessions', 'worries', 'push_subscriptions']
+export const TABLES = ['thoughts', 'breath_sessions', 'worries', 'push_subscriptions', 'user_docs']
 
 const b64json = s => { try { return JSON.parse(Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')) } catch { return null } }
 export const keyRole = key => (key.startsWith('sb_publishable_') ? 'publishable' : key.startsWith('sb_secret_') ? 'service_role' : b64json(key.split('.')[1] ?? '')?.role ?? 'unknown')
