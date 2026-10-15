@@ -7,17 +7,18 @@ Read `ROADMAP.md` (phases + status), `README.md` (features, limits) and `docs/IO
 ## How to work (follow this every time)
 
 1. **Plan in phases.** Pick the next item from `ROADMAP.md`. Say briefly what you'll build; for anything non-trivial, split into small steps.
-2. **Branch.** Develop on the branch the session names. Commit + **push after every update** (`git push -u origin <branch>`). Never open a PR unless asked.
-3. **Write tests with the change** (see *Testing*). New logic → unit test in `scripts/test-*.mjs`. New/changed user flow → e2e in `scripts/e2e.mjs`. A bug fix → a test that fails without the fix.
-4. **Verify before pushing** — all of these must pass:
+2. **Track.** Keep `docs/KANBAN.md` current (one card *In progress*; move it in the same commit as the work). Anything only the owner can do (accounts, keys, a Mac, a phone) goes into `TODO.md`; real bugs/chores become GitHub issues.
+3. **Branch.** Develop on the branch the session names. Commit + **push after every update** (`git push -u origin <branch>`). Never open a PR unless asked.
+4. **Write tests with the change** (see *Testing*). New logic → unit test in `scripts/test-*.mjs`. New/changed user flow → e2e in `scripts/e2e.mjs`. A bug fix → a test that fails without the fix.
+5. **Verify before pushing** — all of these must pass:
    ```bash
    npx tsc --noEmit && npm test && npm run build && npm run test:e2e -- --no-build
    ```
    (`npm run test:e2e -- --grep="part of name"` runs one test; failures save a screenshot + page text in `test-results/`.)
-5. **After any UI change run `npm run screens` and send the user ALL screens** (`screenshots/*.png` plus the contact sheet `screenshots/_all.png`) with `SendUserFile`. Mention which are new. Add new screens to `scripts/screens.mjs` for new UI. The sheet may be scaled down when very tall — say so.
-6. **Check CI after pushing.** Use the GitHub MCP tools (`actions_list` → `list_workflow_runs` for the branch, `get_job_logs` with `failed_only`). Fix red runs before moving on; say plainly what failed. The `iOS build` job (macOS) only runs when `ios/**`, `ios-native/**`, `capacitor.config.ts` or `package*.json` change.
-7. **Update docs:** `ROADMAP.md` status, `README.md` if behaviour/limits changed, `docs/IOS.md` for iOS. Keep "not verified" notes honest.
-8. **Report honestly.** Say what is verified, what is only mocked/simulated, and what needs the user (a Mac, a phone, accounts/keys). Never claim something works that you only typed. If you can't test it, say so.
+6. **After any UI change run `npm run screens` and send the user ALL screens** (`screenshots/*.png` plus the contact sheet `screenshots/_all.png`) with `SendUserFile`. Mention which are new. Add new screens to `scripts/screens.mjs` for new UI. The sheet may be scaled down when very tall — say so.
+7. **Check CI after pushing.** Use the GitHub MCP tools (`actions_list` → `list_workflow_runs` for the branch, `get_job_logs` with `failed_only`). Fix red runs before moving on; say plainly what failed. The `iOS build` job (macOS) only runs when `ios/**`, `ios-native/**`, `capacitor.config.ts` or `package*.json` change.
+8. **Update docs:** `ROADMAP.md` status, `README.md` if behaviour/limits changed, `docs/IOS.md` for iOS. Keep "not verified" notes honest.
+9. **Report honestly.** Say what is verified, what is only mocked/simulated, and what needs the user (a Mac, a phone, accounts/keys). Never claim something works that you only typed. If you can't test it, say so.
 
 ## Commands
 
