@@ -1,0 +1,41 @@
+// Guards the JS <-> Swift contract and that the committed Xcode project really contains our native code.
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
+
+/* 1. the copies inside ios/ are exactly what ios-native/ says (CI caught this drifting once) */
+for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements'])
+  assert.equal(read(`ios/App/App/${f}`), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
+
+/* 2. every method the JS calls on the Mindful plugin exists in Swift, and vice versa */
+const iface = read('src/lib/native.ts').match(/export interface MindfulPlugin \{([\s\S]*?)\n\}/)[1]
+const jsMethods = [...iface.matchAll(/^\s{2}(\w+)\(/gm)].map(m => m[1]).sort()
+const swift = read('ios-native/MindfulPlugin.swift')
+const swiftRegistered = [...swift.matchAll(/CAPPluginMethod\(name: "(\w+)"/g)].map(m => m[1]).sort()
+const swiftImplemented = [...swift.matchAll(/@objc func (\w+)\(_ call: CAPPluginCall\)/g)].map(m => m[1]).sort()
+assert.deepEqual(swiftRegistered, jsMethods, 'JS interface and Swift plugin methods differ')
+assert.deepEqual(swiftImplemented, jsMethods, 'a registered Swift method has no implementation')
+assert.match(swift, /jsName = "Mindful"/); assert.match(read('src/lib/native.ts'), /registerPlugin<MindfulPlugin>\('Mindful'\)/)
+
+/* 3. project wiring */
+const pbx = read('ios/App/App.xcodeproj/project.pbxproj')
+for (const f of ['MindfulPlugin.swift', 'MainViewController.swift'])
+  assert.ok(new RegExp(`${f} in Sources`).test(pbx), `${f} must be compiled`)
+assert.equal((pbx.match(/CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements/g) ?? []).length, 2, 'entitlements on Debug and Release')
+assert.ok(read('ios/App/App/SceneDelegate.swift').includes('MainViewController()'), 'root view controller must register our plugin')
+assert.match(read('ios-native/MainViewController.swift'), /registerPluginInstance\(MindfulPlugin\(\)\)/)
+
+/* 4. entitlements + permission strings App Review / iOS require */
+assert.match(read('ios/App/App/App.entitlements'), /com\.apple\.developer\.healthkit<\/key>\s*<true\/>/)
+const plist = read('ios/App/App/Info.plist')
+for (const k of ['NSMicrophoneUsageDescription', 'NSCameraUsageDescription', 'NSPhotoLibraryUsageDescription', 'NSHealthUpdateUsageDescription', 'NSHealthShareUsageDescription'])
+  assert.match(plist, new RegExp(`<key>${k}</key>\\s*<string>[^<]{20,}</string>`), `${k} missing or too short`)
+assert.match(plist, /<string>brainpal<\/string>/, 'brainpal:// URL scheme')
+assert.equal(JSON.parse(read('ios/App/App/capacitor.config.json')).appId, 'com.brainpal.app')
+assert.match(read('capacitor.config.ts'), /appId: 'com\.brainpal\.app'/)
+assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.brainpal\.app/)
+
+/* 5. the plugin never *reads* health data (privacy promise in the UI and docs) */
+assert.doesNotMatch(swift, /HKSampleQuery|HKAnchoredObjectQuery|HKStatisticsQuery|read: \[[^\]]+\]/, 'Swift must stay write-only')
+console.log('ios: all tests passed')

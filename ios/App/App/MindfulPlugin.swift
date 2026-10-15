@@ -1,6 +1,7 @@
 import Foundation
 import Capacitor
 import HealthKit
+import UIKit
 
 /// Saves breathing / grounding sessions to Apple Health as "Mindful Minutes" (HKCategoryType .mindfulSession).
 /// JS name: "Mindful"  (see src/lib/native.ts). Write-only: we never read your health data.
@@ -12,7 +13,8 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "authorizationStatus", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "saveSession", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "saveSession", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "keepAwake", returnType: CAPPluginReturnPromise)
     ]
 
     private let store = HKHealthStore()
@@ -68,6 +70,15 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         )
         store.save(sample) { _, error in
             if let error = error { call.reject(error.localizedDescription) } else { call.resolve() }
+        }
+    }
+
+    /// Stops the screen auto-locking during a breathing session.
+    @objc func keepAwake(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? false
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = enabled
+            call.resolve()
         }
     }
 }
