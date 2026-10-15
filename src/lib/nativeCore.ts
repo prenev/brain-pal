@@ -41,13 +41,15 @@ export function reminderText(streak: number): { title: string; body: string } {
 
 export type AuthLink = { kind: 'tokens'; access_token: string; refresh_token: string; type: string | null } | { kind: 'code'; code: string } | { kind: 'error'; message: string }
 
-/** Parse brainpal://auth#access_token=…&refresh_token=… (magic link) or ?code=… (PKCE / OAuth). Null if not an auth link. */
+/**
+ * Parse brainpal://auth#access_token=…&refresh_token=… (implicit links) or brainpal://auth?code=… (PKCE: email links, OAuth).
+ * Done with a regex rather than `new URL()`: host/hash handling of custom schemes differs between engines.
+ * Null if it isn't one of our auth links.
+ */
 export function parseAuthLink(raw: string): AuthLink | null {
-  let u: URL
-  try { u = new URL(raw) } catch { return null }
-  if (u.protocol !== 'brainpal:' || u.hostname !== 'auth') return null
-  const frag = new URLSearchParams(u.hash.replace(/^#/, ''))
-  const q = u.searchParams
+  const m = /^brainpal:\/\/auth\/?(?:\?([^#]*))?(?:#(.*))?$/.exec(raw.trim())
+  if (!m) return null
+  const q = new URLSearchParams(m[1] ?? ''), frag = new URLSearchParams(m[2] ?? '')
   const err = frag.get('error_description') ?? q.get('error_description') ?? frag.get('error') ?? q.get('error')
   if (err) return { kind: 'error', message: err }
   const access_token = frag.get('access_token'), refresh_token = frag.get('refresh_token')

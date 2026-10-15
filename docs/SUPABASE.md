@@ -42,9 +42,30 @@ for the iPhone app they're baked in at `npm run ios:sync` time (see `docs/IOS.md
    - *Redirect URLs*: add `http://localhost:5173`, your deployed web URL, and **`brainpal://auth`** (iPhone app magic links / password reset).
 2. **Authentication → Sign In / Providers → Email**: decide whether *Confirm email* stays on. On: new users must click an emailed link before signing in.
    Supabase's built-in email sender is **heavily rate-limited** — set up **custom SMTP** (e.g. Resend, Postmark) before inviting real users.
-3. Optional: enable Google / Apple under Providers, then set `VITE_OAUTH_PROVIDERS=google,apple` (the iPhone app doesn't support these buttons yet).
+3. Optional: Google / Apple sign-in — see **Social sign-in** below. The buttons appear by themselves once a provider is enabled.
 4. Optional, **web push reminders only**: generate keys with `npx web-push generate-vapid-keys`, add `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` as Edge Function secrets,
    deploy `supabase/functions/send-reminders`, and run `supabase/cron.sql` (fill the two placeholders). Put the public key in `.env` as `VITE_VAPID_PUBLIC_KEY`.
+
+## Social sign-in (Google, Apple)
+The login screen asks Supabase which providers are on and shows only those. Nothing to set in the app or `.env`.
+
+**Google** (free)
+1. Google Cloud Console → create a project → *APIs & Services → OAuth consent screen* (User type *External*; add your email as a test user while it is in "Testing").
+2. *Credentials → Create credentials → OAuth client ID → Web application*. Under **Authorized redirect URIs** add `https://dncodogkvsjzvptquqnn.supabase.co/auth/v1/callback`.
+3. Copy the Client ID and Client secret into Supabase → *Authentication → Sign In / Providers → Google* → enable → save.
+On the iPhone the app opens Google in the system sign-in sheet and returns to `brainpal://auth` (so that URL must be on the Redirect URLs list).
+
+**Apple** (needs the paid Apple Developer Program, US$99/yr). Apple's App Review rule 4.8 requires it if you offer Google sign-in in an App Store build.
+- *iPhone app only (simplest, no secret key to rotate):* Supabase → Providers → Apple → enable, and under **Client IDs** enter the bundle ID `com.brainpal.app`. In Xcode add the *Sign in with Apple* capability (or run `npm run ios:apple` before building, which adds the entitlement). Apple's own sheet is used; the app sends its identity token to Supabase.
+- *Also on the web:* create a Services ID + a Sign in with Apple key in the Apple developer portal, add `…/auth/v1/callback` as its return URL, and paste the Services ID and a generated client secret (a JWT signed with the key; **expires every 6 months** and must be regenerated) into the same Supabase screen.
+Without a paid account, leave Apple disabled: the button then simply isn't shown. Free "Personal Team" Xcode signing rejects the capability, which is why `ios-patch.py` only adds it with `--apple-signin`.
+
+## If the confirmation email opens "Safari can't open the page" / localhost
+That means the link's redirect target wasn't on the allow-list, so Supabase fell back to the **Site URL**.
+1. *Authentication → URL Configuration → Redirect URLs* must contain exactly `brainpal://auth` (check the spelling: `brainpal`, not `brainpan`), plus your web URLs.
+2. While you only use the iPhone app, set *Site URL* to `brainpal://auth` too, so a mismatch can never land on a dead `localhost` page. Switch it to your deployed web URL when you host the web app.
+3. Links in already-sent emails keep the old target: request a new one (*Sign in → Email me a link*, or sign up again) after fixing the settings. Or, to test quickly, turn *Confirm email* off under Providers → Email.
+(The allow-list isn't visible through Supabase's public API, so `npm run check:supabase` can't verify it — check it in the dashboard.)
 
 ## GitHub integration
 Supabase watches `supabase/` on the production branch: `migrations/*.sql` are applied in order, functions deploy per `config.toml`.

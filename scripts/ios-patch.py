@@ -59,4 +59,12 @@ t = add_key(t, 'CFBundleURLTypes', '<array><dict><key>CFBundleURLName</key><stri
 t = re.sub(r'(<key>UISupportedInterfaceOrientations</key>\s*<array>)(.*?)(</array>)',
            r'\1\n\t\t<string>UIInterfaceOrientationPortrait</string>\n\t\3', t, count=1, flags=re.S)
 ip.write_text(t)
+# ---- optional: Sign in with Apple capability (needs a paid Apple Developer account; free Personal Teams reject it)
+if '--apple-signin' in sys.argv:
+    ent = src / 'App.entitlements'
+    t = ent.read_text()
+    if 'applesignin' not in t:
+        t = t.replace('</dict>', '\t<key>com.apple.developer.applesignin</key>\n\t<array><string>Default</string></array>\n</dict>')
+        ent.write_text(t)
+    print('Sign in with Apple entitlement added')
 print('ios project patched')

@@ -1,13 +1,14 @@
-import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { useEffect, useState } from 'react'
+import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase'
+import { fetchEnabledProviders, PROVIDER_LABEL, type OAuthProvider } from '../lib/authCore'
+import { signInWithProvider, NATIVE_REDIRECT } from '../lib/oauth'
 import { useStore } from '../lib/store'
 import Face from '../components/Face'
 import { isNative } from '../lib/native'
 
-const redirect = () => (isNative() ? 'brainpal://auth' : location.origin)
+const redirect = () => (isNative() ? NATIVE_REDIRECT : location.origin)
 
 type Mode = 'signin' | 'signup' | 'link' | 'forgot' | 'recovery'
-const OAUTH = ((import.meta.env.VITE_OAUTH_PROVIDERS as string | undefined) ?? '').split(',').map(s => s.trim()).filter(Boolean) as ('google' | 'apple')[]
 const TITLES: Record<Mode, string> = { signin: 'Welcome back', signup: 'Create your account', link: 'Email me a link', forgot: 'Reset password', recovery: 'Choose a new password' }
 
 export default function Login() {
@@ -19,6 +20,11 @@ export default function Login() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [info, setInfo] = useState('')
+  const [providers, setProviders] = useState<OAuthProvider[]>([])
+  const [social, setSocial] = useState<OAuthProvider | null>(null)
+  useEffect(() => { // only offer buttons for providers actually switched on in Supabase
+    if (supabaseUrl && supabaseKey) fetchEnabledProviders(supabaseUrl, supabaseKey, fetch).then(setProviders)
+  }, [])
   const auth = supabase!.auth
   const go = (m: Mode) => { setMode(m); setErr(''); setInfo('') }
 
@@ -46,6 +52,13 @@ export default function Login() {
     setBusy(false)
   }
 
+  async function signInSocial(p: OAuthProvider) {
+    setErr(''); setInfo(''); setSocial(p)
+    const r = await signInWithProvider(p)
+    if (r.error) setErr(r.error)
+    setSocial(null)
+  }
+
   const needsEmail = mode !== 'recovery'
   const needsPw = mode === 'signin' || mode === 'signup' || mode === 'recovery'
   const cta = { signin: 'Sign in', signup: 'Create account', link: 'Send link', forgot: 'Send reset link', recovery: 'Update password' }[mode]
@@ -69,12 +82,12 @@ export default function Login() {
         {info && <p role="status" style={{ color: 'var(--accent)', margin: '0 0 12px' }}>{info}</p>}
         <button className="btn primary block" type="submit" disabled={busy}>{busy ? 'Please wait…' : cta}</button>
 
-        {OAUTH.length > 0 && mode !== 'recovery' && <>
+        {providers.length > 0 && mode !== 'recovery' && <>
           <div className="hr" />
-          {OAUTH.map(p => (
-            <button key={p} type="button" className="btn block" style={{ marginBottom: 8 }}
-              onClick={() => auth.signInWithOAuth({ provider: p, options: { redirectTo: redirect() } })}>
-              Continue with {p === 'apple' ? 'Apple' : 'Google'}
+          {providers.map(p => (
+            <button key={p} type="button" className="btn block" style={{ marginBottom: 8 }} disabled={busy || social !== null}
+              onClick={() => signInSocial(p)}>
+              {social === p ? 'Opening…' : `Continue with ${PROVIDER_LABEL[p]}`}
             </button>
           ))}
         </>}

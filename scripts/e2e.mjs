@@ -4,13 +4,17 @@ import { chromium } from 'playwright-core'
 import { chromiumPath } from './chromium.mjs'
 import { preview } from 'vite'
 import { execSync } from 'node:child_process'
-import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { nativeStub } from './native-stub.mjs'
 
 const root = new URL('..', import.meta.url).pathname
 if (!process.argv.includes('--no-build')) execSync('npx vite build', { cwd: root, stdio: 'pipe' })
+const CLOUD_DIR = 'node_modules/.dist-cloud'   // same app built "with Supabase" pointing at a dead address; every call is intercepted below
+if (!process.argv.includes('--no-build') || !existsSync(new URL(`../${CLOUD_DIR}`, import.meta.url)))
+  execSync(`npx vite build --outDir ${CLOUD_DIR}`, { cwd: root, stdio: 'pipe', env: { ...process.env, VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'test-key' } })
 const server = await preview({ root, preview: { port: 4175, strictPort: true }, build: { outDir: 'dist' } })
+const cloudServer = await preview({ root, preview: { port: 4177, strictPort: true }, build: { outDir: CLOUD_DIR } })
 const URL_ = 'http://localhost:4175'
 const exe = chromiumPath()
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required'] })
@@ -348,6 +352,95 @@ test('every interactive control has an accessible name', async () => {
   await done(s)
 })
 
+/* ---------- accounts (Supabase fully mocked: no network, no real project) ---------- */
+const b64u = o => Buffer.from(JSON.stringify(o)).toString('base64url')
+const JWT = `${b64u({ alg: 'HS256', typ: 'JWT' })}.${b64u({ sub: 'u1', role: 'authenticated', aud: 'authenticated', exp: 4102444800 })}.sig`
+const USER = { id: 'u1', aud: 'authenticated', role: 'authenticated', email: 'a@b.co', app_metadata: {}, user_metadata: { name: 'Ada' }, created_at: '2026-01-01T00:00:00Z' }
+const SESSION = { access_token: JWT, refresh_token: 'rt', token_type: 'bearer', expires_in: 3600, expires_at: 4102444800, user: USER }
+
+async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const seen = { token: [], authorize: [] }
+  await ctx.route('http://127.0.0.1:9/**', route => {
+    const req = route.request(), url = new URL(req.url())
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
+    const json = (o, status = 200) => route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(o) })
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    if (url.pathname === '/auth/v1/settings') return json({ external: providers, disable_signup: false, mailer_autoconfirm: true })
+    if (url.pathname === '/auth/v1/authorize') { seen.authorize.push(url.searchParams); return route.fulfill({ status: 200, headers: cors, contentType: 'text/html', body: 'provider page' }) }
+    if (url.pathname === '/auth/v1/token') { seen.token.push({ grant: url.searchParams.get('grant_type'), body: JSON.parse(req.postData() ?? '{}') }); return json(SESSION) }
+    if (url.pathname === '/auth/v1/user') return json(USER)
+    if (url.pathname.startsWith('/rest/v1/')) return json([])
+    return json({})
+  })
+  if (native) {
+    await ctx.addInitScript(nativeStub)
+    if (reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
+  }
+  const page = await ctx.newPage(); const errors = []
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message))
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push('console: ' + m.text()) })
+  await page.goto('http://localhost:4177'); await page.waitForSelector('form.card')
+  opened.push(page)
+  return { ctx, page, errors, seen }
+}
+
+test('sign-in screen only offers Google / Apple when Supabase has them switched on', async () => {
+  const both = await openCloud(); const p = both.page
+  await p.waitForSelector('button:has-text("Continue with Google")'); await p.waitForSelector('button:has-text("Continue with Apple")')
+  await p.click('text=Forgot password?'); assert.equal(await p.locator('button:has-text("Continue with")').count(), 2)   // offered on every form except password recovery
+  await done(both)
+  const none = await openCloud({ providers: { email: true } })
+  await none.page.waitForTimeout(500)
+  assert.equal(await none.page.locator('button:has-text("Continue with")').count(), 0)
+  await done(none)
+  const broken = await openCloud({ providers: null })   // malformed settings (external: null)
+  await broken.page.waitForTimeout(500); assert.equal(await broken.page.locator('button:has-text("Continue with")').count(), 0)
+  await done(broken)
+})
+
+test('web: Continue with Google starts a PKCE OAuth redirect back to this site', async () => {
+  const s = await openCloud(); const p = s.page
+  await p.click('button:has-text("Continue with Google")')
+  await p.waitForFunction(() => location.href.includes('/auth/v1/authorize'))
+  const q = s.seen.authorize.at(-1)
+  assert.equal(q.get('provider'), 'google'); assert.equal(q.get('redirect_to'), 'http://localhost:4177')
+  assert.ok(q.get('code_challenge'), 'PKCE challenge present'); assert.equal(q.get('code_challenge_method'), 's256')
+  await done(s)
+})
+
+test('iPhone app: Google uses the system sign-in sheet and finishes with the one-time code', async () => {
+  const s = await openCloud({ native: true, reply: { 'Mindful.webAuth': { url: 'brainpal://auth?code=CODE123' } } }); const p = s.page
+  await p.click('button:has-text("Continue with Google")')
+  await p.waitForSelector('.topbar')   // signed in -> the app shell replaces the login card
+  const web = (await calls(p, 'Mindful', 'webAuth'))[0]
+  assert.equal(web.options.callbackScheme, 'brainpal')
+  const u = new URL(web.options.url)
+  assert.equal(u.searchParams.get('provider'), 'google'); assert.equal(u.searchParams.get('redirect_to'), 'brainpal://auth'); assert.ok(u.searchParams.get('code_challenge'))
+  assert.equal(s.seen.token.length, 1); assert.equal(s.seen.token[0].grant, 'pkce'); assert.equal(s.seen.token[0].body.auth_code, 'CODE123'); assert.ok(s.seen.token[0].body.code_verifier)
+  await done(s)
+})
+
+test('iPhone app: Sign in with Apple exchanges the identity token (with the raw nonce) and stays signed in', async () => {
+  const s = await openCloud({ native: true, reply: { 'Mindful.appleSignIn': { idToken: 'APPLE.ID.TOKEN', nonce: 'RAWNONCE', givenName: 'Ada', familyName: 'Lovelace' } } }); const p = s.page
+  await p.click('button:has-text("Continue with Apple")')
+  await p.waitForSelector('.topbar')
+  assert.equal(s.seen.token.length, 1); assert.equal(s.seen.token[0].grant, 'id_token')
+  assert.deepEqual([s.seen.token[0].body.provider, s.seen.token[0].body.id_token, s.seen.token[0].body.nonce], ['apple', 'APPLE.ID.TOKEN', 'RAWNONCE'])
+  await done(s)
+})
+
+test('iPhone app: cancelling the sign-in sheet is silent; a failed one explains itself', async () => {
+  const c = await openCloud({ native: true, reply: { 'Mindful.webAuth': { __reject: 'CANCELLED' }, 'Mindful.appleSignIn': { __reject: 'X', message: 'The operation couldn’t be completed. (com.apple.AuthenticationServices.AuthorizationError error 1000.)' } } }); const p = c.page
+  await p.click('button:has-text("Continue with Google")')
+  await p.waitForSelector('button:has-text("Continue with Google"):not([disabled])')
+  assert.equal(await p.locator('[role=alert]').count(), 0, 'cancel shows no error')
+  await p.click('button:has-text("Continue with Apple")')
+  await p.waitForSelector('[role=alert]:has-text("isn’t enabled in this build")')
+  assert.equal(c.seen.token.length, 0)
+  await done(c)
+})
+
 const grep = process.argv.find(a => a.startsWith('--grep='))?.slice(7).toLowerCase()
 const selected = grep ? tests.filter(([n]) => n.toLowerCase().includes(grep)) : tests
 let failed = 0
@@ -366,6 +459,6 @@ for (const [name, fn] of selected) {
   }
   opened.length = 0
 }
-await browser.close(); await server.close()
+await browser.close(); await server.close(); await cloudServer.close()
 console.log(failed ? `\n${failed} of ${selected.length} e2e tests FAILED` : `\nAll ${selected.length} e2e tests passed`)
 process.exit(failed ? 1 : 0)

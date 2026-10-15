@@ -12,7 +12,7 @@ npm run dev        # works immediately in local mode (data stays in this browser
 ## Cloud sync (Supabase, free tier)
 
 1. Create a project at supabase.com. The schema lives in `supabase/migrations/` — apply it via the GitHub integration, `supabase db push`, or by pasting the files in order into the SQL editor (tables, row-level security, private `photos` bucket). Full guide: **[docs/SUPABASE.md](docs/SUPABASE.md)**.
-2. Auth → URL config: add your site URL(s) as redirect URLs. Auth → Providers: Email is on by default (password, sign-up, magic link, password reset all work). For *Continue with Google/Apple*, enable the provider in Supabase and set `VITE_OAUTH_PROVIDERS=google,apple`. Without Supabase keys the app runs account-free in local mode.
+2. Auth → URL config: add your site URL(s) as redirect URLs. Auth → Providers: Email is on by default (password, sign-up, magic link, password reset all work). For *Continue with Google / Apple*, just enable the provider in Supabase (setup in `docs/SUPABASE.md`) — the buttons appear automatically, nothing to configure in the app. Without Supabase keys the app runs account-free in local mode.
 3. `cp .env.example .env` and fill `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 4. Verify with `npm run check:supabase`.
 5. `npm run build` and deploy `dist/` to Vercel/Netlify/Cloudflare Pages (HTTPS is required for PWA + push).

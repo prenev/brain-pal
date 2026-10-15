@@ -8,7 +8,7 @@ function nativeStub() {
   }
   const methods = {
     Haptics: ['impact', 'notification', 'vibrate', 'selectionStart', 'selectionChanged', 'selectionEnd'],
-    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake'],
+    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn'],
     LocalNotifications: ['checkPermissions', 'requestPermissions', 'schedule', 'cancel', 'getPending'],
     StatusBar: ['setStyle', 'setBackgroundColor', 'show', 'hide', 'setOverlaysWebView'],
     SplashScreen: ['hide', 'show'],
@@ -17,7 +17,12 @@ function nativeStub() {
   window.Capacitor = {
     PluginHeaders: [...Object.entries(methods).map(([name, ms]) => ({ name, methods: ms.map(n => ({ name: n, rtype: 'promise' })) })),
       { name: 'App', methods: [{ name: 'addListener', rtype: 'callback' }, { name: 'removeListener', rtype: 'promise' }] }],
-    nativePromise: async (plugin, method, options) => { window.__native.push({ plugin, method, options, at: Date.now() }); return reply[`${plugin}.${method}`] ?? {} },
+    nativePromise: async (plugin, method, options) => {
+      window.__native.push({ plugin, method, options, at: Date.now() })
+      const r = (window.__reply ?? {})[`${plugin}.${method}`] ?? reply[`${plugin}.${method}`] ?? {}   // tests may preset window.__reply
+      if (r && r.__reject) { const e = new Error(r.message ?? 'rejected'); e.code = r.__reject; throw e }
+      return r
+    },
     nativeCallback: (plugin, method, options) => { window.__native.push({ plugin, method, options, listener: true }); return 'cb' },
   }
 }

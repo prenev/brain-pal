@@ -43,7 +43,7 @@ Every time you change web code: `npm run ios:sync`, then ▶ Run again.
 The Simulator can test Health permissions and saving, but **not haptics** (use a real phone for those).
 
 ## Accounts inside the app
-Email + password works as-is. For magic-link / password-reset emails to open the app, add `brainpal://auth` under **Supabase ▸ Authentication ▸ URL Configuration ▸ Redirect URLs**. (Google/Apple sign-in buttons need extra native setup and aren't wired for the app yet.)
+Email + password works as-is. For magic-link / password-reset emails to open the app, add `brainpal://auth` under **Supabase ▸ Authentication ▸ URL Configuration ▸ Redirect URLs**. Google and Apple sign-in buttons show automatically once the provider is enabled in Supabase; setup, and why Apple needs a paid developer account, is in `docs/SUPABASE.md`. For Apple run `npm run ios:apple` (adds the capability) instead of plain `ios-patch.py`.
 
 ## How it's put together
 - `capacitor.config.ts` – app id/name, colours. `ios/` – the generated Xcode project (Swift Package Manager, no CocoaPods).
@@ -55,4 +55,5 @@ Email + password works as-is. For magic-link / password-reset emails to open the
 ## Honest status
 - **Verified:** the JavaScript, 8 unit suites, 5 browser tests that simulate the iOS bridge, and a JS↔Swift contract test. On every iOS-related push, the **`iOS build` GitHub Action compiles the whole app (Capacitor + our Swift HealthKit plugin) for the iOS Simulator on a macOS runner — it passes** (unsigned build).
 - **Not yet verified:** running on a physical iPhone — i.e. the HealthKit permission sheet, saving to the Health app, real Taptic feedback and local notifications. Your first ▶ Run is that test. If anything misbehaves, send me what Xcode or the phone shows.
-- Not done: Android, push notifications via APNs (local reminders are used instead), Sign in with Apple / Google inside the app, App Store submission assets (screenshots, privacy policy, health-data disclosures).
+- Not verified on a real device: Google sheet and Sign in with Apple (compile-checked by CI only; Apple needs a paid account).
+- Not done: Android, push notifications via APNs (local reminders are used instead), App Store submission assets (screenshots, privacy policy, health-data disclosures).

@@ -13,7 +13,7 @@ rmSync(out, { recursive: true, force: true }); mkdirSync(out)
 const sh = (cmd, env = {}) => execSync(cmd, { cwd: root, stdio: 'pipe', env: { ...process.env, ...env } })
 
 sh('npx vite build')
-sh('npx vite build --outDir node_modules/.dist-auth', { VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'x', VITE_OAUTH_PROVIDERS: 'google,apple' })
+sh('npx vite build --outDir node_modules/.dist-auth', { VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'x' })
 const local = await preview({ root, preview: { port: 4173, strictPort: true }, build: { outDir: 'dist' } })
 const cloud = await preview({ root, preview: { port: 4174, strictPort: true }, build: { outDir: 'node_modules/.dist-auth' } })
 
@@ -63,6 +63,7 @@ async function mockGemini(ctx) {
 async function session(base, seed, fn, { native = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications', 'microphone'] })
   await mockGemini(ctx)
+  await ctx.route('http://127.0.0.1:9/auth/v1/settings', r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ external: { email: true, google: true, apple: true } }) }))
   if (native) await ctx.addInitScript(nativeStub)
   if (seed) await ctx.addInitScript(([t, s, w]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)) } }, [thoughts, sessions, worries])
   const p = await ctx.newPage()
@@ -137,6 +138,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // iPhone ap
 }, { native: true })
 
 await session('http://localhost:4174', false, async (p, snap) => {
+  await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')
   await p.click('text=Create an account'); await snap('login-signup')
   await p.click('text=Back to sign in'); await p.click('text=Forgot password?'); await snap('login-forgot')
