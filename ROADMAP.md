@@ -14,4 +14,5 @@ Each phase ships as its own commit(s) and is pushed to the branch when done.
 | 4.5 | **Playful redesign**: Duolingo-style dark theme, Fluent emoji for moods/emotions/tags/tabs, daily goals, celebration screen + confetti | ✅ done |
 | 5 | **iPhone app (Capacitor)**: Taptic haptics, Apple Health Mindful Minutes, on-device reminders, keep-awake, icon/splash, brainpal:// auth links, macOS CI build | ✅ done; compiles on macOS CI, awaiting first run on a real iPhone (docs/IOS.md) |
 | 6 | **Voice memos & worry time**: record voice memos, optional Gemini transcript / auto-fill thought record / reframe ideas (opt-in, bring-your-own free key), worry-postponement box, unit + end-to-end tests, CI | ✅ done (cloud + live-Gemini paths untested) |
+| 5.5 | **Cloud connection**: Supabase project `brain-pal` set up (migrations, row-level security, private bucket, delete-account function), DB + contract tests, `check:supabase`, CI Postgres | ✅ done; dashboard auth settings + first real sign-in pending (docs/SUPABASE.md) |
 | 7 | Reports & extras: weekly/monthly reports, goals, theme picker, push-to-talk "quick log" | ⏳ |

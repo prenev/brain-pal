@@ -1,0 +1,39 @@
+# Supabase CLI / GitHub-integration configuration. (Hosted-project Auth settings such as redirect URLs are set in the
+# dashboard — see docs/SUPABASE.md; the [auth] block below applies to local development and preview branches.)
+project_id = "brain-pal"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173", "http://127.0.0.1:5173", "brainpal://auth"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+# Called by the hourly database job (supabase/cron.sql) with an x-cron-secret header, not by a signed-in user.
+[functions.send-reminders]
+verify_jwt = false
+
+# Called from the app with the user's own token.
+[functions.delete-account]
+verify_jwt = true

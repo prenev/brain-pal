@@ -24,7 +24,7 @@ Read `ROADMAP.md` (phases + status), `README.md` (features, limits) and `docs/IO
 | | |
 |---|---|
 | `npm run dev` | local dev server (works with no backend) |
-| `npm test` | unit suites (`scripts/test-*.mjs`, Node strips TS types; library files they import must use **no extensionless relative imports**) |
+| `npm test` | unit suites (also schema contract + check:supabase logic; DB tests run when `TEST_DATABASE_URL` is set) (`scripts/test-*.mjs`, Node strips TS types; library files they import must use **no extensionless relative imports**) |
 | `npm run test:e2e` | ~20 headless-Chromium flows: fake mic, mocked Gemini, simulated iOS bridge (`scripts/native-stub.mjs`) |
 | `npm run screens` | builds + screenshots every screen into `screenshots/` (git-ignored) |
 | `npm run ios:sync` / `ios:open` | build web → `cap sync ios` → re-apply our native patch / open Xcode (Mac only) |
@@ -36,11 +36,21 @@ The sandbox's browser is auto-detected by `scripts/chromium.mjs` (never hardcode
 ## Map
 
 - `src/pages/` screens · `src/components/` UI pieces (`Sos`, `WorryTime`, `VoiceRecorder`, `AiSettings`, `Celebrate`, …) · `src/lib/` logic.
-- **Data:** `lib/repo.ts` (one `Repo` interface; `localRepo` = localStorage + IndexedDB blobs via `blobstore.ts`, `cloudRepo` = Supabase), `lib/store.tsx` (React context). Schema: `supabase/schema.sql` (+ commented upgrade `alter table` lines at the bottom — **keep them updated** when adding columns).
+- **Data:** `lib/repo.ts` (one `Repo` interface; `localRepo` = localStorage + IndexedDB blobs via `blobstore.ts`, `cloudRepo` = Supabase), `lib/store.tsx` (React context). Schema: `supabase/migrations/` — every table/column change is a **new** migration file (see *Supabase* below); update `lib/repo.ts` and the app↔schema contract test together with it.
 - **Pure, unit-tested logic** (no DOM imports on purpose): `aiCore.ts` (Gemini client), `audio.ts`, `insights.ts`, `worries.ts`, `dates.ts`, `nativeCore.ts`, `supabase/functions/_shared/reminder.ts`.
 - **iPhone:** `native.ts` (Capacitor facade + our `Mindful` plugin interface), `health.ts`, `nativeReminders.ts`, `nativeInit.ts`, `haptics.ts`. Swift lives in `ios-native/` (source of truth) and is copied into `ios/` by `ios-patch.py`.
-- Supabase edge functions: `supabase/functions/send-reminders`, `delete-account` (untested against a live project).
+- **Supabase:** schema = `supabase/migrations/*.sql` (mirrors the live project's history exactly), config = `supabase/config.toml`, functions in `supabase/functions/`, DB tests in `supabase/tests/` (+ `scripts/test-db.mjs`), live check = `npm run check:supabase`. Details: `docs/SUPABASE.md`.
 - Design: `src/styles.css` — chunky Duolingo-style dark theme (3D buttons, thick-bordered cards, Nunito, Fluent emoji). Reuse the existing classes (`.card`, `.btn`, `.chip`, `.ig`, `.bar`, `.sheet`, `.overlay`) rather than inventing new styling.
+
+## Supabase (project `brain-pal`, ref `dncodogkvsjzvptquqnn`)
+
+If the Supabase MCP tools are available, they act on the **user's real project** — be careful:
+- Work **only** on `brain-pal` (`dncodogkvsjzvptquqnn`). The account has other projects (e.g. `KGMOA-Connect-main`, `manova-bible`): never touch them.
+- Schema changes: write a new file in `supabase/migrations/`, test it (`npm run test:db`), then apply it with `apply_migration`. The tool records its **own** version number, so afterwards call `list_migrations` and **name the repo file with that exact version + name** (the GitHub integration breaks if history and files disagree). Re-verify the live schema matches (compare `information_schema` / `pg_policies` with a local run) and run `get_advisors` (security) — it must stay clean.
+- `apply_migration` **times out on `DO $$ … $$` blocks** — use plain SQL statements.
+- Never print, store or commit the secret/`service_role` key. The publishable key is public but still lives in `.env` (git-ignored), not in the repo.
+- Auth settings (redirect URLs, email confirmation, SMTP, providers) and Edge-Function secret values can't be set by you — tell the user the exact dashboard steps (`docs/SUPABASE.md`).
+- The sandbox's network blocks `*.supabase.co`: you can't call the live API (so `check:supabase` can't run here). For DB tests start a throwaway Postgres: `useradd -m pgtest; su pgtest -c "/usr/lib/postgresql/16/bin/initdb -D /tmp/pgdata -A trust && /usr/lib/postgresql/16/bin/pg_ctl -D /tmp/pgdata -o '-p 54329 -k /tmp/pgsock -c listen_addresses=127.0.0.1' -l /tmp/pg.log start"` then `TEST_DATABASE_URL=postgres://pgtest@127.0.0.1:54329/postgres npm run test:db`.
 
 ## Rules that matter
 
