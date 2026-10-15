@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, Bell, LifeBuoy, ChevronRight, Download, HeartPulse, Image, LogOut, Cloud, UserRound } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import Support from '../components/Support'
 import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sendTest } from '../lib/push'
@@ -116,22 +117,22 @@ export default function More({ initial = null }: { initial?: 'support' | null })
   return (
     <>
       <div className="topbar">
-        <span className="glass round green"><HeartPulse /></span>
+        <span className="glass round"><Emoji name="gear" size={28} /></span>
         <span className="title">More</span>
         <span className="glass pill-btn">{name ? `Hi, ${name}` : 'Hi there'}</span>
       </div>
 
       <div className="list">
-        {mode === 'cloud' && <Row icon={<UserRound size={24} />} color="#3b82f6" label="Account" value={name} onClick={() => setView('account')} />}
-        <Row icon={<Image size={24} />} color="#e8873a" label="Photo Gallery" onClick={() => setView('gallery')} />
-        <Row icon={<Bell size={24} />} color="#3fa869" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
-        <Row icon={<LifeBuoy size={24} />} color="#5e6ad2" label="Get support" onClick={() => setView('support')} />
-        <Row icon={<HeartPulse size={24} />} color="#e0364a" label="Apple Health" value="Soon" onClick={() => setView('health')} />
+        {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
+        <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />
+        <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
+        <Row icon={<Emoji name="blueheart" size={30} />} color="var(--card2)" label="Get support" onClick={() => setView('support')} />
+        <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Apple Health" value="Soon" onClick={() => setView('health')} />
       </div>
       <div className="list">
-        <Row icon={<Cloud size={24} />} color="#5e6ad2" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
-        <Row icon={<Download size={24} />} color="#8e6bd8" label="Export data" onClick={exportJson} />
-        {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="#636366" label="Sign out" onClick={signOut} />}
+        <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
+        <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
+        {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={signOut} />}
       </div>
       <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal 0.1 · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>

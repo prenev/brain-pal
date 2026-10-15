@@ -14,7 +14,7 @@ const fmtWhen = (d: Date) => {
   return `${day}, ${d.getDate()} ${d.toLocaleDateString(undefined, { month: 'short' })} at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
 }
 
-export default function NewEntry({ date, onClose, initialMood = null }: { date: Date; onClose: () => void; initialMood?: number | null }) {
+export default function NewEntry({ date, onClose, onSaved, initialMood = null }: { date: Date; onClose: () => void; onSaved: () => void; initialMood?: number | null }) {
   const { addThought, allTags } = useStore()
   const [when, setWhen] = useState(date)
   const [pickDate, setPickDate] = useState(false)
@@ -56,7 +56,7 @@ export default function NewEntry({ date, onClose, initialMood = null }: { date: 
         internalBehaviour: internal.trim(), externalBehaviour: external.trim(), alternateThought: alt.trim(),
         outcomeIntensity: outcome, tags, distortions: traps, photoFiles: files,
       })
-      onClose()
+      onSaved()
     } catch (e: any) { setError(e?.message ?? 'Could not save'); setSaving(false) }
   }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import Face from './Face'
+import { Emoji } from '../lib/emoji'
 import { NameIcon } from '../lib/icons'
 import { moodOf } from '../lib/mood'
 import { fmtTime } from '../lib/dates'
@@ -24,14 +25,14 @@ export default function EntryCard({ t, onDelete }: { t: Thought; onDelete?: (id:
         </div>
         {(t.emotions.length > 0 || t.tags.length > 0) && (
           <div className="etags">
-            {t.emotions.map(e => <span key={e.name} className="etag" style={{ color: m.color }}><NameIcon name={e.name} size={20} /><span style={{ color: '#fff' }}>{e.name}</span></span>)}
-            {t.tags.map(g => <span key={g} className="etag muted"><NameIcon name={g} size={18} />#{g}</span>)}
+            {t.emotions.map(e => <span key={e.name} className="etag"><NameIcon name={e.name} size={22} /><span style={{ color: m.color }}>{e.name}</span></span>)}
+            {t.tags.map(g => <span key={g} className="etag"><NameIcon name={g} size={20} />{g}</span>)}
           </div>
         )}
         {t.thought && <p className="etext">{t.thought}</p>}
         {t.alternateThought && (
-          <div className="alt">💡 {t.alternateThought}
-            {t.outcomeIntensity !== null && peak > 0 && <div className="small muted">Feeling {peak}% → {t.outcomeIntensity}%</div>}
+          <div className="alt"><Emoji name="bulb" size={26} /><div>{t.alternateThought}
+            {t.outcomeIntensity !== null && peak > 0 && <div className="small muted">Feeling {peak}% → {t.outcomeIntensity}%</div>}</div>
           </div>
         )}
         {open && <>

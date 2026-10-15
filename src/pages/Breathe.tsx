@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useStore } from '../lib/store'
 import BreathRunner, { type BreathResult } from '../components/BreathRunner'
 import { Toggle } from '../components/ui'
+import { Emoji } from '../lib/emoji'
+import { burst } from '../lib/confetti'
 import type { BreathPattern } from '../lib/types'
 
 const PRESETS: Record<string, BreathPattern> = {
@@ -33,6 +35,7 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
     if (r.elapsedSec >= 10) {
       addSession({ pattern, cycles: r.cyclesDone, durationSec: r.elapsedSec, completed: r.completed }).catch(console.error)
       setDone({ cycles: r.cyclesDone, sec: r.elapsedSec })
+      if (r.completed) burst()
     }
   }
 
@@ -41,14 +44,14 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
       <div className="topbar"><span className="title">Breathe</span></div>
 
       {!running && <button className="sos-card" onClick={onSos}>
-        <span style={{ fontSize: 26 }}>🆘</span>
+        <Emoji name="sos" size={36} />
         <span style={{ flex: 1 }}><b>Anxious right now?</b><span className="sub">Guided help in under 3 minutes</span></span>
       </button>}
 
       {running
         ? <div className="card"><BreathRunner pattern={pattern} cycles={cycles} vibrate={vibrate} sound={sound} onFinish={finish} /></div>
         : <>
-          {done && <div className="card" style={{ textAlign: 'center' }}>Nice work — {done.cycles} rounds, {Math.floor(done.sec / 60)}m {done.sec % 60}s logged. 🌿</div>}
+          {done && <div className="card" style={{ textAlign: 'center' }}><Emoji name="lotus" size={64} /><div style={{ fontWeight: 900, fontSize: 20, marginTop: 6 }}>Nice work!</div><div className="muted">{done.cycles} rounds · {Math.floor(done.sec / 60)}m {done.sec % 60}s logged</div></div>}
           <div className="card">
             <div className="seg" role="tablist" aria-label="Pattern">
               {Object.keys(PRESETS).map(p => <button key={p} className={p === preset ? 'on' : ''} onClick={() => setPreset(p)}>{p}</button>)}

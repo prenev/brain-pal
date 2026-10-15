@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
-import { Wind, Hand, Square, X, TrendingDown } from 'lucide-react'
+import { X } from 'lucide-react'
+import { Emoji } from '../lib/emoji'
+import { burst } from '../lib/confetti'
 import BreathRunner, { type BreathResult } from './BreathRunner'
 import Grounding from './Grounding'
 import { Toggle } from './ui'
@@ -12,9 +14,9 @@ type Step = 'rate' | 'choose' | 'breath' | 'ground' | 'after'
 type Tool = { id: 'calm' | 'ground' | 'box'; title: string; sub: string; icon: React.ReactNode }
 
 const TOOLS: Tool[] = [
-  { id: 'calm', title: 'Slow breathing', sub: '2 minutes · in 4, out 6', icon: <Wind /> },
-  { id: 'ground', title: 'Ground yourself', sub: '5-4-3-2-1 senses · about 3 minutes', icon: <Hand /> },
-  { id: 'box', title: 'Box breathing', sub: '2 minutes · 4-4-4-4', icon: <Square /> },
+  { id: 'calm', title: 'Slow breathing', sub: '2 minutes · in 4, out 6', icon: <Emoji name="wind" size={34} /> },
+  { id: 'ground', title: 'Ground yourself', sub: '5-4-3-2-1 senses · about 3 minutes', icon: <Emoji name="lotus" size={34} /> },
+  { id: 'box', title: 'Box breathing', sub: '2 minutes · 4-4-4-4', icon: <Emoji name="target" size={34} /> },
 ]
 const WORDS = ['calm', 'a little uneasy', 'uneasy', 'tense', 'anxious', 'very anxious', 'panicking']
 const word = (n: number) => WORDS[Math.min(6, Math.floor((n / 10) * 6.99))]
@@ -41,6 +43,7 @@ export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: ()
     const r = result.current
     if (r) await addSession({ kind: r.kind, pattern: r.pattern, cycles: r.cycles, durationSec: r.sec, completed: r.completed, anxietyBefore: before, anxietyAfter: after }).catch(console.error)
     setSaved(true)
+    if (before - after > 0) burst()
   }
   const drop = before - after
 
@@ -68,7 +71,7 @@ export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: ()
           const rec = (before >= 7 && t.id === 'ground') || (before < 7 && t.id === 'calm')
           return (
             <button key={t.id} className="card tool" onClick={() => { setTool(t.id); setStep(t.id === 'ground' ? 'ground' : 'breath') }}>
-              <span className="sq tool-ic">{t.icon}</span>
+              <span className="tool-ic">{t.icon}</span>
               <span style={{ flex: 1, textAlign: 'left' }}><b style={{ fontSize: 19 }}>{t.title}</b>{rec && <span className="chip on" style={{ marginLeft: 8 }}>try first</span>}
                 <div className="muted small">{t.sub}</div></span>
             </button>
@@ -91,7 +94,7 @@ export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: ()
 
       {step === 'after' && saved && <>
         <div className="card" style={{ textAlign: 'center', padding: 26 }}>
-          <TrendingDown size={40} color={drop > 0 ? 'var(--accent)' : 'var(--muted)'} />
+          <Emoji name={drop > 0 ? 'party' : drop === 0 ? 'hug' : 'blueheart'} size={90} />
           <h1 style={{ fontSize: 28, margin: '10px 0 6px' }}>{drop > 0 ? `Down ${drop} point${drop === 1 ? '' : 's'}` : drop === 0 ? 'Holding steady' : 'Still a tough one'}</h1>
           <p className="muted" style={{ margin: 0 }}>
             {drop > 0 ? `From ${before} to ${after}. You did that — and you can do it again.`

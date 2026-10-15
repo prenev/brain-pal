@@ -5,6 +5,7 @@ import { dayKey, lastNDays } from '../lib/dates'
 import { MOODS } from '../lib/mood'
 import { reliefStats, timeOfDay, trapStats, triggerStats } from '../lib/insights'
 import { NameIcon } from '../lib/icons'
+import { Emoji } from '../lib/emoji'
 import Face from '../components/Face'
 import { monthLabel } from '../components/ui'
 
@@ -72,12 +73,12 @@ export default function Stats() {
   const todMax = Math.max(1, ...tod.map(x => x.count))
 
   const badges = [
-    { em: '🔥', label: '3-day streak', ok: streak.longest >= 3 },
-    { em: '🌟', label: '7-day streak', ok: streak.longest >= 7 },
-    { em: '🏆', label: '30-day streak', ok: streak.longest >= 30 },
-    { em: '📝', label: '10 entries', ok: thoughts.length >= 10 },
-    { em: '💡', label: '5 reframes', ok: thoughts.filter(t => t.alternateThought).length >= 5 },
-    { em: '🫧', label: '30 min breathing', ok: sessions.reduce((a, s) => a + s.durationSec, 0) >= 1800 },
+    { em: 'fire', label: '3-day streak', ok: streak.longest >= 3 },
+    { em: 'star', label: '7-day streak', ok: streak.longest >= 7 },
+    { em: 'trophy', label: '30-day streak', ok: streak.longest >= 30 },
+    { em: 'memo', label: '10 entries', ok: thoughts.length >= 10 },
+    { em: 'bulb', label: '5 reframes', ok: thoughts.filter(t => t.alternateThought).length >= 5 },
+    { em: 'bubbles', label: '30 min breathing', ok: sessions.reduce((a, s) => a + s.durationSec, 0) >= 1800 },
   ]
 
   return (
@@ -102,7 +103,7 @@ export default function Stats() {
           <div className="d"><div className="total">{streak.current}</div></div>
         </div>
         <div className="hr" />
-        <div>🏆 &nbsp;Longest chain: {streak.longest}</div>
+        <div className="row"><Emoji name="trophy" size={26} />Longest chain: {streak.longest}</div>
       </div>
 
       <div className="card">
@@ -115,7 +116,7 @@ export default function Stats() {
         {emoCounts.length === 0 && <p className="muted">Tag emotions on your entries to see them here.</p>}
         {emoCounts.map(([n, c]) => (
           <div key={n} className="row" style={{ marginBottom: 12 }}>
-            <span style={{ color: 'var(--accent)' }}><NameIcon name={n} size={24} /></span>
+            <NameIcon name={n} size={28} />
             <span style={{ width: 96 }}>{n}</span>
             <div className="bar" style={{ flex: 1 }}><i style={{ width: `${(c / emoCounts[0][1]) * 100}%` }} /></div>
             <b>{c}</b>
@@ -156,7 +157,7 @@ export default function Stats() {
 
       <div className="card">
         <div className="card-head"><h3>Achievements</h3></div>
-        <div className="badges">{badges.map(b => <div key={b.label} className={`badge ${b.ok ? '' : 'locked'}`}><div className="em">{b.em}</div>{b.label}</div>)}</div>
+        <div className="badges">{badges.map(b => <div key={b.label} className={`badge ${b.ok ? '' : 'locked'}`}><div className="em"><Emoji name={b.em} size={40} /></div>{b.label}</div>)}</div>
       </div>
     </>
   )

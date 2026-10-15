@@ -83,6 +83,8 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.faces button >> nth=3'); await p.click('.ig >> text=anxious'); await p.click('.ig >> text=stressed'); await snap('editor-emotions')
   await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await p.locator('text=Thinking traps').scrollIntoViewIfNeeded(); await p.click('.chip >> text=catastrophizing'); await p.click('.chip >> text=mind reading'); await snap('editor-thinking-traps')
   await p.locator('text=Questions that help').scrollIntoViewIfNeeded(); await p.click('.qbtn >> nth=1'); await p.evaluate(() => document.querySelector('.overlay').scrollBy(0, 200)); await snap('editor-reframe-questions')
+  await p.click('text=Save'); await p.waitForSelector('.celebrate'); await p.waitForTimeout(900); await snap('celebrate')
+  await p.click('.celebrate .btn'); await snap('entries-after-save')
 })
 
 await session('http://localhost:4174', false, async (p, snap) => {

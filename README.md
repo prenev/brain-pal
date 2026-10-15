@@ -31,6 +31,10 @@ supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=ma
 ```
 Then fill the two placeholders in `supabase/cron.sql` and run it in the SQL editor (hourly job). Users pick their hour in More → Reminders; they're only nudged if they haven't checked in that day.
 
+## Look & feel
+
+Playful dark theme following Duolingo-style UI principles: chunky 3D buttons that press down, thick-bordered cards, rounded bold type (Nunito, bundled offline), bright colour on deep navy, visible progress (daily goals), and a celebration screen with confetti after you save an entry. Emoji are Microsoft's **Fluent Emoji** (MIT licence) — the ~70 we use are extracted into `src/lib/emojiData.ts` by `scripts/extract-emoji.mjs` so the app stays offline-capable. To use another emoji, add its name to that script and re-run it.
+
 ## Anxiety toolkit
 
 - **SOS ("Anxious right now?")** — on the Entries tab, Breathe tab and the + menu. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
