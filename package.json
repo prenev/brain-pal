@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "icons": "node scripts/make-icons.mjs",
+    "screens": "node scripts/screens.mjs",
     "test": "node --experimental-strip-types scripts/test-reminder.mjs"
   },
   "dependencies": {

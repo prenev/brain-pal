@@ -103,6 +103,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
 .ig span { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid #3a3a3c; color: var(--accent); background: #232325; transition: all .2s; }
 .ig.on span { background: var(--accent); color: #04130a; border-color: var(--accent); transform: scale(1.06); }
 .ig.on { color: #fff; font-weight: 600; }
+.ig .lbl { font-style: normal; font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Editor overlay */
 .overlay { position: fixed; inset: 0; z-index: 60; background: #000; overflow-y: auto; animation: rise .3s cubic-bezier(.2,.9,.3,1); }

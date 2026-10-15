@@ -1,5 +1,7 @@
 # Brain Pal roadmap
 
+Run `npm run screens` to regenerate screenshots of every screen into `screenshots/` (git-ignored).
+
 Each phase ships as its own commit(s) and is pushed to the branch when done.
 
 | # | Phase | Status |
