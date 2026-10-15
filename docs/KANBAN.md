@@ -34,4 +34,5 @@ Legend: 馃П build 路 馃И tests 路 馃梽 data/migration 路 馃摫 iOS/native 路 馃
 - P7 Daily Anchors + P7b Today card / one-tap mood / short lists (29 e2e)
 - P5.5: Supabase project, migrations mirrored, RLS tests, `check:supabase`, delete-account function
 - P5.6: PKCE + Google/Apple sign-in, redirect troubleshooting docs
+- UI: liquid-glass floating tab bar, line icons + Fluent nib for Entries (fixes invisible unselected More icon); e2e/screens build key-free so a local `.env` can't break them
 - Planning: roadmap, idea backlog, this board, TODO.md, GitHub issues, competitor analysis + gap matrix (docs/COMPETITORS.md)

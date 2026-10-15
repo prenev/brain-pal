@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, ArrowLeft, Pencil } from 'lucide-react'
+import { Plus, ArrowLeft, Pencil, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
@@ -15,14 +15,15 @@ import Sos from './components/Sos'
 import WorryTime from './components/WorryTime'
 import ParkWorry from './components/ParkWorry'
 
-const TABS = [
-  { id: 'entries', label: 'Entries', icon: 'notebook' },
-  { id: 'stats', label: 'Stats', icon: 'chart' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
-  { id: 'breathe', label: 'Breathe', icon: 'wind' },
-  { id: 'more', label: 'More', icon: 'gear' },
-] as const
-type Tab = (typeof TABS)[number]['id']
+type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
+// Line icons for the tab bar; Entries keeps the Fluent nib as the app's signature.
+const TABS: { id: Tab; label: string; icon: LucideIcon | 'nib' }[] = [
+  { id: 'entries', label: 'Entries', icon: 'nib' },
+  { id: 'stats', label: 'Stats', icon: ChartColumn },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+  { id: 'breathe', label: 'Breathe', icon: Wind },
+  { id: 'more', label: 'More', icon: CircleEllipsis },
+]
 
 function Shell() {
   const { ready, needsLogin, recovery } = useStore()
@@ -54,10 +55,10 @@ function Shell() {
       </div>
 
       <div className="dock">
-        <nav className="tabbar glass" aria-label="Main">
-          {TABS.map(({ id, label, icon }) => (
+        <nav className="tabbar" aria-label="Main">
+          {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => { setMoreView(null); setTab(id) }}>
-              <Emoji name={icon} size={28} />{label}
+              {Icon === 'nib' ? <Emoji name="nib" size={26} style={{ filter: 'drop-shadow(0 0 1.5px rgba(255,255,255,.55))' }} /> : <Icon size={24} strokeWidth={2.2} />}{label}
             </button>
           ))}
         </nav>

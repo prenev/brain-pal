@@ -12,7 +12,7 @@ const out = join(root, 'screenshots')
 rmSync(out, { recursive: true, force: true }); mkdirSync(out)
 const sh = (cmd, env = {}) => execSync(cmd, { cwd: root, stdio: 'pipe', env: { ...process.env, ...env } })
 
-sh('npx vite build')
+sh('npx vite build', { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' })   // local mode, whatever .env says
 sh('npx vite build --outDir node_modules/.dist-auth', { VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'x' })
 const local = await preview({ root, preview: { port: 4173, strictPort: true }, build: { outDir: 'dist' } })
 const cloud = await preview({ root, preview: { port: 4174, strictPort: true }, build: { outDir: 'node_modules/.dist-auth' } })

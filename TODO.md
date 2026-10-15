@@ -7,6 +7,7 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] **Confirm your account:** request a new confirmation/magic-link email after fixing the URL (or ask the agent to confirm it in the DB, or turn "Confirm email" off temporarily).
 - [ ] **Google provider:** Google Cloud → OAuth client type **Web application**, redirect `https://dncodogkvsjzvptquqnn.supabase.co/auth/v1/callback`; paste ID + secret into Supabase → Providers → Google.
 - [ ] **Apple provider:** Supabase → Providers → Apple → Client ID `com.brainpal.app`; App ID has *Sign in with Apple* enabled; Xcode: paid Team + capability (`npm run ios:apple` after every `ios:sync`).
+- [ ] **Signed-in round trip:** make a throwaway account, then `CHECK_EMAIL=… CHECK_PASSWORD=… npm run check:supabase` — proves signed-in users can save data/photos (not yet verified; if it says *permission denied for table*, tables need `grant select, insert, update, delete … to authenticated`).
 - [ ] **Run on your iPhone** and tell the agent what Apple/Google sign-in did (errors verbatim).
 
 ## Soon
