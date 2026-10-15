@@ -134,7 +134,8 @@ await session('http://localhost:4173', true, async (p, snap) => {   // AI helper
 await session('http://localhost:4173', true, async (p, snap) => {   // iPhone app (native bridge simulated)
   await p.click('.tab >> text=More'); await p.click('.li >> text=Apple Health'); await snap('iphone-apple-health')
   await p.click('[role=switch]'); await p.waitForSelector('text=Connected.'); await p.click('text=Save past sessions'); await p.waitForTimeout(300); await snap('iphone-apple-health-connected')
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Reminders'); await p.click('[role=switch]'); await p.waitForSelector('text=Reminder set for'); await snap('iphone-reminders')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Reminders'); await snap('iphone-rituals')
+  await p.click('[role=switch][aria-label="Morning breathe"]'); await p.click('[role=switch][aria-label="Evening breathe"]'); await p.waitForSelector('input[aria-label="Evening breathe time"]'); await snap('iphone-rituals-on')
 }, { native: true })
 
 await session('http://localhost:4173', true, async (p, snap) => {   // daily anchors

@@ -6,7 +6,6 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## 🔜 Backlog (ordered — see ROADMAP "Order of work")
 - **P7b** 🧱 First-run (3 skippable screens), reduced-motion, tap-target audit (rest of 7b)
-- **P9** 🧱🧪 Rituals: pure `rituals.ts`, list UI (07:00 / 21:30 breathe…), deep-link actions, migration of old reminder
 - **P10** 🧱📱 Sleep: pure `sleep.ts` + Swift readSleep + card/page + manual log + sleep↔mood insight + honest privacy docs
 - **P11** 🧱🧪 Coins: pure `rewards.ts`, wallet, shop, rest day, treat jar
 - **P12** 🗄 Migrations + cloudRepo + importLocal for all new data (+RLS tests, advisors)
@@ -14,11 +13,11 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - **chore** 🐞 Code-split bundle · neutral demo seed text · Siri/widgets (Mac)
 
 ## ⏭ Next up
-- **P9** 🧱🧪 Rituals & reminders: pure `rituals.ts` first (07:00 / 21:30 breathe, deep links)
+- **P10** 🧱📱 Sleep: pure `sleep.ts` first (Watch data via Apple Health)
 - **P7b** First-run screens + reduced-motion
 
 ## 🔨 In progress
-- **P14** 📄 verify (full e2e + screens), commit, push — focus flow done, e2e mutation-checked
+- **P9** 📄 verify (full e2e + screens), commit, push — rituals wired, 4 native e2e
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -27,6 +26,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## ✅ Done
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time
+- P9 Rituals (07:00/21:30 breathe, check-in, anchors nudge; tap-to-open; skip-when-done) — native-stub e2e; real-device delivery pending
 - P14 One small step (worry plan → calm start → focus timer, fake-clock e2e, pause/stop neutral)
 - P8 Journal (editor, autosaved drafts, list/search/tags/edit/delete, crisis support) — 3 e2e, mutation-checked
 - P15 Summary view + P16 Progress (skills, proof, milestones, level-ups) — pure logic mutation-checked, 4 new e2e

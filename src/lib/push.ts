@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { isNative } from './native'
-import { cancelNativeReminders, requestNotificationPermission, scheduleNativeReminders, sendNativeTest } from './nativeReminders'
+import { sendNativeTest } from './nativeReminders'
 
 const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 const K = 'bp.reminder'
@@ -41,13 +41,6 @@ export type EnableResult = 'ok' | 'denied' | 'unconfigured' | 'unsupported'
 
 /** Subscribe this device and store the chosen hour. Also used to change the hour of an existing subscription. */
 export async function enablePush(hour: number): Promise<EnableResult> {
-  if (isNative()) {
-    // iPhone app: reminders are scheduled on-device (no server, VAPID or Supabase needed)
-    if (!(await requestNotificationPermission())) return 'denied'
-    save({ enabled: true, hour })
-    await scheduleNativeReminders(hour, { skipToday: false, streak: 0 })
-    return 'ok'
-  }
   if (!pushSupported()) return 'unsupported'
   const perm = await Notification.requestPermission()
   if (perm !== 'granted') return 'denied'
@@ -70,7 +63,6 @@ export async function enablePush(hour: number): Promise<EnableResult> {
 export async function disablePush(): Promise<void> {
   const cur = getReminder()
   save({ enabled: false, hour: cur.hour })
-  if (isNative()) { await cancelNativeReminders(); return }
   if (!pushSupported()) return
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()

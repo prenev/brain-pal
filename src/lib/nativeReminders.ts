@@ -1,5 +1,6 @@
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { planReminderDates, reminderText, REMINDER_BASE_ID, REMINDER_DAYS } from './nativeCore'
+import { allRitualIds, type Planned } from './rituals.ts'
 
 const ids = () => Array.from({ length: REMINDER_DAYS + 1 }, (_, i) => ({ id: REMINDER_BASE_ID + i }))
 
@@ -27,4 +28,13 @@ export async function scheduleNativeReminders(hour: number, opts: { skipToday: b
 
 export async function sendNativeTest() {
   await LocalNotifications.schedule({ notifications: [{ id: REMINDER_BASE_ID + 99, title: 'Brain Pal', body: 'Reminders are working. 🌱', schedule: { at: new Date(Date.now() + 2000) } }] })
+}
+
+/** Replace everything we had scheduled (old single reminder + rituals) with this plan. Each notification carries a `route` so a tap opens the right tool. */
+export async function scheduleNativeRituals(plan: Planned[]) {
+  await LocalNotifications.cancel({ notifications: [...ids(), ...allRitualIds().map(id => ({ id }))] })
+  if (!plan.length) return
+  await LocalNotifications.schedule({
+    notifications: plan.map(p => ({ id: p.id, title: p.title, body: p.body, schedule: { at: p.at, allowWhileIdle: true }, extra: { route: p.route } })),
+  })
 }

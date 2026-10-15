@@ -1,6 +1,7 @@
 import type { Anchor } from './anchors.ts'
 import type { JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
+import { migrateOldReminder, normalizeRituals, type Ritual } from './rituals.ts'
 
 /**
  * Device-local storage for the wellbeing extras (anchors now; journal, sleep and coins later).
@@ -55,3 +56,11 @@ export const loadFocus = (): FocusSession[] => {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 export const saveFocus = (f: FocusSession[]) => write(K_FOCUS, f)
+
+const K_RITUALS = 'bp.rituals'
+/** Rituals, or — for people who already had the single daily reminder — that reminder carried over as the "Daily check-in". */
+export const loadRituals = (): Ritual[] => {
+  const raw = read<unknown>(K_RITUALS, null)
+  return raw === null ? migrateOldReminder(read<{ enabled?: boolean; hour?: number } | null>('bp.reminder', null)) : normalizeRituals(raw)
+}
+export const saveRituals = (r: Ritual[]) => write(K_RITUALS, r)

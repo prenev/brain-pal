@@ -44,6 +44,17 @@ function Shell() {
   const [focusOpen, setFocusOpen] = useState(false)
   const [journalOpen, setJournalOpen] = useState<{ entry?: JournalEntry } | null>(null)
 
+  // A tapped reminder (iPhone app) opens the matching tool.
+  useEffect(() => {
+    const go = (e: Event) => {
+      const route = (e as CustomEvent<string>).detail
+      if (route === 'breathe') setTab('breathe')
+      else if (route === 'journal') setJournalOpen({})
+      else if (route === 'checkin' || route === 'anchors') setTab('entries')
+    }
+    window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
+  }, [])
+
   // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
   useEffect(() => {
     if (!ready || needsLogin || recovery || cel) return

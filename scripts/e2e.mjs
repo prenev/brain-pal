@@ -579,28 +579,81 @@ test('iPhone app mode: Apple Health saves mindful minutes (only when connected, 
   await done(s)
 })
 
-test('iPhone app mode: reminders are scheduled on-device and skip today once you have checked in', async () => {
+const scheduled = p => p.evaluate(() => {
+  const last = window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'schedule').at(-1)
+  return last ? last.options.notifications.map(n => ({ id: n.id, h: new Date(n.schedule.at).getHours(), m: new Date(n.schedule.at).getMinutes(), dow: new Date(n.schedule.at).getDay(), route: n.extra && n.extra.route, title: n.title, day: new Date(n.schedule.at).toDateString() })) : null
+})
+// notifications still to come from one daily ritual at h:m, from the browser's own clock
+const remainingToday = (p, h, m) => p.evaluate(([h, m]) => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() < h * 60 + m ? 1 : 0 }, [h, m])
+
+test('iPhone app: rituals — breathe at 07:00 and at night are scheduled on-device, adjustable, and quiet once done', async () => {
   const s = await open(null, { native: true }); const p = s.page
-  const lateHour = new Date().getHours() < 22 ? 23 : null   // only meaningful if today's reminder time hasn't passed yet
-  await tab(p, 'More'); await p.click('.li >> text=Reminders')
-  if (lateHour) await p.selectOption('select', String(lateHour))
-  await p.click('[role=switch]'); await p.waitForSelector('text=Reminder set for')
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Reminders") >> text=Off'); await p.click('.li >> text=Reminders')
+  for (const l of ['Morning breathe', 'Evening breathe', 'Daily check-in', 'Anchors nudge']) await p.waitForSelector(`[role=switch][aria-label="${l}"]`)
+  assert.equal(await p.locator('input[type=time]').count(), 0, 'times only show for rituals you turn on')
+
+  await p.click('[role=switch][aria-label="Morning breathe"]')
   assert.equal((await calls(p, 'LocalNotifications', 'requestPermissions')).length, 1)
-  const batch = async () => (await calls(p, 'LocalNotifications', 'schedule')).at(-1).options.notifications
   await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule'))
-  const before = await batch()
-  assert.ok(before.length >= 13 && before.length <= 14); assert.deepEqual(before.map(n => n.id), before.map((_, i) => 7000 + i))
-  assert.equal(before[0].title, 'How are you feeling?')
-  if (lateHour) {
-    assert.equal(before.length, 14, 'today is included before checking in')
-    await p.click('[aria-label=Back]'); await tab(p, 'Entries'); await newEntry(p, { mood: 3 }); await save(p)
-    await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 2)
-    const after = await batch()
-    assert.equal(after.length, 13, 'today dropped after checking in'); assert.match(after[0].title, /streak/i)
-  }
-  await tab(p, 'More'); await p.click('.li >> text=Reminders'); await p.click('[role=switch]')
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'cancel'))
-  await reload(p); await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Reminders")').innerText(), /Off/)
+  const todayMorning = await remainingToday(p, 7, 0)
+  let batch = await scheduled(p)
+  assert.equal(batch.length, 13 + todayMorning); assert.ok(batch.every(n => n.h === 7 && n.m === 0 && n.route === 'breathe' && n.title === 'A slow minute'))
+  assert.ok(batch.every(n => n.id >= 8000 && n.id < 8020), 'morning ritual ids live in their own block'); assert.equal(new Set(batch.map(n => n.id)).size, batch.length)
+
+  await p.click('[role=switch][aria-label="Evening breathe"]'); await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 2)
+  const todayEvening = await remainingToday(p, 21, 30)
+  batch = await scheduled(p)
+  assert.equal(batch.length, 13 + todayMorning + 13 + todayEvening); assert.ok(batch.some(n => n.h === 21 && n.m === 30))
+  assert.deepEqual(batch.map(n => n.id).filter(id => id >= 8020 && id < 8040).length, 13 + todayEvening)
+
+  await p.fill('input[aria-label="Morning breathe time"]', '07:45'); await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 3)
+  batch = await scheduled(p); assert.ok(batch.filter(n => n.id < 8020).every(n => n.h === 7 && n.m === 45)); assert.ok(batch.filter(n => n.id >= 8020).every(n => n.h === 21 && n.m === 30), 'other rituals are untouched')
+  await p.click('[role=group][aria-label="Morning breathe days"] >> [aria-label=Saturday]'); await p.click('[role=group][aria-label="Morning breathe days"] >> [aria-label=Sunday]')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 5)
+  batch = await scheduled(p); assert.ok(batch.filter(n => n.id < 8020).every(n => ![0, 6].includes(n.dow)), 'weekdays only now')
+  // can't switch every day off
+  for (const d of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) await p.click(`[role=group][aria-label="Morning breathe days"] >> [aria-label=${d}]`)
+  assert.equal(await p.locator('[role=group][aria-label="Morning breathe days"] [aria-pressed=true]').count(), 1, 'at least one day stays on')
+
+  await reload(p); await tab(p, 'More'); await p.waitForSelector('.li:has-text("Reminders") >> text=2 on')      // persisted
+  await p.click('.li >> text=Reminders'); assert.equal(await p.inputValue('input[aria-label="Morning breathe time"]'), '07:45')
+  await p.click('[role=switch][aria-label="Morning breathe"]'); await p.click('[role=switch][aria-label="Evening breathe"]')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'cancel').length >= 3)
+  await done(s)
+})
+
+test('iPhone app: a ritual is skipped for today once you have done it (check-in, evening breathe) — but not the others', async () => {
+  const afternoon = new Date(); afternoon.setHours(14, 0, 0, 0)                       // an afternoon session today -> the evening ritual is redundant, the morning one is not
+  const every = [0, 1, 2, 3, 4, 5, 6]
+  const s = await open({ 'bp.thoughts': [rec('t', 0)], 'bp.sessions': [{ ...calm('s', 0, 6, 3), createdAt: afternoon.toISOString() }],
+    'bp.rituals': [{ id: 'anchors', hour: 23, minute: 56, days: every, enabled: true }, { id: 'evening-breathe', hour: 23, minute: 58, days: every, enabled: true }, { id: 'checkin', hour: 23, minute: 59, days: every, enabled: true }] }, { native: true }); const p = s.page
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule'))
+  const batch = await scheduled(p), slot = i => batch.filter(n => n.id >= 8000 + i * 20 && n.id < 8020 + i * 20)
+  // slots follow the default order: morning 0, evening 1, check-in 2, anchors 3
+  assert.equal(slot(3).length, 14, 'anchors nudge: the anchors aren’t all done, so tonight’s still stands')
+  assert.equal(slot(1).length, 13, 'evening breathe: you already breathed this afternoon, today is skipped'); assert.equal(slot(2).length, 13, 'check-in: you already checked in, today is skipped')
+  assert.notEqual(slot(1)[0].day, slot(3)[0].day, 'the skipped ritual starts tomorrow')
+  await done(s)
+})
+
+test('iPhone app: tapping a reminder opens the matching tool; unknown targets are ignored', async () => {
+  const s = await open(null, { native: true }); const p = s.page
+  const fire = route => p.evaluate(r => window.__fire('LocalNotifications', 'localNotificationActionPerformed', { notification: { extra: { route: r } } }), route)
+  await fire('breathe'); await p.waitForSelector('.tab[aria-current=true]:has-text("Breathe")')
+  await fire('checkin'); await p.waitForSelector('.tab[aria-current=true]:has-text("Entries")')
+  await fire('journal'); await p.waitForSelector('[aria-label="Journal entry"]'); await p.click('[aria-label=Back]')
+  await fire('https://evil.example'); await fire('<script>'); await p.waitForTimeout(300)
+  assert.equal(await p.locator('[aria-label="Journal entry"]').count(), 0); assert.equal(await p.locator('.tab[aria-current=true]:has-text("Entries")').count(), 1, 'unknown routes do nothing')
+  await done(s)
+})
+
+test('iPhone app: an existing daily reminder carries over as the check-in ritual', async () => {
+  const s = await open({ 'bp.reminder': { enabled: true, hour: 9 } }, { native: true }); const p = s.page
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Reminders") >> text=1 on'); await p.click('.li >> text=Reminders')
+  assert.equal(await p.getAttribute('[role=switch][aria-label="Daily check-in"]', 'aria-checked'), 'true'); assert.equal(await p.inputValue('input[aria-label="Daily check-in time"]'), '09:00')
+  assert.equal(await p.getAttribute('[role=switch][aria-label="Morning breathe"]', 'aria-checked'), 'false')
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule')); const batch = await scheduled(p)
+  assert.ok(batch.every(n => n.h === 9 && n.route === 'checkin'))
   await done(s)
 })
 

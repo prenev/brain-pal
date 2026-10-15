@@ -13,6 +13,7 @@ import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sen
 import { Toggle } from '../components/ui'
 import { AnchorsManager } from '../components/Anchors'
 import { JournalList } from '../components/Journal'
+import Rituals from '../components/Rituals'
 import type { JournalEntry } from '../lib/journal.ts'
 import { activeAnchors } from '../lib/anchors.ts'
 
@@ -26,7 +27,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 }
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
-  const { mode, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal } = useStore()
+  const { mode, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals } = useStore()
   const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
@@ -89,7 +90,8 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
-      {view === 'reminders' && <div className="card">
+      {view === 'reminders' && isNative() && <Rituals />}
+      {view === 'reminders' && !isNative() && <div className="card">
         <Toggle label="Daily reminder" hint="Only nudges you if you haven't checked in yet today." on={rem.enabled} onChange={on => applyReminder(on, rem.hour)} />
         <label className="field" style={{ marginTop: 12 }}><span>Remind me at</span>
           <select className="input" value={rem.hour} onChange={e => { const h = +e.target.value; setRem({ ...rem, hour: h }); if (rem.enabled) applyReminder(true, h) }}>
@@ -157,7 +159,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="worry" size={30} />} color="var(--card2)" label="Worry time" value={worryStats(worries).open ? `${worryStats(worries).open} parked` : ''} onClick={onWorry} />
         <Row icon={<Emoji name="robot" size={30} />} color="var(--card2)" label="AI helper" value={aiEnabled() ? 'On' : 'Off'} onClick={() => setView('ai')} />
         <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />
-        <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
+        <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Reminders" value={isNative() ? (rituals.some(r => r.enabled) ? `${rituals.filter(r => r.enabled).length} on` : 'Off') : rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
         <Row icon={<Emoji name="blueheart" size={30} />} color="var(--card2)" label="Get support" onClick={() => setView('support')} />
         <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Apple Health" value={isNative() ? (healthEnabled() ? 'On' : 'Off') : 'iPhone app'} onClick={() => setView('health')} />
       </div>

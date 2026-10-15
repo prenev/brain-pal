@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { cloudRepo, localRepo, type Repo } from './repo'
 import { supabase } from './supabase'
@@ -6,13 +6,13 @@ import { computeStreak, dayKey, type Streak } from './dates'
 import { DEFAULT_TAGS } from './constants'
 import { syncSession } from './health'
 import { isNative } from './native'
-import { getReminder } from './push'
-import { scheduleNativeReminders } from './nativeReminders'
+import { scheduleNativeRituals } from './nativeReminders'
+import { planRituals, type Ritual } from './rituals.ts'
 import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadFocus, loadJournal, saveAnchors, saveChecks, saveFocus, saveJournal } from './extras'
+import { loadAnchors, loadChecks, loadFocus, loadJournal, loadRituals, saveAnchors, saveChecks, saveFocus, saveJournal, saveRituals } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
@@ -37,6 +37,8 @@ interface Ctx {
   addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
+  rituals: Ritual[]
+  setRituals(next: Ritual[]): void
   focusSessions: FocusSession[]
   addFocus(d: Omit<FocusSession, 'id' | 'createdAt'>): FocusSession
   journal: JournalEntry[]
@@ -71,6 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [checks, setChecks] = useState<Set<string>>(loadChecks)
   const [journal, setJournal] = useState<JournalEntry[]>(loadJournal)
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>(loadFocus)
+  const [rituals, setRitualsState] = useState<Ritual[]>(loadRituals)
   const updateJournalList = (next: JournalEntry[]) => { const sorted = [...next].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); setJournal(sorted); saveJournal(sorted) }
   const [today, setToday] = useState(() => dayKey(new Date()))
   useEffect(() => { // roll "today" over at midnight, and when the app comes back to the foreground
@@ -113,15 +116,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const levels = useMemo(() => skillLevels({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
   const updateAnchors = (next: Anchor[]) => { setAnchors(next); saveAnchors(next) }
 
-  // iPhone app: keep on-device reminders in step with your activity (drops today's nudge once you've checked in).
-  const activity = useRef({ activeToday: false, current: 0 })
-  activity.current = { activeToday: streak.activeToday, current: streak.current }
+  // iPhone app: keep on-device rituals in step with what you've already done today (a ritual is dropped for today once it's redundant).
+  const doneKey = useMemo(() => {
+    const hr = (iso: string) => new Date(iso).getHours()
+    const todaySessions = sessions.filter(s => dayKey(s.createdAt) === today)
+    return JSON.stringify({
+      checkin: act.checkin.has(today), journaled: act.journal.has(today), anchorsComplete: anchorsToday.complete,
+      breathedAm: todaySessions.some(s => hr(s.createdAt) < 12), breathedPm: todaySessions.some(s => hr(s.createdAt) >= 12),
+    })
+  }, [sessions, act, anchorsToday.complete, today])
   useEffect(() => {
     if (!loaded || !isNative()) return
-    const run = () => { const r = getReminder(); if (r.enabled) scheduleNativeReminders(r.hour, { skipToday: activity.current.activeToday, streak: activity.current.current }).catch(e => console.warn('reminder schedule failed', e)) }
-    run(); window.addEventListener('bp:reminder', run)
-    return () => window.removeEventListener('bp:reminder', run)
-  }, [loaded, streak.activeToday, streak.current])
+    scheduleNativeRituals(planRituals(new Date(), rituals, JSON.parse(doneKey))).catch(e => console.warn('ritual schedule failed', e))
+  }, [loaded, rituals, doneKey])
 
   useEffect(() => {
     const on = () => setRecovery(true)
@@ -161,6 +168,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
+    rituals,
+    setRituals(next) { setRitualsState(next); saveRituals(next) },
     focusSessions,
     addFocus(d) {
       const f: FocusSession = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...d, step: d.step.trim().slice(0, 140) }

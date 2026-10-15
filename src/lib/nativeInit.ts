@@ -1,6 +1,11 @@
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { completeAuthLink } from './authLink'
+import type { Route } from './rituals.ts'
+
+export const ROUTES: Route[] = ['breathe', 'checkin', 'journal', 'anchors']
+export const routeEvent = 'bp:route'
 
 /** One-time setup inside the iPhone app. Every step is best-effort: a missing plugin must never stop the app booting. */
 export async function initNative() {
@@ -12,4 +17,11 @@ export async function initNative() {
       if (problem) console.warn('auth link failed:', problem)
     })
   } catch { /* App plugin unavailable */ }
+  try {
+    // tapping a reminder opens the matching tool (the route comes from our own scheduled notification, but is still allow-listed)
+    await LocalNotifications.addListener('localNotificationActionPerformed', ev => {
+      const route = (ev.notification?.extra as { route?: string } | undefined)?.route
+      if (route && (ROUTES as string[]).includes(route)) window.dispatchEvent(new CustomEvent(routeEvent, { detail: route }))
+    })
+  } catch { /* notifications plugin unavailable */ }
 }
