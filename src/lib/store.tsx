@@ -11,6 +11,9 @@ interface Ctx {
   mode: Repo['mode']
   needsLogin: boolean
   session: Session | null
+  recovery: boolean
+  clearRecovery(): void
+  importLocal(): Promise<number>
   thoughts: Thought[]
   sessions: BreathSession[]
   streak: Streak
@@ -30,11 +33,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [thoughts, setThoughts] = useState<Thought[]>([])
   const [sessions, setSessions] = useState<BreathSession[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [recovery, setRecovery] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
     supabase.auth.getSession().then(({ data }) => { setAuthSession(data.session); setAuthChecked(true) })
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setAuthSession(s))
+    const { data } = supabase.auth.onAuthStateChange((e, s) => { setAuthSession(s); if (e === 'PASSWORD_RECOVERY') setRecovery(true) })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -65,7 +69,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: Ctx = {
     ready: authChecked && (needsLogin || loaded),
-    mode: repo.mode, needsLogin, session: authSession, thoughts, sessions, streak, allTags,
+    mode: repo.mode, needsLogin, session: authSession, recovery, clearRecovery: () => setRecovery(false),
+    async importLocal() {
+      const lt = await localRepo.listThoughts(), ls = await localRepo.listSessions()
+      for (const t of [...lt].reverse()) {
+        const photoFiles = await Promise.all(t.photos.map(async (p, i) => new File([await (await fetch(p)).blob()], `p${i}.jpg`, { type: 'image/jpeg' })))
+        await cloudRepo.addThought({ ...t, photoFiles })
+      }
+      for (const x of [...ls].reverse()) await cloudRepo.addSession(x)
+      localStorage.removeItem('bp.thoughts'); localStorage.removeItem('bp.sessions')
+      await refresh()
+      return lt.length + ls.length
+    }, thoughts, sessions, streak, allTags,
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]) },

@@ -12,11 +12,15 @@ npm run dev        # works immediately in local mode (data stays in this browser
 ## Cloud sync (Supabase, free tier)
 
 1. Create a project at supabase.com and run `supabase/schema.sql` in the SQL editor (tables, RLS, private `photos` bucket).
-2. Auth → URL config: add your site URL(s) as redirect URLs. Login is by magic link.
+2. Auth → URL config: add your site URL(s) as redirect URLs. Auth → Providers: Email is on by default (password, sign-up, magic link, password reset all work). For *Continue with Google/Apple*, enable the provider in Supabase and set `VITE_OAUTH_PROVIDERS=google,apple`. Without Supabase keys the app runs account-free in local mode.
 3. `cp .env.example .env` and fill `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 4. `npm run build` and deploy `dist/` to Vercel/Netlify/Cloudflare Pages (HTTPS is required for PWA + push).
 
 Why Supabase over Neon: auth, photo storage and row-level security come with the Postgres in one free project; Neon is Postgres only.
+
+Anyone who used local mode first can sign in and tap **More → Account → Import into my account** to move their entries to the cloud.
+
+See `ROADMAP.md` for the phases.
 
 ## What works / what doesn't
 

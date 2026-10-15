@@ -20,14 +20,14 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 
 function Shell() {
-  const { ready, needsLogin } = useStore()
+  const { ready, needsLogin, recovery } = useStore()
   const [tab, setTab] = useState<Tab>('entries')
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
-  if (needsLogin) return <Login />
+  if (needsLogin || recovery) return <Login />
 
   const start = (d: Date) => { setMenu(false); setOtherDay(false); setComposeAt(d) }
   const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d }

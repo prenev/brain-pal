@@ -9,7 +9,7 @@ export interface Repo {
   addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   listSessions(): Promise<BreathSession[]>
-  addSession(s: Omit<BreathSession, 'id' | 'createdAt'>): Promise<BreathSession>
+  addSession(s: Omit<BreathSession, 'id' | 'createdAt'> & { createdAt?: string }): Promise<BreathSession>
 }
 
 const uid = () => crypto.randomUUID()
@@ -91,7 +91,7 @@ export const cloudRepo: Repo = {
   },
   async addSession(s) {
     const { data, error } = await sb().from('breath_sessions')
-      .insert({ pattern: s.pattern, cycles: s.cycles, duration_sec: s.durationSec, completed: s.completed }).select().single()
+      .insert({ ...(s.createdAt && { created_at: s.createdAt }), pattern: s.pattern, cycles: s.cycles, duration_sec: s.durationSec, completed: s.completed }).select().single()
     if (error) throw error
     return { id: data.id, createdAt: data.created_at, pattern: data.pattern, cycles: data.cycles, durationSec: data.duration_sec, completed: data.completed }
   },
