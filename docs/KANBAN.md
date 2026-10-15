@@ -42,4 +42,5 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time
 - P5.5: Supabase project, migrations mirrored, RLS tests, `check:supabase`, delete-account function
 - P5.6: PKCE + Google/Apple sign-in, redirect troubleshooting docs
+- UI: liquid-glass floating tab bar, line icons + Fluent nib for Entries (fixes invisible unselected More icon); e2e/screens build key-free so a local `.env` can't break them
 - Planning: roadmap for phases 7–13 + idea backlog, this board, TODO.md, GitHub issues
