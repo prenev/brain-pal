@@ -1,8 +1,16 @@
 import { useState } from 'react'
-import { ArrowLeft, Bell, ChevronRight, Download, HeartPulse, Image, LogOut, Cloud, UserRound } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
-import { enablePush, isStandalone } from '../lib/push'
+import Support from '../components/Support'
+import AiSettings from '../components/AiSettings'
+import { aiEnabled } from '../lib/gemini'
+import { isNative } from '../lib/native'
+import { connectHealth, disconnectHealth, healthEnabled, syncAll } from '../lib/health'
+import { worryStats } from '../lib/worries'
+import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sendTest } from '../lib/push'
+import { Toggle } from '../components/ui'
 
 function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; color: string; label: string; value?: string; onClick?: () => void }) {
   return (
@@ -13,10 +21,12 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
   )
 }
 
-export default function More() {
-  const { mode, session, signOut, thoughts, sessions, importLocal } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account'>(null)
-  const [hour, setHour] = useState(20)
+export default function More({ initial = null, onWorry }: { initial?: 'support' | null; onWorry: () => void }) {
+  const { mode, session, signOut, thoughts, sessions, worries, importLocal } = useStore()
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai'>(initial)
+  const [rem, setRem] = useState(getReminder)
+  const [health, setHealth] = useState(healthEnabled)
+  const [healthMsg, setHealthMsg] = useState('')
   const [msg, setMsg] = useState('')
   const photos = thoughts.flatMap(t => t.photos)
   const meta = session?.user.user_metadata?.name as string | undefined
@@ -39,23 +49,31 @@ export default function More() {
     try { setAcctMsg(`Imported ${await importLocal()} items from this device.`) } catch (e: any) { setAcctMsg(e.message) }
   }
 
-  async function remind() {
+  const STATUS: Record<string, string> = {
+    denied: 'Notifications are blocked. Turn them on for this site in your browser or iOS settings.',
+    unconfigured: 'Permission granted, but server push needs Supabase + a VAPID key (see README). Test notifications still work.',
+  }
+  async function applyReminder(enabled: boolean, hour: number) {
+    setMsg('')
     try {
+      if (!enabled) { await disablePush(); setRem({ enabled: false, hour }); return }
       const r = await enablePush(hour)
-      setMsg({
-        ok: `Reminders on — daily at ${hour}:00.`,
-        denied: 'Notifications are blocked. Enable them in your browser or iOS settings.',
-        unconfigured: 'Permission granted, but push needs Supabase + a VAPID key (see README).',
-        unsupported: /iPhone|iPad/.test(navigator.userAgent) && !isStandalone()
-          ? 'On iPhone: tap Share → Add to Home Screen, then open Brain Pal from there.'
-          : 'This browser does not support push notifications.',
-      }[r])
+      setRem(getReminder())
+      setMsg(r === 'ok' ? `Reminder set for ${fmtHour(hour)}.` : r === 'unsupported'
+        ? (isIOS() && !isStandalone() ? 'On iPhone: tap Share → Add to Home Screen, then open Brain Pal from there.' : 'This browser does not support notifications.')
+        : STATUS[r])
     } catch (e: any) { setMsg(e.message) }
+  }
+  async function deleteAccount() {
+    if (!confirm('Permanently delete your account and ALL entries and photos? This cannot be undone.')) return
+    const { error } = await supabase!.functions.invoke('delete-account')
+    if (error) { setAcctMsg(`Could not delete: ${error.message}`); return }
+    localStorage.removeItem('bp.reminder'); await signOut()
   }
 
   function exportJson() {
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ thoughts, sessions }, null, 2)], { type: 'application/json' }))
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ thoughts: thoughts.map(({ photos: _p, audio, ...t }) => ({ ...t, audio: audio && { durationSec: audio.durationSec, transcript: audio.transcript } })), sessions, worries }, null, 2)], { type: 'application/json' }))
     a.download = 'brain-pal-export.json'; a.click()
   }
 
@@ -63,16 +81,22 @@ export default function More() {
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
       {view === 'reminders' && <div className="card">
-        <p className="muted" style={{ marginTop: 0 }}>A daily nudge to check in.</p>
-        <div className="row"><input className="input" type="number" min={0} max={23} value={hour} onChange={e => setHour(+e.target.value)} style={{ width: 90 }} aria-label="Hour (0-23)" />
-          <span className="muted">:00</span><button className="btn primary" onClick={remind}>Enable</button></div>
-        {msg && <p className="small">{msg}</p>}
+        <Toggle label="Daily reminder" hint="Only nudges you if you haven't checked in yet today." on={rem.enabled} onChange={on => applyReminder(on, rem.hour)} />
+        <label className="field" style={{ marginTop: 12 }}><span>Remind me at</span>
+          <select className="input" value={rem.hour} onChange={e => { const h = +e.target.value; setRem({ ...rem, hour: h }); if (rem.enabled) applyReminder(true, h) }}>
+            {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{fmtHour(h)}</option>)}
+          </select></label>
+        <p className="muted small">If your streak is at risk you'll get a streak-saver message instead of the usual one.</p>
+        <button className="btn" onClick={async () => setMsg((await sendTest()) ? 'Test sent.' : 'Enable the reminder first so notifications are allowed.')}>Send test notification</button>
+        {msg && <p className="small" role="status">{msg}</p>}
       </div>}
+      {view === 'support' && <Support />}
+      {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
         <div className="card">
           <p className="muted small" style={{ marginTop: 0 }}>Signed in as {session?.user.email}</p>
@@ -89,32 +113,50 @@ export default function More() {
         </div>}
         {acctMsg && <p className="small" role="status" style={{ textAlign: 'center' }}>{acctMsg}</p>}
         <button className="btn danger block" onClick={signOut}>Sign out</button>
+        <button className="btn block" style={{ marginTop: 10, color: 'var(--danger)', background: 'none' }} onClick={deleteAccount}>Delete account…</button>
       </>}
-      {view === 'health' && <div className="card">
-        <p style={{ marginTop: 0 }}>Apple Health sync isn’t available in the web app.</p>
-        <p className="muted">Browsers can’t access HealthKit — only native apps can. The plan is to wrap this same app with Capacitor so every breathing session is saved as Mindful Minutes. Nothing is synced yet.</p>
-      </div>}
+      {view === 'health' && (isNative() ? <div className="card">
+        <p style={{ marginTop: 0 }}>Save your breathing and grounding sessions to Apple Health as <b>Mindful Minutes</b>.</p>
+        <p className="muted small">Brain Pal only <i>writes</i> sessions — it never reads your health data.</p>
+        <Toggle label="Save sessions to Apple Health" on={health} onChange={async on => {
+          setHealthMsg('')
+          if (!on) { disconnectHealth(); setHealth(false); return }
+          try {
+            const r = await connectHealth()
+            setHealth(r === 'ok')
+            setHealthMsg(r === 'ok' ? 'Connected. New sessions will appear in Health → Mindfulness.' : r === 'denied' ? 'Permission was declined. You can allow it in Settings → Health → Data Access → Brain Pal.' : 'Apple Health isn’t available on this device.')
+          } catch (e: any) { setHealthMsg(e?.message ?? 'Could not connect.') }
+        }} />
+        {health && <button className="btn" style={{ marginTop: 10 }} onClick={async () => { const n = await syncAll(sessions); setHealthMsg(n ? `Saved ${n} past session${n === 1 ? '' : 's'} to Apple Health.` : 'Everything is already saved.') }}>Save past sessions</button>}
+        {healthMsg && <p className="small" role="status">{healthMsg}</p>}
+      </div> : <div className="card">
+        <p style={{ marginTop: 0 }}>Apple Health sync is part of the <b>iPhone app</b>.</p>
+        <p className="muted">Browsers can’t access HealthKit — only native apps can. Build the iPhone app from this project (see <code>docs/IOS.md</code>) and every breathing session is saved as Mindful Minutes.</p>
+      </div>)}
     </>
   )
 
   return (
     <>
       <div className="topbar">
-        <span className="glass round green"><HeartPulse /></span>
+        <span className="glass round"><Emoji name="gear" size={28} /></span>
         <span className="title">More</span>
         <span className="glass pill-btn">{name ? `Hi, ${name}` : 'Hi there'}</span>
       </div>
 
       <div className="list">
-        {mode === 'cloud' && <Row icon={<UserRound size={24} />} color="#3b82f6" label="Account" value={name} onClick={() => setView('account')} />}
-        <Row icon={<Image size={24} />} color="#e8873a" label="Photo Gallery" onClick={() => setView('gallery')} />
-        <Row icon={<Bell size={24} />} color="#3fa869" label="Reminders" value="8:00 pm" onClick={() => setView('reminders')} />
-        <Row icon={<HeartPulse size={24} />} color="#e0364a" label="Apple Health" value="Soon" onClick={() => setView('health')} />
+        {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
+        <Row icon={<Emoji name="worry" size={30} />} color="var(--card2)" label="Worry time" value={worryStats(worries).open ? `${worryStats(worries).open} parked` : ''} onClick={onWorry} />
+        <Row icon={<Emoji name="robot" size={30} />} color="var(--card2)" label="AI helper" value={aiEnabled() ? 'On' : 'Off'} onClick={() => setView('ai')} />
+        <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />
+        <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
+        <Row icon={<Emoji name="blueheart" size={30} />} color="var(--card2)" label="Get support" onClick={() => setView('support')} />
+        <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Apple Health" value={isNative() ? (healthEnabled() ? 'On' : 'Off') : 'iPhone app'} onClick={() => setView('health')} />
       </div>
       <div className="list">
-        <Row icon={<Cloud size={24} />} color="#5e6ad2" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
-        <Row icon={<Download size={24} />} color="#8e6bd8" label="Export data" onClick={exportJson} />
-        {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="#636366" label="Sign out" onClick={signOut} />}
+        <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
+        <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
+        {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={signOut} />}
       </div>
       <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal 0.1 · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>

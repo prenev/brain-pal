@@ -8,7 +8,7 @@ export function IconGrid({ options, value, onChange }: { options: string[]; valu
     <div className="icon-grid">
       {options.map(o => (
         <button type="button" key={o} className={`ig ${value.includes(o) ? 'on' : ''}`} aria-pressed={value.includes(o)} onClick={() => toggle(o)}>
-          <span><NameIcon name={o} /></span>{o}
+          <span><NameIcon name={o} /></span><em className="lbl">{o}</em>
         </button>
       ))}
     </div>

@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { BarChart3, CalendarDays, Ellipsis, NotebookText, Plus, Wind, ArrowLeft, Pencil, Calendar, History } from 'lucide-react'
+import { Plus, ArrowLeft, Pencil } from 'lucide-react'
+import { Emoji } from './lib/emoji'
+import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
 import { StoreProvider, useStore } from './lib/store'
 import Entries from './pages/Entries'
@@ -9,13 +11,16 @@ import Breathe from './pages/Breathe'
 import More from './pages/More'
 import Login from './pages/Login'
 import NewEntry from './pages/NewEntry'
+import Sos from './components/Sos'
+import WorryTime from './components/WorryTime'
+import ParkWorry from './components/ParkWorry'
 
 const TABS = [
-  { id: 'entries', label: 'Entries', icon: NotebookText },
-  { id: 'stats', label: 'Stats', icon: BarChart3 },
-  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { id: 'breathe', label: 'Breathe', icon: Wind },
-  { id: 'more', label: 'More', icon: Ellipsis },
+  { id: 'entries', label: 'Entries', icon: 'notebook' },
+  { id: 'stats', label: 'Stats', icon: 'chart' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { id: 'breathe', label: 'Breathe', icon: 'wind' },
+  { id: 'more', label: 'More', icon: 'gear' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -25,6 +30,12 @@ function Shell() {
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
+  const [sos, setSos] = useState(false)
+  const [worryTime, setWorryTime] = useState(false)
+  const [park, setPark] = useState(false)
+  const [moreView, setMoreView] = useState<'support' | null>(null)
+  const [composeMood, setComposeMood] = useState<number | null>(null)
+  const [cel, setCel] = useState<Celebration | null>(null)
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
   if (needsLogin || recovery) return <Login />
@@ -35,22 +46,22 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries />}
+        {tab === 'entries' && <Entries onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
-        {tab === 'breathe' && <Breathe />}
-        {tab === 'more' && <More />}
+        {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
+        {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} onWorry={() => setWorryTime(true)} />}
       </div>
 
       <div className="dock">
         <nav className="tabbar glass" aria-label="Main">
-          {TABS.map(({ id, label, icon: I }) => (
-            <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => setTab(id)}>
-              <I size={24} />{label}
+          {TABS.map(({ id, label, icon }) => (
+            <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => { setMoreView(null); setTab(id) }}>
+              <Emoji name={icon} size={28} />{label}
             </button>
           ))}
         </nav>
-        <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={2.4} /></button>
+        <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={3} /></button>
       </div>
 
       {menu && (
@@ -63,15 +74,21 @@ function Shell() {
               start(new Date(y, m - 1, d, n.getHours(), n.getMinutes()))
             }} />
           </> : <>
-            <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Wind /></span>Start breathing</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Emoji name="wind" size={30} /></span>Start breathing</button>
             <div className="sheet-label">Create Entry</div>
-            <button className="sheet-item" onClick={() => setOtherDay(true)}><span className="ic"><Calendar /></span>Other day</button>
-            <button className="sheet-item" onClick={() => start(yesterday())}><span className="ic"><History /></span>Yesterday</button>
+            <button className="sheet-item" onClick={() => setOtherDay(true)}><span className="ic"><Emoji name="calendar" size={30} /></span>Other day</button>
+            <button className="sheet-item" onClick={() => start(yesterday())}><span className="ic"><Emoji name="past" size={30} /></span>Yesterday</button>
             <button className="btn primary" onClick={() => start(new Date())}><Pencil size={20} style={{ display: 'inline', verticalAlign: -3 }} /> Today</button>
           </>}
         </Sheet>
       )}
-      {composeAt && <NewEntry date={composeAt} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {sos && <Sos onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
+      {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
+      {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
+      {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
   )
 }

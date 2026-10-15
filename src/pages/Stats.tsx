@@ -3,7 +3,10 @@ import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { dayKey, lastNDays } from '../lib/dates'
 import { MOODS } from '../lib/mood'
+import { worryStats } from '../lib/worries'
+import { reliefStats, timeOfDay, trapStats, triggerStats } from '../lib/insights'
 import { NameIcon } from '../lib/icons'
+import { Emoji } from '../lib/emoji'
 import Face from '../components/Face'
 import { monthLabel } from '../components/ui'
 
@@ -38,7 +41,7 @@ function MoodChart({ points, days }: { points: Map<number, number>; days: number
 }
 
 export default function Stats() {
-  const { thoughts, sessions, streak } = useStore()
+  const { thoughts, sessions, worries, streak } = useStore()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const isNow = dayKey(month).slice(0, 7) === dayKey(new Date()).slice(0, 7)
   const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
@@ -64,14 +67,20 @@ export default function Stats() {
     ? Math.round(reframed.reduce((a, t) => a + (Math.max(...t.emotions.map(e => e.intensity)) - t.outcomeIntensity!), 0) / reframed.length) : null
   const breathMin = Math.round(ms.reduce((a, s) => a + s.durationSec, 0) / 60)
   const week = lastNDays(5)
+  const relief = reliefStats(sessions)
+  const ws = worryStats(worries)
+  const triggers = triggerStats(thoughts)
+  const traps = trapStats(thoughts)
+  const tod = timeOfDay(thoughts)
+  const todMax = Math.max(1, ...tod.map(x => x.count))
 
   const badges = [
-    { em: '🔥', label: '3-day streak', ok: streak.longest >= 3 },
-    { em: '🌟', label: '7-day streak', ok: streak.longest >= 7 },
-    { em: '🏆', label: '30-day streak', ok: streak.longest >= 30 },
-    { em: '📝', label: '10 entries', ok: thoughts.length >= 10 },
-    { em: '💡', label: '5 reframes', ok: thoughts.filter(t => t.alternateThought).length >= 5 },
-    { em: '🫧', label: '30 min breathing', ok: sessions.reduce((a, s) => a + s.durationSec, 0) >= 1800 },
+    { em: 'fire', label: '3-day streak', ok: streak.longest >= 3 },
+    { em: 'star', label: '7-day streak', ok: streak.longest >= 7 },
+    { em: 'trophy', label: '30-day streak', ok: streak.longest >= 30 },
+    { em: 'memo', label: '10 entries', ok: thoughts.length >= 10 },
+    { em: 'bulb', label: '5 reframes', ok: thoughts.filter(t => t.alternateThought).length >= 5 },
+    { em: 'bubbles', label: '30 min breathing', ok: sessions.reduce((a, s) => a + s.durationSec, 0) >= 1800 },
   ]
 
   return (
@@ -96,7 +105,7 @@ export default function Stats() {
           <div className="d"><div className="total">{streak.current}</div></div>
         </div>
         <div className="hr" />
-        <div>🏆 &nbsp;Longest chain: {streak.longest}</div>
+        <div className="row"><Emoji name="trophy" size={26} />Longest chain: {streak.longest}</div>
       </div>
 
       <div className="card">
@@ -109,13 +118,39 @@ export default function Stats() {
         {emoCounts.length === 0 && <p className="muted">Tag emotions on your entries to see them here.</p>}
         {emoCounts.map(([n, c]) => (
           <div key={n} className="row" style={{ marginBottom: 12 }}>
-            <span style={{ color: 'var(--accent)' }}><NameIcon name={n} size={24} /></span>
+            <NameIcon name={n} size={28} />
             <span style={{ width: 96 }}>{n}</span>
             <div className="bar" style={{ flex: 1 }}><i style={{ width: `${(c / emoCounts[0][1]) * 100}%` }} /></div>
             <b>{c}</b>
           </div>
         ))}
       </div>
+
+      <div className="card">
+        <div className="card-head"><h3>Anxiety Insights</h3></div>
+        <div className="muted small" style={{ marginBottom: 6 }}>What helps</div>
+        {relief
+          ? <p style={{ margin: '0 0 14px' }}><b style={{ color: 'var(--accent)', fontSize: 28 }}>−{relief.avgDrop}</b> points on average (0–10) after calming exercises — helped {relief.helped} of {relief.n} times.</p>
+          : <p className="muted" style={{ margin: '0 0 14px' }}>Use “Anxious right now?” and rate before/after to see which tools work for you.</p>}
+        <div className="muted small" style={{ marginBottom: 6 }}>Likely triggers</div>
+        {triggers.length ? triggers.map(t => <div key={t.tag} className="row spread" style={{ marginBottom: 6 }}><span>#{t.tag}</span><span className="muted">avg {t.avg}% · {t.n} entries</span></div>)
+          : <p className="muted" style={{ margin: '0 0 14px' }}>Tag anxious entries (work, sleep, social…) — patterns appear after a few.</p>}
+        <div className="muted small" style={{ margin: '14px 0 6px' }}>Your common thinking traps</div>
+        {traps.length ? <div className="chips">{traps.map(([n, c]) => <span key={n} className="chip">{n} · {c}</span>)}</div>
+          : <p className="muted" style={{ margin: 0 }}>Spot traps in the thought record to see which ones you fall into most.</p>}
+        <div className="muted small" style={{ margin: '14px 0 6px' }}>When anxiety shows up</div>
+        {tod.map(x => <div key={x.label} className="row" style={{ marginBottom: 6 }}><span style={{ width: 84 }}>{x.label}</span><div className="bar" style={{ flex: 1 }}><i style={{ width: `${(x.count / todMax) * 100}%` }} /></div><b style={{ width: 20, textAlign: 'right' }}>{x.count}</b></div>)}
+      </div>
+
+      {worries.length > 0 && <div className="card">
+        <div className="card-head"><h3>Worry Box</h3><Emoji name="worry" size={30} /></div>
+        <div className="row spread">
+          <div><div style={{ fontSize: 34, fontWeight: 900 }}>{ws.open}</div><div className="muted">parked</div></div>
+          <div><div style={{ fontSize: 34, fontWeight: 900, color: 'var(--accent)' }}>{ws.letGo}</div><div className="muted">let go</div></div>
+          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 34, fontWeight: 900, color: 'var(--blue)' }}>{ws.actionable}</div><div className="muted">with a plan</div></div>
+        </div>
+        {ws.letGoPct !== null && ws.reviewed >= 3 && <p className="muted" style={{ margin: '12px 0 0' }}>{ws.letGoPct}% of reviewed worries were out of your control.</p>}
+      </div>}
 
       <div className="card">
         <div className="card-head"><h3>Reframe Effect</h3></div>
@@ -134,7 +169,7 @@ export default function Stats() {
 
       <div className="card">
         <div className="card-head"><h3>Achievements</h3></div>
-        <div className="badges">{badges.map(b => <div key={b.label} className={`badge ${b.ok ? '' : 'locked'}`}><div className="em">{b.em}</div>{b.label}</div>)}</div>
+        <div className="badges">{badges.map(b => <div key={b.label} className={`badge ${b.ok ? '' : 'locked'}`}><div className="em"><Emoji name={b.em} size={40} /></div>{b.label}</div>)}</div>
       </div>
     </>
   )

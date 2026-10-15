@@ -4,3 +4,5 @@ dist
 .env.local
 *.local
 dev-dist
+screenshots/*.png
+test-results

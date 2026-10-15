@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../lib/store'
 import Face from '../components/Face'
+import { isNative } from '../lib/native'
+
+const redirect = () => (isNative() ? 'brainpal://auth' : location.origin)
 
 type Mode = 'signin' | 'signup' | 'link' | 'forgot' | 'recovery'
 const OAUTH = ((import.meta.env.VITE_OAUTH_PROVIDERS as string | undefined) ?? '').split(',').map(s => s.trim()).filter(Boolean) as ('google' | 'apple')[]
@@ -25,14 +28,14 @@ export default function Login() {
       let error: { message: string } | null = null
       if (mode === 'signin') ({ error } = await auth.signInWithPassword({ email, password }))
       else if (mode === 'signup') {
-        const r = await auth.signUp({ email, password, options: { data: { name: name.trim() }, emailRedirectTo: location.origin } })
+        const r = await auth.signUp({ email, password, options: { data: { name: name.trim() }, emailRedirectTo: redirect() } })
         error = r.error
         if (!error && !r.data.session) setInfo(`Check ${email} to confirm your account, then sign in.`)
       } else if (mode === 'link') {
-        ({ error } = await auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin } }))
+        ({ error } = await auth.signInWithOtp({ email, options: { emailRedirectTo: redirect() } }))
         if (!error) setInfo(`Sign-in link sent to ${email}.`)
       } else if (mode === 'forgot') {
-        ({ error } = await auth.resetPasswordForEmail(email, { redirectTo: location.origin }))
+        ({ error } = await auth.resetPasswordForEmail(email, { redirectTo: redirect() }))
         if (!error) setInfo(`Password reset link sent to ${email}.`)
       } else {
         ({ error } = await auth.updateUser({ password }))
@@ -70,7 +73,7 @@ export default function Login() {
           <div className="hr" />
           {OAUTH.map(p => (
             <button key={p} type="button" className="btn block" style={{ marginBottom: 8 }}
-              onClick={() => auth.signInWithOAuth({ provider: p, options: { redirectTo: location.origin } })}>
+              onClick={() => auth.signInWithOAuth({ provider: p, options: { redirectTo: redirect() } })}>
               Continue with {p === 'apple' ? 'Apple' : 'Google'}
             </button>
           ))}

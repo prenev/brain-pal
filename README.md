@@ -22,15 +22,60 @@ Anyone who used local mode first can sign in and tap **More → Account → Impo
 
 See `ROADMAP.md` for the phases.
 
+## Reminders & account-deletion setup (one time)
+
+```bash
+npx web-push generate-vapid-keys                  # public key -> .env VITE_VAPID_PUBLIC_KEY
+supabase functions deploy send-reminders delete-account
+supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com CRON_SECRET=<random>
+```
+Then fill the two placeholders in `supabase/cron.sql` and run it in the SQL editor (hourly job). Users pick their hour in More → Reminders; they're only nudged if they haven't checked in that day.
+
+## Look & feel
+
+Playful dark theme following Duolingo-style UI principles: chunky 3D buttons that press down, thick-bordered cards, rounded bold type (Nunito, bundled offline), bright colour on deep navy, visible progress (daily goals), and a celebration screen with confetti after you save an entry. Emoji are Microsoft's **Fluent Emoji** (MIT licence) — the ~70 we use are extracted into `src/lib/emojiData.ts` by `scripts/extract-emoji.mjs` so the app stays offline-capable. To use another emoji, add its name to that script and re-run it.
+
+## Anxiety toolkit
+
+- **SOS ("Anxious right now?")** — on the Entries tab, Breathe tab and the + menu. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
+- **Thinking traps** — the thought record lists 10 common cognitive distortions with a "try asking" prompt for each, plus tap-to-add reframing questions.
+- **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
+- **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.
+
+## iPhone app (Apple Health, real haptics, on-device reminders)
+
+The same code runs as a native iPhone app via Capacitor — see **[docs/IOS.md](docs/IOS.md)** for the Mac steps (`npm ci && npm run ios:sync && npm run ios:open`, then ▶ Run).
+
+## Voice memos, transcripts & the optional AI helper
+
+- **Voice memo** — in the new-entry editor, record up to 5 minutes. Stored on-device (IndexedDB) in local mode, or in your private Supabase bucket in cloud mode. Play it back from the entry; you can type or edit a transcript by hand.
+- **AI helper (opt-in)** — *More → AI helper*. With **your own free Gemini API key** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) you can: transcribe a memo, **fill the thought record from what you said**, and get three reframe suggestions. The key stays in your browser. The model is discovered from your key (names change often) and the first one that works on your plan is used.
+- **Privacy:** audio/text is sent to Google. On Google's free tier it may be used to improve their products and read by reviewers, and UK/EEA/Swiss users may need a paid project. The app asks for explicit consent, keeps AI **off by default**, and **never sends text that looks like self-harm** — it shows support options instead.
+- **Worry time** — park worries from the + menu, then review them in one sitting: *can I act on it?* → plan a tiny step, or let it go. Stats shows how many were out of your control.
+
+## Testing
+
+```bash
+npm test            # 9 unit suites (breathing timer, native logic, AI client w/ mocked network, audio/WAV encoding, insights, reminders, worries, streaks)
+npm run test:e2e    # 20 browser flows (incl. simulated iPhone-app bridge) (fake microphone, mocked Gemini): create/delete, legacy-data migration, voice memo,
+                    # AI helper, crisis guard, XSS, worry time, SOS, photos, export, offline PWA, accessible names
+npm run screens     # screenshots of every screen -> screenshots/
+```
+CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on every push.
+
 ## What works / what doesn't
 
 | Feature | Status |
 |---|---|
 | Thought records, tags, photos, streaks, search, JSON export | ✅ |
 | Box breathing timer + session log | ✅ |
-| Vibration | ✅ Android/desktop. **iPhone Safari has no Vibration API**; a best-effort Safari 17.4+ fallback is included but iOS may ignore it outside a tap. Reliable iOS haptics need the native wrapper. |
-| Web push | Client, schema and service worker done; **sender not built yet** (needs VAPID keys + a scheduled edge function). On iOS the app must be on the Home Screen (16.4+). |
-| Apple Health | ❌ Not possible from a web app. Next step: wrap with Capacitor and write *Mindful Minutes* through a HealthKit plugin (needs a Mac + Apple Developer account). |
+| Vibration | ✅ Android/desktop. iPhone Safari has no Vibration API (best-effort fallback only) — **the iPhone app uses the Taptic Engine**. |
+| Web push reminders | Client, service worker and sender (`supabase/functions/send-reminders`) written; the scheduling logic is unit-tested (`npm test`) but the deployed pipeline is not. Needs one-time setup below. On iOS the app must be on the Home Screen (16.4+). |
+| Delete account | `supabase/functions/delete-account` (needs deploying). |
+| Apple Health | iPhone app only (browsers can't reach HealthKit): writes *Mindful Minutes*. Compiles on a macOS CI runner (simulator); not yet run on a physical phone — see docs/IOS.md. |
+| Insights / SOS logic | Unit-tested (`npm test`). Not clinically validated; breathing/grounding techniques are standard CBT-style self-help. |
+| Gemini (live) | Request/response handling is unit- and e2e-tested against a **mocked** API. Not yet run against the real service. |
+| Voice memos on iPhone | Uses MediaRecorder (Safari 14.1+, mp4/AAC). Recording inside an installed Home-Screen app works on recent iOS, but is untested here. |
 | Cloud (Supabase) path | Written but not yet tested against a live project. |
 
 ## Roadmap
