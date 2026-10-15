@@ -5,3 +5,4 @@ dist
 *.local
 dev-dist
 screenshots/*.png
+test-results

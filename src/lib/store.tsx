@@ -4,7 +4,8 @@ import { cloudRepo, localRepo, type Repo } from './repo'
 import { supabase } from './supabase'
 import { computeStreak, dayKey, type Streak } from './dates'
 import { DEFAULT_TAGS } from './constants'
-import type { BreathSession, NewSession, NewThought, Thought } from './types'
+import { deleteBlob, getBlob } from './blobstore'
+import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
 
 interface Ctx {
   ready: boolean
@@ -16,8 +17,13 @@ interface Ctx {
   importLocal(): Promise<number>
   thoughts: Thought[]
   sessions: BreathSession[]
+  worries: Worry[]
   streak: Streak
   allTags: string[]
+  setTranscript(thoughtId: string, transcript: string): Promise<void>
+  addWorry(text: string): Promise<void>
+  updateWorry(id: string, patch: Parameters<Repo['updateWorry']>[1]): Promise<void>
+  deleteWorry(id: string): Promise<void>
   addThought(t: NewThought): Promise<void>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
@@ -32,6 +38,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [authChecked, setAuthChecked] = useState(!supabase)
   const [thoughts, setThoughts] = useState<Thought[]>([])
   const [sessions, setSessions] = useState<BreathSession[]>([])
+  const [worries, setWorries] = useState<Worry[]>([])
   const [loaded, setLoaded] = useState(false)
   const [recovery, setRecovery] = useState(false)
 
@@ -46,8 +53,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const needsLogin = !!supabase && !authSession
 
   const refresh = useCallback(async () => {
-    const [t, s] = await Promise.all([repo.listThoughts(), repo.listSessions()])
-    setThoughts(t); setSessions(s); setLoaded(true)
+    const [t, s, w] = await Promise.all([repo.listThoughts(), repo.listSessions(), repo.listWorries()])
+    setThoughts(t); setSessions(s); setWorries(w); setLoaded(true)
   }, [repo])
 
   useEffect(() => {
@@ -71,16 +78,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ready: authChecked && (needsLogin || loaded),
     mode: repo.mode, needsLogin, session: authSession, recovery, clearRecovery: () => setRecovery(false),
     async importLocal() {
-      const lt = await localRepo.listThoughts(), ls = await localRepo.listSessions()
+      const lt = await localRepo.listThoughts(), ls = await localRepo.listSessions(), lw = await localRepo.listWorries()
+      const stored: { id: string; photoRefs?: string[]; audio?: { ref: string } | null }[] = JSON.parse(localStorage.getItem('bp.thoughts') ?? '[]')
       for (const t of [...lt].reverse()) {
         const photoFiles = await Promise.all(t.photos.map(async (p, i) => new File([await (await fetch(p)).blob()], `p${i}.jpg`, { type: 'image/jpeg' })))
-        await cloudRepo.addThought({ ...t, photoFiles })
+        const blob = t.audio ? await getBlob(t.audio.ref) : undefined
+        await cloudRepo.addThought({ ...t, photoFiles, audioClip: t.audio && blob ? { blob, durationSec: t.audio.durationSec, mime: t.audio.mime, transcript: t.audio.transcript } : null })
       }
       for (const x of [...ls].reverse()) await cloudRepo.addSession(x)
-      localStorage.removeItem('bp.thoughts'); localStorage.removeItem('bp.sessions')
+      for (const w of [...lw].reverse()) { const n = await cloudRepo.addWorry(w.text); if (w.status !== 'open') await cloudRepo.updateWorry(n.id, { status: w.status, action: w.action, reviewedAt: w.reviewedAt }) }
+      for (const t of stored) for (const ref of [...(t.photoRefs ?? []), ...(t.audio ? [t.audio.ref] : [])]) await deleteBlob(ref).catch(() => {})
+      for (const k of ['bp.thoughts', 'bp.sessions', 'bp.worries']) localStorage.removeItem(k)
       await refresh()
-      return lt.length + ls.length
-    }, thoughts, sessions, streak, allTags,
+      return lt.length + ls.length + lw.length
+    }, thoughts, sessions, worries, streak, allTags,
+    async setTranscript(id, transcript) {
+      await repo.setTranscript(id, transcript)
+      setThoughts(p => p.map(t => (t.id === id && t.audio ? { ...t, audio: { ...t.audio, transcript } } : t)))
+    },
+    async addWorry(text) { const w = await repo.addWorry(text); setWorries(p => [w, ...p]) },
+    async updateWorry(id, patch) { const w = await repo.updateWorry(id, patch); setWorries(p => p.map(x => (x.id === id ? w : x))) },
+    async deleteWorry(id) { await repo.deleteWorry(id); setWorries(p => p.filter(w => w.id !== id)) },
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]) },

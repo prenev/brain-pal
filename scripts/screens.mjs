@@ -16,7 +16,7 @@ const local = await preview({ root, preview: { port: 4173, strictPort: true }, b
 const cloud = await preview({ root, preview: { port: 4174, strictPort: true }, build: { outDir: 'node_modules/.dist-auth' } })
 
 const exe = process.env.CHROMIUM_PATH || readdirSync('/opt/pw-browsers').filter(d => d.startsWith('chromium-')).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0]
-const browser = await chromium.launch({ executablePath: exe })
+const browser = await chromium.launch({ executablePath: exe, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] })
 const errors = []
 const names = []
 
@@ -40,9 +40,28 @@ const sessions = [[0, 8, 4, 'breathing'], [1, 7, 3, 'grounding'], [2, 6, 5, 'bre
   return { id: 'b' + i, createdAt: d.toISOString(), pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 384, completed: true, kind, anxietyBefore: b, anxietyAfter: a }
 })
 
+const worries = [['Rent is due on Friday', 'actionable', 'Pay on Thursday morning'], ['My friend seemed upset yesterday', 'let-go', null], ['What if the flight is delayed', 'let-go', null], ['Presentation next week', 'open', null], ['I forgot to reply to Sam', 'open', null]]
+  .map(([text, status, action], i) => ({ id: 'w' + i, createdAt: new Date(Date.now() - (5 - i) * 3600e3).toISOString(), text, status, action, reviewedAt: status === 'open' ? null : new Date().toISOString() }))
+
+/** Canned Gemini responses so AI screens can be captured without a key. */
+async function mockGemini(ctx) {
+  await ctx.route('https://generativelanguage.googleapis.com/**', async route => {
+    const req = route.request(), body = req.postData() ?? '', cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const json = o => route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(o) })
+    const text = t => json({ candidates: [{ content: { parts: [{ text: t }] } }] })
+    if (req.url().includes('/models?')) return json({ models: [{ name: 'models/gemini-3.5-flash', supportedGenerationMethods: ['generateContent'] }] })
+    if (body.includes('single word OK')) return text('OK')
+    if (body.includes('inline_data')) return text('I am really worried about my presentation tomorrow. My chest feels tight and I keep thinking everyone will notice if I mess up.')
+    if (body.includes('fill in a CBT thought record')) return text(JSON.stringify({ situation: 'Presentation tomorrow', thought: 'Everyone will notice if I mess up', emotions: [{ name: 'anxious', intensity: 80 }], internalBehaviour: 'Tight chest', externalBehaviour: '', alternateThought: '', distortions: ['catastrophizing', 'mind reading'], tags: ['work'] }))
+    return text(JSON.stringify({ distortions: ['mind reading'], reframes: ['I have prepared well and can handle a wobble.', 'Most people are focused on themselves, not on me.', 'One slip would not ruin the whole talk.'], crisis: false }))
+  })
+}
+
 async function session(base, seed, fn) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications'] })
-  if (seed) await ctx.addInitScript(([t, s]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)) } }, [thoughts, sessions])
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications', 'microphone'] })
+  await mockGemini(ctx)
+  if (seed) await ctx.addInitScript(([t, s, w]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)) } }, [thoughts, sessions, worries])
   const p = await ctx.newPage()
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && !/Failed to load resource|ERR_/.test(m.text()) && errors.push(m.text()))
   await p.goto(base); await p.waitForSelector('.topbar, form')
@@ -56,6 +75,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.entry >> nth=0'); await snap('entry-expanded')
   await p.click('.tab >> text=Stats'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('stats')
   await p.locator('h3:has-text("Anxiety Insights")').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -80)); await snap('stats-anxiety-insights')
+  await p.locator('h3:has-text("Worry Box")').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -80)); await snap('stats-worry-box')
   await p.evaluate(() => window.scrollTo(0, 99999)); await snap('stats-bottom')
   await p.click('.tab >> text=Calendar'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('calendar')
   await p.click('.cell:not(.off) .bub:has(svg) >> nth=-1'); await p.evaluate(() => window.scrollTo(0, 700)); await snap('calendar-day')
@@ -73,18 +93,37 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.sos-card'); await p.click('text=Continue'); await p.click('.tool >> text=Slow breathing'); await p.waitForTimeout(5200); await snap('sos-breathing')
   await p.click('text=End session'); await p.click('text=Save'); await p.click('text=Done')
   await p.click('.tab >> text=More'); await snap('more')
+  await p.click('.li >> text=Worry time'); await snap('worry-time')
+  await p.click('text=Start worry time'); await snap('worry-review-ask')
+  await p.click('text=Yes — I can take a step'); await p.fill('textarea', 'Reply to Sam tonight'); await snap('worry-review-plan')
+  await p.click('text=Save plan'); await p.click('text=it’s out of my control'); await snap('worry-review-done'); await p.click('button:has-text("Done")'); await p.click('[aria-label=Back]')
+  await p.click('.li >> text=AI helper'); await snap('ai-settings'); await p.click('[aria-label=Back]')
   await p.click('text=Photo Gallery'); await snap('gallery'); await p.click('[aria-label=Back]')
   await p.click('text=Reminders'); await p.click('[role=switch]'); await p.waitForTimeout(500); await snap('reminders'); await p.click('[aria-label=Back]')
   await p.click('.li >> text=Apple Health'); await snap('apple-health'); await p.click('[aria-label=Back]')
   await p.click('.li >> text=Get support'); await snap('support'); await p.click('[aria-label=Back]')
   await p.click('.fab'); await snap('new-entry-menu')
-  await p.click('.btn.primary >> text=Today'); await snap('mood-picker')
+  await p.click('.sheet-item >> text=Park a worry'); await p.fill('textarea', 'What if I forget my notes?'); await snap('park-worry'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await p.click('.fab'); await p.click('.btn.primary >> text=Today'); await snap('mood-picker')
   await p.click('.datelink'); await snap('mood-picker-date'); await p.click('.datelink')
   await p.click('.faces button >> nth=3'); await p.click('.ig >> text=anxious'); await p.click('.ig >> text=stressed'); await snap('editor-emotions')
   await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await p.locator('text=Thinking traps').scrollIntoViewIfNeeded(); await p.click('.chip >> text=catastrophizing'); await p.click('.chip >> text=mind reading'); await snap('editor-thinking-traps')
   await p.locator('text=Questions that help').scrollIntoViewIfNeeded(); await p.click('.qbtn >> nth=1'); await p.evaluate(() => document.querySelector('.overlay').scrollBy(0, 200)); await snap('editor-reframe-questions')
+  await p.locator('h3:has-text("Voice memo")').scrollIntoViewIfNeeded(); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await snap('voice-recording')
+  await p.click('button:has-text("Stop")'); await p.waitForSelector('audio'); await p.fill('textarea[placeholder^="Type it yourself"]', 'Talked it through: the demo went fine in the end.'); await snap('voice-recorded')
   await p.click('text=Save'); await p.waitForSelector('.celebrate'); await p.waitForTimeout(900); await snap('celebrate')
   await p.click('.celebrate .btn'); await snap('entries-after-save')
+  await p.locator('.entry:has-text("Voice memo")').first().click(); await snap('entry-with-voice-memo')
+})
+
+await session('http://localhost:4173', true, async (p, snap) => {   // AI helper (Gemini mocked)
+  await p.click('.tab >> text=More'); await p.click('.li >> text=AI helper'); await p.click('[role=switch]'); await p.fill('input[type=password]', 'demo-key')
+  await p.click('text=Save & test'); await p.waitForSelector('text=/Connected/'); await snap('ai-connected'); await p.click('[aria-label=Back]')
+  await p.click('.tab >> text=Entries'); await p.click('.fab'); await p.click('.sheet .btn.primary >> text=Today'); await p.click('.faces button >> nth=3')
+  await p.locator('h3:has-text("Voice memo")').scrollIntoViewIfNeeded(); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio')
+  await p.click('button:has-text("Transcribe")'); await p.waitForFunction(() => [...document.querySelectorAll('textarea')].some(x => x.value.startsWith('I am really worried'))); await snap('ai-transcribed')
+  await p.click('button:has-text("Fill my thought record")'); await p.waitForSelector('text=Filled in from your memo'); await snap('ai-filled')
+  await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card'); await p.locator('.reframe-card').first().scrollIntoViewIfNeeded(); await snap('ai-reframes')
 })
 
 await session('http://localhost:4174', false, async (p, snap) => {

@@ -19,7 +19,7 @@ const KEYS = {
   herb: 'herb', star: 'star', sparkles: 'sparkles', chart: 'bar-chart', calendar: 'calendar', notebook: 'notebook-with-decorative-cover', wind: 'wind-face',
   gear: 'gear', camera: 'camera', bell: 'bell', party: 'party-popper', muscle: 'flexed-biceps', check: 'check-mark-button', target: 'bullseye', lotus: 'person-in-lotus-position',
   heartfire: 'heart-on-fire', rocket: 'rocket', sunglasses: 'smiling-face-with-sunglasses', hug: 'hugging-face', tada: 'confetti-ball', medal: 'sports-medal',
-  photo: 'framed-picture', health2: 'red-heart', cloud: 'cloud', lock: 'locked', phone: 'mobile-phone',
+  photo: 'framed-picture', mic: 'microphone', balloon: 'balloon', thought: 'thought-balloon', robot: 'robot', key: 'key', brain: 'brain', worry: 'thought-balloon', hourglass: 'hourglass-done', health2: 'red-heart', cloud: 'cloud', lock: 'locked', phone: 'mobile-phone',
 }
 const out = {}, missing = []
 for (const [k, name] of Object.entries(KEYS)) {

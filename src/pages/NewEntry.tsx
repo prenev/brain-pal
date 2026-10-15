@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Camera, Check, ChevronLeft, ChevronUp, Images, Plus, Search, X } from 'lucide-react'
 import { IconGrid } from '../components/ui'
+import VoiceRecorder from '../components/VoiceRecorder'
+import Support from '../components/Support'
+import { AiError, aiEnabled, looksLikeCrisis, suggestReframes, type Structured } from '../lib/gemini'
+import { Emoji } from '../lib/emoji'
 import Face from '../components/Face'
 import { EMOTIONS, REFRAME_QUESTIONS, TRAPS } from '../lib/constants'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
-import type { EmotionRating } from '../lib/types'
+import type { AudioClip, EmotionRating } from '../lib/types'
 
 const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16)
 const fmtWhen = (d: Date) => {
@@ -32,6 +36,11 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const [outcome, setOutcome] = useState<number | null>(null)
   const [traps, setTraps] = useState<string[]>([])
   const [files, setFiles] = useState<File[]>([])
+  const [clip, setClip] = useState<AudioClip | null>(null)
+  const [filled, setFilled] = useState(false)
+  const [ideas, setIdeas] = useState<string[]>([])
+  const [ideaBusy, setIdeaBusy] = useState(false)
+  const [ideaErr, setIdeaErr] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -48,13 +57,35 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const customEmos = emotions.map(e => e.name).filter(n => !EMOTIONS.includes(n) && match(n))
   const customTags = tags.filter(n => !allTags.includes(n) && match(n))
 
+  const crisis = looksLikeCrisis([thought, situation, internal, external, alt, clip?.transcript ?? ''].join(' '))
+
+  /** Merge an AI-structured transcript into the form without overwriting what the user already wrote. */
+  function applyStructured(r: Structured) {
+    setSituation(v => v || r.situation); setThought(v => v || r.thought)
+    setInternal(v => v || r.internalBehaviour); setExternal(v => v || r.externalBehaviour); setAlt(v => v || r.alternateThought)
+    setEmotions(cur => [...cur, ...r.emotions.filter(e => !cur.some(c => c.name === e.name))])
+    setTraps(cur => [...new Set([...cur, ...r.distortions])]); setTags(cur => [...new Set([...cur, ...r.tags])])
+    setFilled(true)
+  }
+
+  async function getIdeas() {
+    setIdeaBusy(true); setIdeaErr(''); setIdeas([])
+    try {
+      const r = await suggestReframes({ thought, situation, emotions: emotions.map(e => e.name) })
+      if (r.crisis) { setIdeaErr('Please look at the support options above — you don’t have to handle this alone.'); return }
+      setIdeas(r.reframes); setTraps(cur => [...new Set([...cur, ...r.distortions])])
+      if (!r.reframes.length) setIdeaErr('No suggestions this time — try rewording the thought.')
+    } catch (e) { setIdeaErr(e instanceof AiError ? e.message : 'Something went wrong. Please try again.') }
+    finally { setIdeaBusy(false) }
+  }
+
   async function save() {
     setSaving(true); setError('')
     try {
       await addThought({
         mood: mood!, createdAt: when.toISOString(), situation: situation.trim(), thought: thought.trim(), emotions,
         internalBehaviour: internal.trim(), externalBehaviour: external.trim(), alternateThought: alt.trim(),
-        outcomeIntensity: outcome, tags, distortions: traps, photoFiles: files,
+        outcomeIntensity: outcome, tags, distortions: traps, photoFiles: files, audioClip: clip,
       })
       onSaved()
     } catch (e: any) { setError(e?.message ?? 'Could not save'); setSaving(false) }
@@ -116,6 +147,11 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
         {tagOpen && <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />}
       </div>
 
+      {crisis && <div role="alert"><Support /></div>}
+
+      <VoiceRecorder clip={clip} onChange={setClip} onFill={applyStructured} />
+      {filled && <p role="status" style={{ color: 'var(--accent)', margin: '-6px 6px 14px', fontWeight: 800 }}>✨ Filled in from your memo — review and edit below.</p>}
+
       <div className="card">
         <div className="card-head"><h3 style={{ fontWeight: 500 }}>Thought record</h3></div>
         <label className="field"><span>Situation</span><textarea className="input" value={situation} onChange={e => setSituation(e.target.value)} placeholder="What was happening?" /></label>
@@ -132,6 +168,11 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
         <div className="field"><span>Questions that help you reframe (tap to add)</span>
           {REFRAME_QUESTIONS.map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => (a ? a + '\n' : '') + q + ' ')}>{q}</button>)}
         </div>
+        {aiEnabled() && !crisis && thought.trim() && <div className="field">
+          <button type="button" className="btn" disabled={ideaBusy} onClick={getIdeas}><Emoji name="sparkles" size={18} style={{ display: 'inline', verticalAlign: -4, marginRight: 6 }} />{ideaBusy ? 'Thinking…' : 'Suggest reframes'}</button>
+          {ideas.map(i => <button type="button" key={i} className="reframe-card" style={{ marginTop: 8 }} onClick={() => setAlt(a => (a ? a + '\n' : '') + i)}>{i}<div className="muted small">Tap to use</div></button>)}
+          {ideaErr && <p role="alert" style={{ color: 'var(--danger)', margin: '8px 0 0' }}>{ideaErr}</p>}
+        </div>}
         <label className="field"><span>Alternate thought</span><textarea className="input" value={alt} onChange={e => setAlt(e.target.value)} placeholder="What would you tell a friend? What’s the evidence?" /></label>
         {emotions.length > 0 && alt.trim() && <div>
           <div className="row spread"><span className="muted small">Feeling now (was {peak}%)</span><b>{outcome ?? peak}%</b></div>

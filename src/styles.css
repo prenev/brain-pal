@@ -233,3 +233,18 @@ select.input { appearance: none; }
 @keyframes pop { from { transform: scale(.2) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Voice memo + AI + worries */
+.voice audio { color-scheme: dark; border-radius: 14px; }
+.rec-live { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 6px 0; }
+.rec-meter { --lvl: 0; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,93,115,.14); border: 3px solid var(--danger);
+  box-shadow: 0 0 0 calc(var(--lvl) * 22px) rgba(255,93,115,.22); transition: box-shadow .08s; }
+.rec-dot { width: 34px; height: 34px; border-radius: 50%; background: var(--danger); animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .45; } }
+.rec-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.disclosure { border-color: rgba(255,166,61,.5); }
+.worry-focus { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; } .worry-focus p { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.35; }
+.reframe-card { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px; border-radius: 16px; background: rgba(53,208,127,.1); border: 2px solid rgba(53,208,127,.45); border-bottom-width: 4px; font-weight: 700; }
+.reframe-card:active { transform: translateY(2px); border-bottom-width: 2px; }
+.etranscript { margin-top: 12px; padding: 10px 14px; border-radius: 16px; background: var(--card2); border: 2px solid var(--edge); font-weight: 600; font-style: italic; white-space: pre-wrap; }
+.entry audio { width: 100%; margin-top: 12px; color-scheme: dark; }

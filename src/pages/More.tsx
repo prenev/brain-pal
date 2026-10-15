@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import Support from '../components/Support'
+import AiSettings from '../components/AiSettings'
+import { aiEnabled } from '../lib/gemini'
+import { worryStats } from '../lib/worries'
 import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sendTest } from '../lib/push'
 import { Toggle } from '../components/ui'
 
@@ -16,9 +19,9 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
   )
 }
 
-export default function More({ initial = null }: { initial?: 'support' | null }) {
-  const { mode, session, signOut, thoughts, sessions, importLocal } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support'>(initial)
+export default function More({ initial = null, onWorry }: { initial?: 'support' | null; onWorry: () => void }) {
+  const { mode, session, signOut, thoughts, sessions, worries, importLocal } = useStore()
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [msg, setMsg] = useState('')
   const photos = thoughts.flatMap(t => t.photos)
@@ -66,7 +69,7 @@ export default function More({ initial = null }: { initial?: 'support' | null })
 
   function exportJson() {
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ thoughts, sessions }, null, 2)], { type: 'application/json' }))
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ thoughts: thoughts.map(({ photos: _p, audio, ...t }) => ({ ...t, audio: audio && { durationSec: audio.durationSec, transcript: audio.transcript } })), sessions, worries }, null, 2)], { type: 'application/json' }))
     a.download = 'brain-pal-export.json'; a.click()
   }
 
@@ -74,7 +77,7 @@ export default function More({ initial = null }: { initial?: 'support' | null })
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -89,6 +92,7 @@ export default function More({ initial = null }: { initial?: 'support' | null })
         {msg && <p className="small" role="status">{msg}</p>}
       </div>}
       {view === 'support' && <Support />}
+      {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
         <div className="card">
           <p className="muted small" style={{ marginTop: 0 }}>Signed in as {session?.user.email}</p>
@@ -124,6 +128,8 @@ export default function More({ initial = null }: { initial?: 'support' | null })
 
       <div className="list">
         {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
+        <Row icon={<Emoji name="worry" size={30} />} color="var(--card2)" label="Worry time" value={worryStats(worries).open ? `${worryStats(worries).open} parked` : ''} onClick={onWorry} />
+        <Row icon={<Emoji name="robot" size={30} />} color="var(--card2)" label="AI helper" value={aiEnabled() ? 'On' : 'Off'} onClick={() => setView('ai')} />
         <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />
         <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
         <Row icon={<Emoji name="blueheart" size={30} />} color="var(--card2)" label="Get support" onClick={() => setView('support')} />

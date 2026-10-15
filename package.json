@@ -9,7 +9,8 @@
     "preview": "vite preview --host",
     "icons": "node scripts/make-icons.mjs",
     "screens": "node scripts/screens.mjs",
-    "test": "node --experimental-strip-types scripts/test-reminder.mjs && node --experimental-strip-types scripts/test-insights.mjs"
+    "test:e2e": "node scripts/e2e.mjs",
+    "test": "node scripts/run-tests.mjs"
   },
   "dependencies": {
     "@fontsource-variable/nunito": "^5.3.0",

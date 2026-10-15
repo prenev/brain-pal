@@ -13,7 +13,11 @@ create table if not exists public.thoughts (
   outcome_intensity int,                          -- re-rated emotion after alternate thought
   tags text[] not null default '{}',
   distortions text[] not null default '{}',       -- thinking traps spotted
-  photos text[] not null default '{}'             -- storage paths in bucket "photos"
+  photos text[] not null default '{}',            -- storage paths in bucket "photos"
+  audio_path text,                                -- voice memo: storage path in bucket "photos"
+  audio_duration int,
+  audio_mime text,
+  transcript text                                 -- voice-memo transcript (optional)
 );
 create index on public.thoughts (user_id, created_at desc);
 
@@ -41,12 +45,25 @@ create table if not exists public.push_subscriptions (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.worries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users on delete cascade,
+  created_at timestamptz not null default now(),
+  text text not null,
+  status text not null default 'open' check (status in ('open', 'actionable', 'let-go')),
+  action text,                                    -- next small step when actionable
+  reviewed_at timestamptz
+);
+create index on public.worries (user_id, created_at desc);
+
 alter table public.thoughts enable row level security;
+alter table public.worries enable row level security;
 alter table public.breath_sessions enable row level security;
 alter table public.push_subscriptions enable row level security;
 
 create policy "own thoughts" on public.thoughts for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own sessions" on public.breath_sessions for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own worries" on public.worries for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own push" on public.push_subscriptions for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- Private photo bucket; each user may only touch files under "<uid>/".
@@ -62,3 +79,8 @@ create policy "own photos delete" on storage.objects for delete using (bucket_id
 --   alter table public.breath_sessions add column if not exists kind text not null default 'breathing';
 --   alter table public.breath_sessions add column if not exists anxiety_before int;
 --   alter table public.breath_sessions add column if not exists anxiety_after int;
+--   alter table public.thoughts add column if not exists audio_path text;
+--   alter table public.thoughts add column if not exists audio_duration int;
+--   alter table public.thoughts add column if not exists audio_mime text;
+--   alter table public.thoughts add column if not exists transcript text;
+--   -- plus: create the worries table + policy from above

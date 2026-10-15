@@ -3,6 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { dayKey, lastNDays } from '../lib/dates'
 import { MOODS } from '../lib/mood'
+import { worryStats } from '../lib/worries'
 import { reliefStats, timeOfDay, trapStats, triggerStats } from '../lib/insights'
 import { NameIcon } from '../lib/icons'
 import { Emoji } from '../lib/emoji'
@@ -40,7 +41,7 @@ function MoodChart({ points, days }: { points: Map<number, number>; days: number
 }
 
 export default function Stats() {
-  const { thoughts, sessions, streak } = useStore()
+  const { thoughts, sessions, worries, streak } = useStore()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const isNow = dayKey(month).slice(0, 7) === dayKey(new Date()).slice(0, 7)
   const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
@@ -67,6 +68,7 @@ export default function Stats() {
   const breathMin = Math.round(ms.reduce((a, s) => a + s.durationSec, 0) / 60)
   const week = lastNDays(5)
   const relief = reliefStats(sessions)
+  const ws = worryStats(worries)
   const triggers = triggerStats(thoughts)
   const traps = trapStats(thoughts)
   const tod = timeOfDay(thoughts)
@@ -139,6 +141,16 @@ export default function Stats() {
         <div className="muted small" style={{ margin: '14px 0 6px' }}>When anxiety shows up</div>
         {tod.map(x => <div key={x.label} className="row" style={{ marginBottom: 6 }}><span style={{ width: 84 }}>{x.label}</span><div className="bar" style={{ flex: 1 }}><i style={{ width: `${(x.count / todMax) * 100}%` }} /></div><b style={{ width: 20, textAlign: 'right' }}>{x.count}</b></div>)}
       </div>
+
+      {worries.length > 0 && <div className="card">
+        <div className="card-head"><h3>Worry Box</h3><Emoji name="worry" size={30} /></div>
+        <div className="row spread">
+          <div><div style={{ fontSize: 34, fontWeight: 900 }}>{ws.open}</div><div className="muted">parked</div></div>
+          <div><div style={{ fontSize: 34, fontWeight: 900, color: 'var(--accent)' }}>{ws.letGo}</div><div className="muted">let go</div></div>
+          <div style={{ textAlign: 'right' }}><div style={{ fontSize: 34, fontWeight: 900, color: 'var(--blue)' }}>{ws.actionable}</div><div className="muted">with a plan</div></div>
+        </div>
+        {ws.letGoPct !== null && ws.reviewed >= 3 && <p className="muted" style={{ margin: '12px 0 0' }}>{ws.letGoPct}% of reviewed worries were out of your control.</p>}
+      </div>}
 
       <div className="card">
         <div className="card-head"><h3>Reframe Effect</h3></div>

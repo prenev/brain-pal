@@ -12,6 +12,8 @@ import More from './pages/More'
 import Login from './pages/Login'
 import NewEntry from './pages/NewEntry'
 import Sos from './components/Sos'
+import WorryTime from './components/WorryTime'
+import ParkWorry from './components/ParkWorry'
 
 const TABS = [
   { id: 'entries', label: 'Entries', icon: 'notebook' },
@@ -29,6 +31,8 @@ function Shell() {
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
   const [sos, setSos] = useState(false)
+  const [worryTime, setWorryTime] = useState(false)
+  const [park, setPark] = useState(false)
   const [moreView, setMoreView] = useState<'support' | null>(null)
   const [composeMood, setComposeMood] = useState<number | null>(null)
   const [cel, setCel] = useState<Celebration | null>(null)
@@ -46,7 +50,7 @@ function Shell() {
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
-        {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} />}
+        {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} onWorry={() => setWorryTime(true)} />}
       </div>
 
       <div className="dock">
@@ -71,6 +75,7 @@ function Shell() {
             }} />
           </> : <>
             <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Emoji name="wind" size={30} /></span>Start breathing</button>
             <div className="sheet-label">Create Entry</div>
             <button className="sheet-item" onClick={() => setOtherDay(true)}><span className="ic"><Emoji name="calendar" size={30} /></span>Other day</button>
@@ -81,6 +86,8 @@ function Shell() {
       )}
       {sos && <Sos onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
+      {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
       {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
   )

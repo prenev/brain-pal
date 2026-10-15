@@ -42,6 +42,23 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 - **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
 - **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.
 
+## Voice memos, transcripts & the optional AI helper
+
+- **Voice memo** — in the new-entry editor, record up to 5 minutes. Stored on-device (IndexedDB) in local mode, or in your private Supabase bucket in cloud mode. Play it back from the entry; you can type or edit a transcript by hand.
+- **AI helper (opt-in)** — *More → AI helper*. With **your own free Gemini API key** ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) you can: transcribe a memo, **fill the thought record from what you said**, and get three reframe suggestions. The key stays in your browser. The model is discovered from your key (names change often) and the first one that works on your plan is used.
+- **Privacy:** audio/text is sent to Google. On Google's free tier it may be used to improve their products and read by reviewers, and UK/EEA/Swiss users may need a paid project. The app asks for explicit consent, keeps AI **off by default**, and **never sends text that looks like self-harm** — it shows support options instead.
+- **Worry time** — park worries from the + menu, then review them in one sitting: *can I act on it?* → plan a tiny step, or let it go. Stats shows how many were out of your control.
+
+## Testing
+
+```bash
+npm test            # 6 unit suites (AI client w/ mocked network, audio/WAV encoding, insights, reminders, worries, streaks)
+npm run test:e2e    # 15 browser flows (fake microphone, mocked Gemini): create/delete, legacy-data migration, voice memo,
+                    # AI helper, crisis guard, XSS, worry time, SOS, photos, export, offline PWA, accessible names
+npm run screens     # screenshots of every screen -> screenshots/
+```
+CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on every push.
+
 ## What works / what doesn't
 
 | Feature | Status |
@@ -53,6 +70,8 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 | Delete account | `supabase/functions/delete-account` (needs deploying). |
 | Apple Health | ❌ Not possible from a web app. Next step: wrap with Capacitor and write *Mindful Minutes* through a HealthKit plugin (needs a Mac + Apple Developer account). |
 | Insights / SOS logic | Unit-tested (`npm test`). Not clinically validated; breathing/grounding techniques are standard CBT-style self-help. |
+| Gemini (live) | Request/response handling is unit- and e2e-tested against a **mocked** API. Not yet run against the real service. |
+| Voice memos on iPhone | Uses MediaRecorder (Safari 14.1+, mp4/AAC). Recording inside an installed Home-Screen app works on recent iOS, but is untested here. |
 | Cloud (Supabase) path | Written but not yet tested against a live project. |
 
 ## Roadmap

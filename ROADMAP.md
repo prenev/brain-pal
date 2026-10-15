@@ -13,4 +13,5 @@ Each phase ships as its own commit(s) and is pushed to the branch when done.
 | 4 | **Anxiety toolkit**: SOS flow (rate → breathing or 5-4-3-2-1 grounding → re-rate), calming presets (4-6, 4-7-8), thinking-traps helper + reframe questions, anxiety insights (triggers, traps, time of day, what helps), support resources + rough-patch nudge | ✅ done |
 | 4.5 | **Playful redesign**: Duolingo-style dark theme, Fluent emoji for moods/emotions/tags/tabs, daily goals, celebration screen + confetti | ✅ done |
 | 5 | iOS shell (Capacitor): reliable haptics for breathing, Apple Health Mindful Minutes, native notifications | ⏳ needs Mac + Apple Developer account |
-| 6 | Reports & extras: weekly/monthly reports, goals, voice memo, worry-time journal, theme picker | ⏳ |
+| 6 | **Voice memos & worry time**: record voice memos, optional Gemini transcript / auto-fill thought record / reframe ideas (opt-in, bring-your-own free key), worry-postponement box, unit + end-to-end tests, CI | ✅ done (cloud + live-Gemini paths untested) |
+| 7 | Reports & extras: weekly/monthly reports, goals, theme picker, push-to-talk "quick log" | ⏳ |
