@@ -6,17 +6,16 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## 🔜 Backlog (ordered — see ROADMAP "Order of work")
 - **P7b** 🧱 First-run (3 skippable screens), reduced-motion, tap-target audit (rest of 7b)
-- **P11** 🧱🧪 Coins: pure `rewards.ts`, wallet, shop, rest day, treat jar
 - **P12** 🗄 Migrations + cloudRepo + importLocal for all new data (+RLS tests, advisors)
 - **P13** 🧱 Theme picker; optional Gemini "reflect with me"
 - **chore** 🐞 Code-split bundle · neutral demo seed text · Siri/widgets (Mac)
 
 ## ⏭ Next up
-- **P11** 🧱🧪 Coins & rewards: pure `rewards.ts` first (derived earnings, caps, milestones)
+- **P12** 🗄 Cloud sync for journal / anchors / focus / sleep / rituals / purchases (migrations + RLS + tests)
 - **P7b** First-run screens + reduced-motion
 
 ## 🔨 In progress
-- **P10** 📄 verify (full e2e + screens), commit, push — sleep logic, Swift read, UI, 3 e2e
+- **P11** 📄 verify (full e2e + screens), commit, push — coins/wallet/shop/rest days, 4 e2e
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -25,6 +24,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## ✅ Done
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time
+- P11 Coins (derived earnings with caps, themes, rest days, treats) — pure logic mutation-checked, 4 e2e
 - P10 Sleep (Apple Health read-only, nights/stages/consistency, sleep↔mood, manual log) — pure logic mutation-checked, 3 e2e; real Watch data pending
 - P9 Rituals (07:00/21:30 breathe, check-in, anchors nudge; tap-to-open; skip-when-done) — native-stub e2e; real-device delivery pending
 - P14 One small step (worry plan → calm start → focus timer, fake-clock e2e, pause/stop neutral)

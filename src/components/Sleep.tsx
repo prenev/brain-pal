@@ -71,7 +71,7 @@ export default function Sleep() {
         <b>Last {week.length} {week.length === 1 ? 'night' : 'nights'}</b>
         <div className="sleep-bars" role="list">
           {week.map(n => <div key={n.date} className="col" role="listitem" aria-label={`${dow(n.date)}: ${fmtDuration(n.asleepMin)}`}>
-            <i style={{ height: `${Math.min(100, (n.asleepMin / 600) * 100)}%`, opacity: n.source === 'manual' ? 0.6 : 1 }} /><span>{dow(n.date, 'narrow')}</span></div>)}
+            <i style={{ height: Math.max(4, Math.min(100, (n.asleepMin / 600) * 100)), opacity: n.source === 'manual' ? 0.6 : 1 }} /><span>{dow(n.date, 'narrow')}</span></div>)}
         </div>
         {sum.avgAsleepMin !== null && <p style={{ margin: '14px 0 0' }}>On average you slept <b>{fmtDuration(sum.avgAsleepMin)}</b>, going to bed around <b>{eveningToClock(sum.avgBedEvening!)}</b>.
           {sum.bedtimeSpreadMin !== null && <span className="muted"> Your bedtime varies by about {sum.bedtimeSpreadMin} minutes.</span>}</p>}

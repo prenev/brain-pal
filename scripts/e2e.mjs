@@ -560,6 +560,65 @@ test('sleep shows up in the weekly summary', async () => {
 })
 
 
+const seenAll = { 'bp.levels.seen': { calming: 99, reframing: 99, worry: 99, consistency: 99 } }
+const noon = n => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(12, 0, 0, 0); return d.toISOString() }
+const entriesOn = (day, count) => Array.from({ length: count }, (_, i) => rec(`c${day}-${i}`, 0, { createdAt: new Date(new Date(noon(day)).getTime() + i * 60_000).toISOString() }))
+
+test('coins: derived from your own activity with daily caps, shown in More and the wallet', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 4), ...entriesOn(1, 3), ...entriesOn(2, 3)], ...seenAll }); const p = s.page   // 4 today (cap 3), 3 yesterday, 3 the day before
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Coins") >> text=55')   // 3 days x 15 (cap) + 10 for the 3-day streak
+  await p.click('.li >> text=Coins'); await p.waitForSelector('[aria-label="55 coins"]')
+  await p.waitForSelector('text=+25 earned today.'); assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Today: .*Check-ins/)
+  assert.match(await p.locator('.card:has-text("Recently")').innerText(), /3-day streak/)
+  assert.equal(await p.locator('.card:has-text("How you earn them")').count(), 1)
+  await done(s)
+  const fresh = await open({ 'bp.purchases': 'garbage', 'bp.theme': 7, ...seenAll }); await tab(fresh.page, 'More'); await fresh.page.waitForSelector('.li:has-text("Coins") >> text=0'); await done(fresh)
+})
+
+test('coins: unlock a theme, it applies and persists, you can switch back; what you can’t afford says why', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 3), ...entriesOn(1, 3), ...entriesOn(2, 3)], ...seenAll }); const p = s.page
+  const accent = () => p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase())
+  assert.equal(await accent(), '#35d07f')
+  await tab(p, 'More'); await p.click('.li >> text=Coins')
+  assert.equal(await p.locator('.shop-item:has-text("Sunset") button.primary').isDisabled(), false); await p.click('.shop-item:has-text("Ocean") button.primary')
+  await p.waitForSelector('text=Ocean unlocked and switched on.'); await p.waitForSelector('[aria-label="15 coins"]'); assert.equal(await accent(), '#4aa8ff')
+  await p.waitForSelector('.shop-item:has-text("Ocean") >> text=In use — tap to switch back')
+  assert.equal(await p.locator('.shop-item:has-text("Sunset") button.primary').isDisabled(), true); await p.waitForSelector('.shop-item:has-text("Sunset") >> text=You need 25 more coins.')
+  assert.equal(await p.locator('.shop-item:has-text("My treat") button.primary').isDisabled(), true)
+  await reload(p); assert.equal(await accent(), '#4aa8ff', 'the theme persists')
+  await tab(p, 'More'); await p.click('.li >> text=Coins'); await p.click('.shop-item:has-text("Ocean") button:has-text("In use")'); assert.equal(await accent(), '#35d07f')
+  await p.waitForSelector('.shop-item:has-text("Ocean") >> text=Use this colour'); await p.click('.shop-item:has-text("Ocean") button:has-text("Use this colour")'); assert.equal(await accent(), '#4aa8ff', 'owned, so switching back and forth is free')
+  assert.equal(await p.locator('[aria-label="15 coins"]').count(), 1)
+  await done(s)
+  // a theme id in storage that you never bought does nothing
+  const t = await open({ 'bp.theme': 'theme-berry', ...seenAll }); assert.equal(await t.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase()), '#35d07f'); await done(t)
+})
+
+test('coins: a rest day covers a missed day so your streak keeps going (bought in the shop)', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 3), ...entriesOn(2, 3), ...entriesOn(3, 3)], ...seenAll }); const p = s.page      // nothing yesterday
+  await p.waitForSelector('[aria-label="1 day streak"]')
+  await tab(p, 'More'); await p.click('.li >> text=Coins'); await p.waitForSelector('[aria-label="45 coins"]')
+  await p.selectOption('[aria-label="Day to cover"]', { label: 'Yesterday' }); await p.click('.shop-item:has-text("Rest day") button.primary')
+  await p.waitForSelector('text=Rest day added'); await p.waitForSelector('[aria-label="25 coins"]')       // -30, and +10 for the 3-day streak it creates
+  await p.waitForSelector('.shop-item:has-text("Rest day") >> text=You need 5 more coins.'); assert.equal(await p.locator('.shop-item:has-text("Rest day") button.primary').isDisabled(), true, 'not enough coins left for another')
+  await tab(p, 'Entries'); await p.waitForSelector('[aria-label="4 day streak"]')
+  await reload(p); await p.waitForSelector('[aria-label="4 day streak"]')
+  await done(s)
+})
+
+test('coins: a treat you name yourself, and a quiet +N when you earn', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(1, 3), ...entriesOn(2, 3), ...entriesOn(3, 3)], ...seenAll }); const p = s.page  // 45 + 10 (3-day streak) = 55
+  await tab(p, 'More'); await p.click('.li >> text=Coins')
+  assert.equal(await p.locator('.shop-item:has-text("My treat") button.primary').isDisabled(), true); await p.waitForSelector('.shop-item:has-text("My treat") >> text=Name your treat first.')
+  await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.shop-item:has-text("My treat") button.primary')
+  await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="30 coins"]')
+  assert.equal(await p.locator('.coin-toast').count(), 0, 'spending never pops a toast')
+  await tab(p, 'Entries'); await p.click('[aria-label="Log mood: good"]'); await p.waitForSelector('.coin-toast >> text=+5 coins')
+  await done(s)
+  const f = await open(seenAll); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow

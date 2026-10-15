@@ -183,6 +183,12 @@ await session('http://localhost:4173', true, async (p, snap) => {   // sleep (Ap
   await p.locator('[aria-label="Sleep and mood"]').scrollIntoViewIfNeeded(); await snap('sleep-mood')
 }, { native: true })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // coins
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Coins'); await snap('coins')
+  await p.locator('h2:has-text("Shop")').scrollIntoViewIfNeeded(); await snap('coins-shop')
+  if (await p.locator('.shop-item:has-text("Ocean") button.primary:not([disabled])').count()) { await p.click('.shop-item:has-text("Ocean") button.primary'); await p.waitForSelector('text=Ocean unlocked'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('coins-theme') }
+})
+
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')

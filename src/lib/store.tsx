@@ -12,9 +12,11 @@ import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadRituals, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, saveRituals } from './extras'
+import { loadAnchors, loadChecks, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadPurchases, loadRituals, loadTheme, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
+import { balance as coinBalance, canBuy, earnings as computeEarnings, itemById, ownedThemes, restDays, type BuyCheck, type Earning, type Purchase } from './rewards.ts'
+import { applyTheme } from './theme.ts'
 import { manualNight, mergeNights, type Night } from './sleep.ts'
 import { connectSleep, disconnectSleep, lastSleepSync, readNights, sleepConnected, type ConnectResult } from './sleepHealth'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
@@ -39,6 +41,12 @@ interface Ctx {
   addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
+  coins: number
+  earned: Earning[]
+  purchases: Purchase[]
+  themeId: string | null
+  buy(itemId: string, opts?: { forDay?: string; note?: string }): BuyCheck
+  setTheme(id: string | null): void
   sleepNights: Night[]
   sleepOn: boolean
   connectSleepNow(): Promise<ConnectResult>
@@ -83,6 +91,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [journal, setJournal] = useState<JournalEntry[]>(loadJournal)
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>(loadFocus)
   const [rituals, setRitualsState] = useState<Ritual[]>(loadRituals)
+  const [purchases, setPurchases] = useState<Purchase[]>(loadPurchases)
+  const [themeId, setThemeId] = useState<string | null>(loadTheme)
   const [healthNights, setHealthNights] = useState<Night[]>(loadHealthNights)
   const [manualNights, setManualNights] = useState<Night[]>(loadManualNights)
   const [sleepOn, setSleepOn] = useState(sleepConnected)
@@ -130,15 +140,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const days = new Set<string>()
     thoughts.forEach(t => days.add(dayKey(t.createdAt)))
     sessions.forEach(s => days.add(dayKey(s.createdAt)))
+    restDays(purchases).forEach(d => days.add(d))     // a rest day you bought covers a missed day
     return computeStreak(days)
-  }, [thoughts, sessions])
+  }, [thoughts, sessions, purchases])
 
   const act = useMemo(() => activityFrom({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
   const anchorsToday = useMemo(() => dayProgress(anchors, today, checks, act), [anchors, today, checks, act])
   const anchorStreakVal = useMemo(() => anchorStreak(anchors, checks, act, new Date()), [anchors, checks, act, today])
-  const anchorHistory = useMemo(() => Array.from({ length: 60 }, (_, i) => shift(today, i - 59)).map(day => { const p = dayProgress(anchors, day, checks, act); return { day, done: p.done, total: p.total } }), [anchors, checks, act, today])
+  const anchorHistory = useMemo(() => Array.from({ length: 400 }, (_, i) => shift(today, i - 399)).map(day => { const p = dayProgress(anchors, day, checks, act); return { day, done: p.done, total: p.total } }), [anchors, checks, act, today])
   const levels = useMemo(() => skillLevels({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
   const updateAnchors = (next: Anchor[]) => { setAnchors(next); saveAnchors(next) }
+
+  const earned = useMemo(() => computeEarnings({
+    thoughts, sessions, journal, focus: focusSessions, worries, anchorDays: anchorHistory,
+    sleepDates: sleepNights.map(n => n.date),
+    streakDays: [...new Set([...thoughts.map(t => dayKey(t.createdAt)), ...sessions.map(s => dayKey(s.createdAt)), ...restDays(purchases)])],
+  }), [thoughts, sessions, journal, focusSessions, worries, anchorHistory, sleepNights, purchases])
+  const coins = coinBalance(earned, purchases)
+  // Apply the chosen accent theme (only if you actually own it).
+  useEffect(() => { const item = themeId && ownedThemes(purchases).includes(themeId) ? itemById(themeId) : null; applyTheme(item?.color ?? null) }, [themeId, purchases])
 
   // iPhone app: keep on-device rituals in step with what you've already done today (a ritual is dropped for today once it's redundant).
   const doneKey = useMemo(() => {
@@ -192,6 +212,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
+    coins, earned, purchases, themeId,
+    buy(itemId, opts = {}) {
+      const item = itemById(itemId); if (!item) return { ok: false, reason: 'Unknown item.' }
+      const check = canBuy(item, coins, purchases, new Date(), opts); if (!check.ok) return check
+      const p: Purchase = { id: crypto.randomUUID(), itemId, at: new Date().toISOString(), cost: item.cost, ...(opts.forDay && { forDay: opts.forDay }), ...(opts.note && { note: opts.note.trim() }) }
+      const next = [...purchases, p]; setPurchases(next); savePurchases(next)
+      if (item.kind === 'theme') { setThemeId(itemId); saveTheme(itemId) }
+      return { ok: true }
+    },
+    setTheme(id) { if (id === null || ownedThemes(purchases).includes(id)) { setThemeId(id); saveTheme(id) } },
     sleepNights, sleepOn, syncSleepNow,
     async connectSleepNow() { const r = await connectSleep(); if (r === 'ok') { setSleepOn(true); await syncSleepNow() } return r },
     disconnectSleepNow() { disconnectSleep(); setSleepOn(false); setHealthNights([]); saveHealthNights([]) },

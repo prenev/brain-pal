@@ -34,7 +34,7 @@
 | Sleep from Apple Watch ↔ mood link | – | – | – | – | – | – | ✅ P10 **unique** |
 | Plain-language summaries (daily / weekly / monthly) | – | – | ◐ | – | ◐ stats | – | ✅ P15 |
 | **Evidence you're levelling up** (skill levels backed by *your own* before/after data) | – streak/score | – streaks | ◐ pet growth (cosmetic) | – | – | – | ✅ P16 **unique** |
-| Reward loop that isn't cosmetic-only or manipulative | – | – | ✅ pet (energy-gated) | – | – | – | 🛠 P11 |
+| Reward loop that isn't cosmetic-only or manipulative | – | – | ✅ pet (energy-gated) | – | – | – | ✅ P11 |
 | Works fully without an account; data stays on device | ? | ? | ? | ? | ? | ? | ✅ local-first |
 | Optional sync (own private account), export, delete-account | ? | ? | ? | ? | ◐ paid backup | ? | ✅ / 🛠 P12 |
 | Bring-your-own-key AI, off by default, crisis text never sent | – | – | – | – | – | – | ✅ **unique** |

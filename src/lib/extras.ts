@@ -2,6 +2,7 @@ import type { Anchor } from './anchors.ts'
 import type { JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
 import type { Night } from './sleep.ts'
+import type { Purchase } from './rewards.ts'
 import { migrateOldReminder, normalizeRituals, type Ritual } from './rituals.ts'
 
 /**
@@ -73,3 +74,12 @@ export const loadHealthNights = (): Night[] => { const r = read<unknown>(K_NIGHT
 export const saveHealthNights = (n: Night[]) => write(K_NIGHTS, n)
 export const loadManualNights = (): Night[] => { const r = read<unknown>(K_MANUAL, []); return Array.isArray(r) ? r.filter(validNight) : [] }
 export const saveManualNights = (n: Night[]) => write(K_MANUAL, n)
+
+const K_PURCHASES = 'bp.purchases', K_THEME = 'bp.theme'
+export const loadPurchases = (): Purchase[] => {
+  const r = read<unknown>(K_PURCHASES, [])
+  return Array.isArray(r) ? r.filter((p): p is Purchase => !!p && typeof p.id === 'string' && typeof p.itemId === 'string' && typeof p.cost === 'number' && p.cost >= 0) : []
+}
+export const savePurchases = (p: Purchase[]) => write(K_PURCHASES, p)
+export const loadTheme = (): string | null => { const t = read<unknown>(K_THEME, null); return typeof t === 'string' ? t : null }
+export const saveTheme = (t: string | null) => { try { t === null ? localStorage.removeItem(K_THEME) : localStorage.setItem(K_THEME, JSON.stringify(t)) } catch { /* ignore */ } }

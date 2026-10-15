@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, ArrowLeft, Pencil, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
@@ -30,7 +30,15 @@ const TABS: { id: Tab; label: string; icon: LucideIcon | 'nib' }[] = [
 ]
 
 function Shell() {
-  const { ready, needsLogin, recovery, levels } = useStore()
+  const { ready, needsLogin, recovery, levels, coins } = useStore()
+  const [coinToast, setCoinToast] = useState(0)
+  const lastCoins = useRef<number | null>(null)
+  // A quiet "+N coins" when you earn some (never on load, never when coins drop from spending).
+  useEffect(() => {
+    if (!ready) return
+    const prev = lastCoins.current; lastCoins.current = coins
+    if (prev !== null && coins > prev) { setCoinToast(coins - prev); const t = setTimeout(() => setCoinToast(0), 2600); return () => clearTimeout(t) }
+  }, [ready, coins])
   const [tab, setTab] = useState<Tab>('entries')
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
@@ -127,6 +135,7 @@ function Shell() {
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
+      {coinToast > 0 && <div className="coin-toast" role="status"><Emoji name="star" size={20} /> +{coinToast} {coinToast === 1 ? 'coin' : 'coins'}</div>}
       {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
   )

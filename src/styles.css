@@ -313,6 +313,8 @@ textarea.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
 .seg.four button { flex: 1 0 22%; padding: 10px 4px; font-size: 14px; }
 .stagebar { display: flex; height: 18px; border-radius: 9px; overflow: hidden; margin: 10px 0 6px; background: var(--card2); }
 .stagebar i { display: block; height: 100%; }
-.sleep-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 130px; margin-top: 14px; }
-.sleep-bars .col { display: grid; justify-items: center; align-items: end; gap: 4px; height: 100%; font-size: 11px; color: var(--muted); }
-.sleep-bars .col i { display: block; width: 100%; border-radius: 8px 8px 4px 4px; background: var(--blue, #4aa8ff); min-height: 3px; }
+.sleep-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 128px; margin-top: 14px; }
+.sleep-bars .col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sleep-bars .col i { display: block; width: 100%; border-radius: 8px 8px 4px 4px; background: var(--blue, #4aa8ff); }
+
+.coin-toast { position: fixed; top: calc(var(--safe-t, 0px) + 14px); left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px; background: var(--card); border: 2px solid var(--accent); color: var(--accent); font-weight: 900; pointer-events: none; animation: rise .3s cubic-bezier(.2,.9,.3,1); }
