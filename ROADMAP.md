@@ -36,8 +36,8 @@ Order of work (changed after the competitor analysis in [`docs/COMPETITORS.md`](
 | 2 | 7b | **Today & ease of use** — one next action, ≤2-tap logging, short lists, tap-budget tests | "Easy to use af" | 🔨 Today card, one-tap mood + undo, short lists ✅; first-run screens + reduced-motion pending |
 | 3 | 8 | **Journal** — free writing + gentle prompts | A place for thoughts that aren't a CBT record | ⏳ |
 | 4 | 14 | **Worry → Focus bridge** ("Start tiny") | Our unique anxiety→action loop; competitors only have a timer | ⏳ |
-| 5 | 15 | **Summaries** — daily recap, weekly/monthly digest, shareable | Understand your week in 20 seconds | ⏳ |
-| 6 | 16 | **Level-up proof** — skill levels backed by your own before/after data | Evidence, not points | ⏳ |
+| 5 | 15 | **Summaries** — daily recap, weekly/monthly digest, shareable | Understand your week in 20 seconds | ✅ Summary view (today/week/month) + share; evening "wind down" recap on the Today card pending |
+| 6 | 16 | **Level-up proof** — skill levels backed by your own before/after data | Evidence, not points | ✅ skills, proof cards, milestones, level-up moment; Journaling/Focus skills appear when P8/P14 ship |
 | 7 | 9 | **Rituals & reminders** — breathe at 07:00 and at night | Reminders that *do* something | ⏳ |
 | 8 | 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood | ⏳ (device-verified part needs you) |
 | 9 | 11 | **Coins & rewards** | Showing up feels good, no shame mechanics | ⏳ |

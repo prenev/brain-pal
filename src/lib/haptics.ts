@@ -26,6 +26,8 @@ function iosTap() {
 }
 
 export const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator
+/** Browsers ignore (and log a warning for) vibration before the first tap; skip it quietly instead. */
+const userHasTapped = () => (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive !== false
 
 export function haptic(pattern: number | number[]) {
   if (isNative()) {   // iPhone app: real Taptic Engine taps shaped like the pattern
@@ -34,14 +36,14 @@ export function haptic(pattern: number | number[]) {
       timers.push(window.setTimeout(() => { Haptics.impact({ style: ImpactStyle[style === 'LIGHT' ? 'Light' : style === 'MEDIUM' ? 'Medium' : 'Heavy'] }).catch(() => {}) }, at))
     return
   }
-  if (canVibrate) { navigator.vibrate(pattern); return }
+  if (canVibrate) { if (userHasTapped()) navigator.vibrate(pattern); return }
   const taps = Array.isArray(pattern) ? Math.ceil(pattern.filter((_, i) => i % 2 === 0).length) : 1
   for (let i = 0; i < Math.min(taps, 3); i++) setTimeout(iosTap, i * 120)
 }
 
 export const stopHaptic = () => {
   timers.forEach(clearTimeout); timers = []
-  if (canVibrate) navigator.vibrate(0)
+  if (canVibrate && userHasTapped()) navigator.vibrate(0)
 }
 
 /** Short "well done" feedback. */

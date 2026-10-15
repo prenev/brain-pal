@@ -318,6 +318,80 @@ test('emotion and tag lists start short, learn what you use, and "More" / search
 })
 
 
+const ago = n => new Date(Date.now() - n * 864e5).toISOString()
+const rec = (id, n, extra = {}) => ({ id, createdAt: ago(n), mood: 4, situation: '', thought: 'a thought', emotions: [{ name: 'anxious', intensity: 80 }], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: [], distortions: [], photos: [], ...extra })
+const calm = (id, n, b, a) => ({ id, createdAt: ago(n), pattern: { inhale: 4, hold1: 4, exhale: 6, hold2: 0 }, cycles: 6, durationSec: 120, completed: true, kind: 'breathing', anxietyBefore: b, anxietyAfter: a })
+
+test('Progress: skill levels, proof from your own data (with its limits), milestones', async () => {
+  const fresh = await open(); await tab(fresh.page, 'Stats'); await fresh.page.click('[role=tab]:has-text("Progress")')
+  await fresh.page.waitForSelector('text=Your proof appears here'); assert.equal(await fresh.page.locator('.proof').count(), 0, 'no proof is invented without data')
+  assert.equal(await fresh.page.locator('.skill >> text=Not started').count(), 4)
+  await done(fresh)
+
+  const s = await open({
+    'bp.thoughts': [rec('t1', 1, { alternateThought: 'b1', outcomeIntensity: 40 }), rec('t2', 2, { alternateThought: 'b2', outcomeIntensity: 30 }), rec('t3', 3, { alternateThought: 'b3', outcomeIntensity: 50 }), rec('t4', 4), rec('t5', 5), rec('t6', 6, { alternateThought: 'b6', outcomeIntensity: 20 })],
+    'bp.sessions': [calm('s1', 1, 8, 4), calm('s2', 2, 7, 3), calm('s3', 3, 9, 5), calm('s4', 4, 8, 4)],
+    'bp.worries': [{ id: 'w1', createdAt: ago(5), text: 'x', status: 'let-go', action: null, reviewedAt: ago(2) }, { id: 'w2', createdAt: ago(5), text: 'y', status: 'let-go', action: null, reviewedAt: ago(1) }, { id: 'w3', createdAt: ago(5), text: 'z', status: 'actionable', action: 'call', reviewedAt: ago(1) }, { id: 'w4', createdAt: ago(5), text: 'q', status: 'open', action: null, reviewedAt: null }],
+    'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")')
+  await p.waitForSelector('[aria-label="Reframing: level 2"]')          // 4 balanced thoughts -> level 2 (needs 3)
+  await p.waitForSelector('[aria-label="Calming: level 2"]')            // 4 sessions
+  await p.waitForSelector('[aria-label="Worry mastery: level 2"]')      // 3 processed worries (the open one doesn't count)
+  await p.waitForSelector('[aria-label="Showing up: level 2"]')         // 6 active days
+  assert.match(await p.locator('.skill:has-text("Reframing")').innerText(), /3 more thoughts reframed to level 3/)
+  const relief = p.locator('.proof:has-text("Relief after calming")')
+  assert.match(await relief.innerText(), /4 pts/); assert.match(await relief.innerText(), /After 4 rated sessions, your anxiety dropped by 4 points on average/)
+  assert.equal(await relief.locator('[aria-label^="Trend"]').count(), 0, 'one window of data: no before/after trend is claimed')
+  assert.match(await p.locator('.proof:has-text("Worries let go")').innerText(), /66\.7%/)
+  assert.match(await p.locator('.skill:has-text("Worry mastery")').innerText(), /4 more worries processed to level 3/)
+  await p.waitForSelector('.timeline >> text=Wrote your first entry'); await p.waitForSelector('.timeline >> text=Let go of your first worry'); await p.waitForSelector('.timeline >> text=Felt your first drop in anxiety')
+  await p.waitForSelector('text=not a medical measure')
+  assert.equal(await p.locator('.celebrate').count(), 0, 'levels you have already seen never pop up again')
+  await done(s)
+})
+
+test('Progress: a real before/after trend appears only with enough data in both windows', async () => {
+  const prev = [40, 41, 42, 43, 44].map((n, i) => calm('p' + i, n, 8, 6)), now = [1, 2, 3, 4, 5].map((n, i) => calm('n' + i, n, 8, 4))
+  const s = await open({ 'bp.sessions': [...prev, ...now], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")')
+  const relief = p.locator('.proof:has-text("Relief after calming")')
+  await relief.locator('[aria-label="Trend: up"]').waitFor()
+  assert.match(await relief.innerText(), /4 points in the last 30 days, versus 2 in the 30 days before \(5 and 5 sessions\)/)
+  await done(s)
+})
+
+test('level-up moment: celebrates a real rise with the evidence, once, and stays quiet on first run', async () => {
+  const seeded = { 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 } }
+  const s = await open(seeded); const p = s.page
+  await p.waitForSelector('.celebrate >> text=Reframing → Level 2'); await p.waitForSelector('.celebrate >> text=3 entries')
+  await p.click('.celebrate .btn'); await p.waitForSelector('.topbar')
+  await reload(p); await p.waitForTimeout(400); assert.equal(await p.locator('.celebrate').count(), 0, 'shown once')
+  await done(s)
+  const first = await open(); await first.page.waitForTimeout(500)    // brand-new install, nothing to celebrate
+  assert.equal(await first.page.locator('.celebrate').count(), 0)
+  await newEntry(first.page, { mood: 4, thought: 'first ever' }); await save(first.page)
+  await first.page.waitForTimeout(400); assert.equal(await first.page.locator('.celebrate').count(), 0, 'Level 1 is recorded quietly, no second pop-up')
+  await done(first)
+})
+
+test('Summary: plain-language day / week / month recap you can share', async () => {
+  const s = await open({ 'bp.thoughts': [rec('a', 0, { mood: 2 }), rec('b', 1, { mood: 4, emotions: [{ name: 'happy', intensity: 60 }] }), rec('c', 3, { mood: 5, emotions: [{ name: 'happy', intensity: 60 }] })],
+    'bp.sessions': [calm('s1', 1, 8, 5)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  await p.evaluate(() => { navigator.share = async d => { window.__shared = d } })
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")')
+  const card = p.locator('.summary')
+  await card.locator('text=You showed up on 3 of 7 days and wrote 3 entries.').waitFor()
+  assert.match(await card.innerText(), /Feelings that came up most: happy and anxious\./); assert.match(await card.innerText(), /1 calming session \(2 minutes\), and your anxiety dropped by 3 points/)
+  await p.click('[role=tab]:has-text("Today")'); await card.locator('text=You showed up on 1 of 1 day and wrote 1 entry.').waitFor()
+  await p.click('[role=tab]:has-text("This month")'); await card.locator('text=of 30 days').waitFor()
+  await p.click('[role=tab]:has-text("This week")'); await p.click('button:has-text("Share")')
+  const shared = await p.evaluate(() => window.__shared); assert.match(shared.text, /^My week\n/); assert.match(shared.text, /• You showed up on 3 of 7 days/); assert.match(shared.text, /not medical advice/)
+  await done(s)
+  const quiet = await open(); await tab(quiet.page, 'Stats'); await quiet.page.click('[role=tab]:has-text("Summary")')
+  await quiet.page.waitForSelector('text=Nothing logged this week — that’s okay'); await done(quiet)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow

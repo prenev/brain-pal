@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, ArrowLeft, Pencil, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
 import { StoreProvider, useStore } from './lib/store'
+import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
 import Entries from './pages/Entries'
 import Stats from './pages/Stats'
 import CalendarPage from './pages/CalendarPage'
@@ -26,7 +27,7 @@ const TABS: { id: Tab; label: string; icon: LucideIcon | 'nib' }[] = [
 ]
 
 function Shell() {
-  const { ready, needsLogin, recovery } = useStore()
+  const { ready, needsLogin, recovery, levels } = useStore()
   const [tab, setTab] = useState<Tab>('entries')
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
@@ -37,6 +38,23 @@ function Shell() {
   const [moreView, setMoreView] = useState<'support' | null>(null)
   const [composeMood, setComposeMood] = useState<number | null>(null)
   const [cel, setCel] = useState<Celebration | null>(null)
+
+  // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
+  useEffect(() => {
+    if (!ready || needsLogin || recovery || cel) return
+    let seen: Partial<Record<SkillId, number>> | null = null
+    try { seen = JSON.parse(localStorage.getItem('bp.levels.seen') ?? 'null') } catch { /* ignore */ }
+    const save = (v: Partial<Record<SkillId, number>>) => { try { localStorage.setItem('bp.levels.seen', JSON.stringify(v)) } catch { /* ignore */ } }
+    const current = Object.fromEntries(Object.entries(levels).map(([k, v]) => [k, v.level])) as Record<SkillId, number>
+    if (!seen) { save(current); return }
+    const ups = levelUps(seen, levels)
+    const quiet = ups.filter(u => u.to < 2)          // Level 1 is just "you started": record it, don't interrupt
+    const up = ups.find(u => u.to >= 2)
+    if (quiet.length || up) save({ ...seen, ...Object.fromEntries(quiet.map(u => [u.skill, u.to])), ...(up ? { [up.skill]: up.to } : {}) })
+    if (!up) return
+    const def = SKILLS.find(s => s.id === up.skill)!
+    setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count) })
+  }, [ready, needsLogin, recovery, cel, levels])
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
   if (needsLogin || recovery) return <Login />

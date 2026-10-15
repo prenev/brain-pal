@@ -145,6 +145,13 @@ await session('http://localhost:4173', true, async (p, snap) => {   // daily anc
   await p.click('.tab >> text=More'); await p.click('.li >> text=Daily anchors'); await snap('anchors-more')
 })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // progress + summaries
+  await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Progress")'); await snap('progress')
+  await p.locator('h2:has-text("Proof")').scrollIntoViewIfNeeded(); await snap('progress-proof')
+  await p.click('[role=tab]:has-text("Summary")'); await snap('summary-week')
+  await p.click('[role=tab]:has-text("Today")'); await snap('summary-today')
+})
+
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')

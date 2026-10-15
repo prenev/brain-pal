@@ -10,6 +10,8 @@ import { getReminder } from './push'
 import { scheduleNativeReminders } from './nativeReminders'
 import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
+import { skillLevels, type Level, type SkillId } from './levels.ts'
+import { shift } from './dates.ts'
 import { loadAnchors, loadChecks, saveAnchors, saveChecks } from './extras'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
 
@@ -35,6 +37,8 @@ interface Ctx {
   addSession(s: NewSession): Promise<void>
   anchors: Anchor[]
   anchorsToday: DayProgress
+  anchorHistory: { day: string; done: number; total: number }[]
+  levels: Record<SkillId, Level>
   anchorStreak: AnchorStreak
   addAnchor(label: string, emoji: string, link: AnchorLink | null): boolean
   renameAnchor(id: string, label: string): void
@@ -94,6 +98,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const act = useMemo(() => activityFrom({ thoughts, sessions, worries }), [thoughts, sessions, worries])
   const anchorsToday = useMemo(() => dayProgress(anchors, today, checks, act), [anchors, today, checks, act])
   const anchorStreakVal = useMemo(() => anchorStreak(anchors, checks, act, new Date()), [anchors, checks, act, today])
+  const anchorHistory = useMemo(() => Array.from({ length: 60 }, (_, i) => shift(today, i - 59)).map(day => { const p = dayProgress(anchors, day, checks, act); return { day, done: p.done, total: p.total } }), [anchors, checks, act, today])
+  const levels = useMemo(() => skillLevels({ thoughts, sessions, worries }), [thoughts, sessions, worries])
   const updateAnchors = (next: Anchor[]) => { setAnchors(next); saveAnchors(next) }
 
   // iPhone app: keep on-device reminders in step with your activity (drops today's nudge once you've checked in).
@@ -144,7 +150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
-    anchors, anchorsToday, anchorStreak: anchorStreakVal,
+    anchors, anchorsToday, anchorHistory, levels, anchorStreak: anchorStreakVal,
     addAnchor(label, emoji, link) {
       const clean = cleanLabel(label)
       if (!clean || !canAdd(anchors)) return false

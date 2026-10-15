@@ -5,14 +5,14 @@ export const LEVEL_THRESHOLDS = [1, 3, 7, 15, 30, 50, 80, 120, 180, 250]
 export const MAX_LEVEL = LEVEL_THRESHOLDS.length
 
 export type SkillId = 'calming' | 'reframing' | 'worry' | 'consistency' | 'journaling' | 'focus'
-export interface SkillDef { id: SkillId; name: string; emoji: string; unit: string; blurb: string }
+export interface SkillDef { id: SkillId; name: string; emoji: string; unit: string; unitOne: string; blurb: string }
 export const SKILLS: SkillDef[] = [
-  { id: 'calming', name: 'Calming', emoji: 'wind', unit: 'calming sessions', blurb: 'Breathing and grounding sessions you finished.' },
-  { id: 'reframing', name: 'Reframing', emoji: 'bulb', unit: 'thoughts reframed', blurb: 'Entries where you wrote a more balanced thought.' },
-  { id: 'worry', name: 'Worry mastery', emoji: 'worry', unit: 'worries processed', blurb: 'Parked worries you let go of or made a plan for.' },
-  { id: 'consistency', name: 'Showing up', emoji: 'seedling', unit: 'active days', blurb: 'Days you did anything in Brain Pal.' },
-  { id: 'journaling', name: 'Journaling', emoji: 'notebook', unit: 'journal entries', blurb: 'Times you wrote in your journal.' },
-  { id: 'focus', name: 'Small steps', emoji: 'rocket', unit: 'focus sessions', blurb: 'Tiny steps you started and finished.' },
+  { id: 'calming', name: 'Calming', emoji: 'wind', unit: 'calming sessions', unitOne: 'calming session', blurb: 'Breathing and grounding sessions you finished.' },
+  { id: 'reframing', name: 'Reframing', emoji: 'bulb', unit: 'thoughts reframed', unitOne: 'thought reframed', blurb: 'Entries where you wrote a more balanced thought.' },
+  { id: 'worry', name: 'Worry mastery', emoji: 'worry', unit: 'worries processed', unitOne: 'worry processed', blurb: 'Parked worries you let go of or made a plan for.' },
+  { id: 'consistency', name: 'Showing up', emoji: 'seedling', unit: 'active days', unitOne: 'active day', blurb: 'Days you did anything in Brain Pal.' },
+  { id: 'journaling', name: 'Journaling', emoji: 'notebook', unit: 'journal entries', unitOne: 'journal entry', blurb: 'Times you wrote in your journal.' },
+  { id: 'focus', name: 'Small steps', emoji: 'rocket', unit: 'focus sessions', unitOne: 'focus session', blurb: 'Tiny steps you started and finished.' },
 ]
 
 export interface Level { level: number; count: number; next: number | null; toNext: number | null; progress: number }

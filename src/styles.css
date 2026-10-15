@@ -284,3 +284,16 @@ select.input { appearance: none; }
 .today-line.linklike { text-align: left; }
 .toast-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -4px 0 12px; padding: 8px 12px; border-radius: 12px; background: rgba(53,208,127,.14); border: 2px solid var(--accent); color: var(--accent); font-weight: 800; font-size: 14px; }
 .morebtn { display: block; margin: 12px auto 0; font-size: 15px; }
+
+/* Progress + summary */
+.sec { font-size: 20px; margin: 22px 4px 10px; }
+.skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.skill { margin: 0; padding: 14px; }
+.skill .lvl { font-weight: 900; font-size: 18px; margin: 8px 0; color: var(--accent); }
+.proof .big { font-size: 34px; font-weight: 900; margin: 6px 0; }
+.trend { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: 14px; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.timeline li { display: flex; align-items: center; gap: 10px; }
+.timeline li span { flex: 1; }
+.timeline em { font-style: normal; color: var(--muted); font-size: 13px; }
+.summary ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 10px; line-height: 1.4; }
