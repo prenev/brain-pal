@@ -9,7 +9,11 @@ import assert from 'node:assert/strict'
 import { nativeStub } from './native-stub.mjs'
 
 const root = new URL('..', import.meta.url).pathname
-if (!process.argv.includes('--no-build')) execSync('npx vite build', { cwd: root, stdio: 'pipe' })
+// The local-mode suite needs a build without Supabase keys; a developer's .env would otherwise put the app behind the login screen.
+const NO_KEYS = { ...process.env, VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' }
+const envUrl = existsSync(new URL('../.env', import.meta.url)) && readFileSync(new URL('../.env', import.meta.url), 'utf8').match(/^VITE_SUPABASE_URL=(\S+)/m)?.[1]
+const distHasKeys = () => !!envUrl && readdirSync(new URL('../dist/assets', import.meta.url)).some(f => f.endsWith('.js') && readFileSync(new URL(`../dist/assets/${f}`, import.meta.url), 'utf8').includes(envUrl))
+if (!process.argv.includes('--no-build') || distHasKeys()) execSync('npx vite build', { cwd: root, stdio: 'pipe', env: NO_KEYS })
 const CLOUD_DIR = 'node_modules/.dist-cloud'   // same app built "with Supabase" pointing at a dead address; every call is intercepted below
 if (!process.argv.includes('--no-build') || !existsSync(new URL(`../${CLOUD_DIR}`, import.meta.url)))
   execSync(`npx vite build --outDir ${CLOUD_DIR}`, { cwd: root, stdio: 'pipe', env: { ...process.env, VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'test-key' } })
@@ -88,6 +92,24 @@ test('every screen renders without errors', async () => {
     await tab(s.page, 'More')
     if (row === 'Worry time') { await s.page.click('.li >> text=Worry time'); await s.page.waitForSelector('text=Parked'); await s.page.click('[aria-label=Back]'); continue }
     await s.page.click(`.li >> text=${row}`); await s.page.waitForSelector('.title'); await s.page.click('[aria-label=Back]')
+  }
+  await done(s)
+})
+
+test('tab bar: every icon is visible whether selected or not; Entries uses the Fluent nib', async () => {
+  const s = await open(); const p = s.page
+  for (const sel of ['Entries', 'More']) {
+    await tab(p, sel)
+    const icons = await p.$$eval('.tab', tabs => tabs.map(t => {
+      const svg = t.querySelector('svg'), r = svg.getBoundingClientRect(), [cr, cg, cb] = getComputedStyle(t).color.match(/\d+/g).map(Number)
+      return { label: t.textContent, on: t.classList.contains('on'), w: r.width, light: (cr + cg + cb) / 3, fluent: svg.getAttribute('viewBox') === '0 0 32 32' }
+    }))
+    assert.equal(icons.length, 5)
+    for (const i of icons) {
+      assert.ok(i.w >= 20, `${i.label} icon is rendered`)
+      if (!i.fluent) assert.ok(i.light > 150 || i.on, `${i.label} icon is light enough to see on the dark bar when not selected`)
+    }
+    assert.deepEqual(icons.filter(i => i.fluent).map(i => i.label), ['Entries'])
   }
   await done(s)
 })
