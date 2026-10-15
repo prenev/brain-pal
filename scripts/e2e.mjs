@@ -392,6 +392,72 @@ test('Summary: plain-language day / week / month recap you can share', async () 
 })
 
 
+const openJournal = async p => { await p.click('.fab'); await p.click('.sheet-item >> text=Write in journal'); await p.waitForSelector('[aria-label="Journal entry"]') }
+const saveJournalEntry = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate >> text=Saved to your journal'); await p.click('.celebrate .btn'); await p.waitForSelector('.topbar') }
+
+test('journal: write, list, search, filter, edit, delete — and it persists', async () => {
+  const s = await open(); const p = s.page
+  await openJournal(p)
+  await p.fill('[aria-label="Title"]', 'Quiet morning'); await p.fill('[aria-label="Journal entry"]', 'Walked by the river and felt lighter.')
+  await p.waitForSelector('text=7 words'); await p.click('[aria-label="Mood: good"]'); await p.click('.chip:has-text("health")')
+  await saveJournalEntry(p)
+  await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'Deadline stress is building.'); await p.click('.chip:has-text("work")'); await saveJournalEntry(p)
+
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Journal") >> text=2'); await p.click('.li >> text=Journal')
+  assert.equal(await p.locator('.jentry').count(), 2)
+  assert.match(await p.locator('.jentry').first().innerText(), /Deadline stress/, 'newest first')
+  await p.fill('[aria-label="Search journal"]', 'river'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
+  assert.match(await p.locator('.jentry').innerText(), /Quiet morning/); await p.fill('[aria-label="Search journal"]', '')
+  await p.click('[role=group][aria-label="Filter by tag"] >> text=work'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
+  assert.match(await p.locator('.jentry').innerText(), /Deadline/); await p.click('[role=group][aria-label="Filter by tag"] >> text=work')
+  await reload(p); await tab(p, 'More'); await p.click('.li >> text=Journal'); assert.equal(await p.locator('.jentry').count(), 2, 'persists across reload')
+
+  await p.click('.jentry:has-text("Quiet morning")')                       // edit in place
+  await p.waitForSelector('[aria-label="Edit journal entry"]'); assert.equal(await p.inputValue('[aria-label="Title"]'), 'Quiet morning')
+  await p.fill('[aria-label="Journal entry"]', 'Walked by the river. Better day than expected.'); await p.click('button:has-text("Save")')
+  await p.waitForSelector('.jentry:has-text("Better day than expected")'); assert.equal(await p.locator('.celebrate').count(), 0, 'no celebration for an edit')
+  assert.equal(await p.locator('.jentry').count(), 2, 'edited, not duplicated')
+
+  p.once('dialog', d => d.accept())
+  await p.click('.jentry:has-text("Deadline")'); await p.click('button:has-text("Delete entry")')
+  await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
+  await done(s)
+})
+
+test('journal: draft survives leaving, blank saves are refused, and text is only ever text', async () => {
+  const s = await open(); const p = s.page
+  await openJournal(p); await p.click('button:has-text("Save")'); await p.waitForSelector('[role=alert]:has-text("Write a few words first")')
+  assert.equal(await p.locator('.celebrate').count(), 0)
+  await p.click('text=Need a place to start?'); await p.waitForSelector('[role=note]')                 // today's prompt
+  await p.fill('[aria-label="Journal entry"]', '<img src=x onerror="window.__pwned=1"> half a thought'); await p.waitForTimeout(700)
+  await reload(p); await openJournal(p)
+  await p.waitForSelector('text=Picked up where you left off'); assert.match(await p.inputValue('[aria-label="Journal entry"]'), /half a thought/)
+  await p.waitForSelector('[role=note]', { timeout: 2000 })                                              // prompt restored too
+  await saveJournalEntry(p)
+  await openJournal(p); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '', 'draft is cleared once saved'); await p.click('[aria-label=Back]')
+  await tab(p, 'More'); await p.click('.li >> text=Journal')
+  assert.equal(await p.locator('.jentry img').count(), 0); assert.equal(await p.evaluate(() => window.__pwned), undefined)
+  assert.match(await p.locator('.jentry').innerText(), /<img src=x/, 'shown literally')
+  await done(s)
+})
+
+test('journal: crisis wording shows support, corrupted journal data is ignored, and a "write one line" anchor ticks itself', async () => {
+  const bad = await open({ 'bp.journal': 'garbage' }); await bad.page.waitForSelector('.topbar'); await done(bad)
+
+  const s = await open(); const p = s.page
+  await p.click('text=Choose your daily anchors'); await p.click('.sheet .chip >> text=Write one line'); await p.click('button:has-text("Done")')
+  await p.click('[aria-label="Log mood: good"]'); await p.waitForSelector('.toast-row')
+  assert.equal(await p.locator('[role=checkbox][aria-label="Write one line"]').getAttribute('aria-checked'), 'false')
+  await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'I want to end my life')
+  await p.waitForSelector('[role=alert] >> text=You don’t have to do this alone')
+  await p.fill('[aria-label="Journal entry"]', 'Feeling a bit better now.'); await saveJournalEntry(p)
+  await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Journaling: level 1"]')
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=You wrote 1 journal entry.')
+  await done(s)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow

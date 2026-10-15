@@ -40,6 +40,13 @@ assert.ok(text.includes('You did 3 calming sessions (12 minutes), and your anxie
 assert.ok(text.includes('You parked 3 worries and let go of 1 and made a plan for 1.'))
 assert.ok(text.includes('You completed every anchor on 2 of 3 days.'))
 
+// journal entries count as showing up and get their own sentence
+const j = summarize({ thoughts: [], sessions: [], worries: [], journal: [{ createdAt: at('2026-10-15') }, { createdAt: at('2026-10-14') }, { createdAt: at('2026-09-01') }] }, '2026-10-15', 7)
+assert.equal(j.journalEntries, 2); assert.equal(j.activeDays, 2)
+assert.ok(sentences(j).includes('You wrote 2 journal entries.')); assert.ok(!sentences(j)[0].startsWith('Nothing logged'))
+assert.ok(sentences(summarize({ thoughts: [], sessions: [], worries: [], journal: [{ createdAt: at('2026-10-15') }] }, '2026-10-15', 1)).includes('You wrote 1 journal entry.'))
+assert.equal(summarize({ thoughts: [], sessions: [], worries: [] }, '2026-10-15', 7).journalEntries, 0)
+
 // wording edge cases
 const one = summarize({ thoughts: [th('2026-10-15', 3)], sessions: [ses('2026-10-15', 1)], worries: [wor('2026-10-15', 'open')] }, '2026-10-15', 1)
 const s1 = sentences(one, 'today')

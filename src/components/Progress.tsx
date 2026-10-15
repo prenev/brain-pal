@@ -15,8 +15,8 @@ function Trend({ t }: { t: NonNullable<ProofCard['trend']> }) {
 
 /** Skill levels + honest before/after proof + first-time milestones, all computed from your own data. */
 export default function Progress() {
-  const { thoughts, sessions, worries } = useStore()
-  const counts = useMemo(() => skillCounts({ thoughts, sessions, worries }), [thoughts, sessions, worries])
+  const { thoughts, sessions, worries, journal } = useStore()
+  const counts = useMemo(() => skillCounts({ thoughts, sessions, worries, journal }), [thoughts, sessions, worries, journal])
   const cards = useMemo(() => proofCards({ thoughts, sessions, worries }), [thoughts, sessions, worries])
   const marks = useMemo(() => milestones({ thoughts, sessions, worries }), [thoughts, sessions, worries])
   // Skills you can't practise yet (journal / focus arrive in later phases) stay hidden until they have data.

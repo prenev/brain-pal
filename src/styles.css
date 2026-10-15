@@ -297,3 +297,8 @@ select.input { appearance: none; }
 .timeline li span { flex: 1; }
 .timeline em { font-style: normal; color: var(--muted); font-size: 13px; }
 .summary ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 10px; line-height: 1.4; }
+
+/* Journal */
+.prompt-card { display: flex; align-items: center; gap: 12px; width: 100%; background: rgba(255,211,107,.08); border-color: rgba(255,211,107,.45); }
+.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
+.jentry { display: block; width: 100%; text-align: left; margin-bottom: 10px; }

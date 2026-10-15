@@ -152,6 +152,15 @@ await session('http://localhost:4173', true, async (p, snap) => {   // progress 
   await p.click('[role=tab]:has-text("Today")'); await snap('summary-today')
 })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // journal
+  await p.click('.fab'); await p.click('.sheet-item >> text=Write in journal'); await p.waitForSelector('[aria-label="Journal entry"]'); await snap('journal-editor-empty')
+  await p.click('text=Need a place to start?'); await p.fill('[aria-label="Title"]', 'A slower morning')
+  await p.fill('[aria-label="Journal entry"]', 'Woke up before the alarm. Made tea, sat by the window and just watched the street for ten minutes. Nothing special, but my shoulders dropped for the first time this week.')
+  await p.click('[aria-label="Mood: good"]'); await p.click('.chip:has-text("health")'); await snap('journal-editor')
+  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn')
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Journal'); await snap('journal-list')
+})
+
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')

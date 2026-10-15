@@ -8,6 +8,7 @@ export interface SummaryData {
   thoughts: { createdAt: string; mood: number; emotions: { name: string }[]; distortions: string[] }[]
   sessions: { createdAt: string; durationSec: number; completed: boolean; anxietyBefore: number | null; anxietyAfter: number | null }[]
   worries: { createdAt: string; status: string; reviewedAt: string | null }[]
+  journal?: { createdAt: string }[]
   /** Per-day anchor completion (days that had anchors). */
   anchorDays?: { day: string; done: number; total: number }[]
 }
@@ -21,6 +22,7 @@ export interface PeriodSummary {
   calmingSessions: number; calmingMinutes: number; avgRelief: number | null
   worriesParked: number; worriesLetGo: number; worriesPlanned: number
   anchorsFullDays: number; anchorsTrackedDays: number
+  journalEntries: number
 }
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null)
@@ -42,6 +44,7 @@ export function summarize(d: SummaryData, end: string, days: number): PeriodSumm
   const active = new Set<string>()
   th.forEach(t => active.add(dayKey(t.createdAt))); ses.forEach(s => active.add(dayKey(s.createdAt)))
   d.worries.forEach(w => w.reviewedAt && inRange(w.reviewedAt, start, end) && active.add(dayKey(w.reviewedAt)))
+  const jr = (d.journal ?? []).filter(j => inRange(j.createdAt, start, end)); jr.forEach(j => active.add(dayKey(j.createdAt)))
 
   const byDay = new Map<string, number[]>()
   for (const t of th) { const k = dayKey(t.createdAt); byDay.set(k, [...(byDay.get(k) ?? []), t.mood]) }
@@ -64,7 +67,7 @@ export function summarize(d: SummaryData, end: string, days: number): PeriodSumm
     avgRelief: rated.length ? r1(avg(rated)!) : null,
     worriesParked: d.worries.filter(w => inRange(w.createdAt, start, end)).length,
     worriesLetGo: wr.filter(w => w.status === 'let-go').length, worriesPlanned: wr.filter(w => w.status === 'actionable').length,
-    anchorsFullDays: ad.filter(a => a.done >= a.total).length, anchorsTrackedDays: ad.length,
+    anchorsFullDays: ad.filter(a => a.done >= a.total).length, anchorsTrackedDays: ad.length, journalEntries: jr.length,
   }
 }
 
@@ -74,7 +77,7 @@ const list = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1
 /** The summary as short sentences, skipping anything with no data. `label` is e.g. "this week". */
 export function sentences(s: PeriodSummary, label = 'this week', prevLabel = 'last week'): string[] {
   const out: string[] = []
-  if (s.entries === 0 && s.calmingSessions === 0 && s.activeDays === 0) return [`Nothing logged ${label} — that’s okay. Whenever you’re ready, one tap is enough.`]
+  if (s.entries === 0 && s.calmingSessions === 0 && s.activeDays === 0 && s.journalEntries === 0) return [`Nothing logged ${label} — that’s okay. Whenever you’re ready, one tap is enough.`]
   out.push(`You showed up on ${s.activeDays} of ${plural(s.days, 'day')}${s.entries ? ` and wrote ${plural(s.entries, 'entry', 'entries')}` : ''}.`)
   if (s.avgMood !== null) {
     if (s.prevAvgMood === null) out.push(`Your average mood was ${s.avgMood} out of 5.`)
@@ -91,6 +94,7 @@ export function sentences(s: PeriodSummary, label = 'this week', prevLabel = 'la
     const bits = [s.worriesLetGo && `let go of ${s.worriesLetGo}`, s.worriesPlanned && `made a plan for ${s.worriesPlanned}`].filter(Boolean) as string[]
     out.push(`You parked ${plural(s.worriesParked, 'worry', 'worries')}${bits.length ? ` and ${list(bits)}` : ''}.`)
   }
+  if (s.journalEntries) out.push(`You wrote ${plural(s.journalEntries, 'journal entry', 'journal entries')}.`)
   if (s.anchorsTrackedDays) out.push(`You completed every anchor on ${s.anchorsFullDays} of ${plural(s.anchorsTrackedDays, 'day')}.`)
   return out
 }
