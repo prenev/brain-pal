@@ -53,6 +53,6 @@ Email + password works as-is. For magic-link / password-reset emails to open the
 - App icon / splash: `npm run` … see `scripts/make-store-assets.mjs`; then `npx @capacitor/assets generate --ios`.
 
 ## Honest status
-- Verified here (Linux): all the JavaScript, unit tests, and browser tests that simulate the iOS bridge; the Xcode project file parses and lists our files.
-- **Not verified here:** compiling the Swift and running on a device — that needs a Mac. The `iOS build` GitHub Action compiles it on a macOS runner; your first ▶ Run is the real test. If Xcode shows an error, send me the text.
-- Not done: Android, push notifications via APNs (local reminders are used instead), Sign in with Apple, App Store submission assets.
+- **Verified:** the JavaScript, 8 unit suites, 5 browser tests that simulate the iOS bridge, and a JS↔Swift contract test. On every iOS-related push, the **`iOS build` GitHub Action compiles the whole app (Capacitor + our Swift HealthKit plugin) for the iOS Simulator on a macOS runner — it passes** (unsigned build).
+- **Not yet verified:** running on a physical iPhone — i.e. the HealthKit permission sheet, saving to the Health app, real Taptic feedback and local notifications. Your first ▶ Run is that test. If anything misbehaves, send me what Xcode or the phone shows.
+- Not done: Android, push notifications via APNs (local reminders are used instead), Sign in with Apple / Google inside the app, App Store submission assets (screenshots, privacy policy, health-data disclosures).

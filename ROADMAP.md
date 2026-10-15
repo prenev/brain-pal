@@ -12,6 +12,6 @@ Each phase ships as its own commit(s) and is pushed to the branch when done.
 | 3 | **Reminders**: hourly push sender (edge function + cron), streak-saver messages, reminder time picker, delete account | ✅ done (server side untested against a live project) |
 | 4 | **Anxiety toolkit**: SOS flow (rate → breathing or 5-4-3-2-1 grounding → re-rate), calming presets (4-6, 4-7-8), thinking-traps helper + reframe questions, anxiety insights (triggers, traps, time of day, what helps), support resources + rough-patch nudge | ✅ done |
 | 4.5 | **Playful redesign**: Duolingo-style dark theme, Fluent emoji for moods/emotions/tags/tabs, daily goals, celebration screen + confetti | ✅ done |
-| 5 | **iPhone app (Capacitor)**: Taptic haptics, Apple Health Mindful Minutes, on-device reminders, keep-awake, icon/splash, brainpal:// auth links, macOS CI build | ✅ code + tests done; Swift not yet compiled on a Mac (see docs/IOS.md) |
+| 5 | **iPhone app (Capacitor)**: Taptic haptics, Apple Health Mindful Minutes, on-device reminders, keep-awake, icon/splash, brainpal:// auth links, macOS CI build | ✅ done; compiles on macOS CI, awaiting first run on a real iPhone (docs/IOS.md) |
 | 6 | **Voice memos & worry time**: record voice memos, optional Gemini transcript / auto-fill thought record / reframe ideas (opt-in, bring-your-own free key), worry-postponement box, unit + end-to-end tests, CI | ✅ done (cloud + live-Gemini paths untested) |
 | 7 | Reports & extras: weekly/monthly reports, goals, theme picker, push-to-talk "quick log" | ⏳ |

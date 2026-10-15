@@ -72,7 +72,7 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 | Vibration | ✅ Android/desktop. iPhone Safari has no Vibration API (best-effort fallback only) — **the iPhone app uses the Taptic Engine**. |
 | Web push reminders | Client, service worker and sender (`supabase/functions/send-reminders`) written; the scheduling logic is unit-tested (`npm test`) but the deployed pipeline is not. Needs one-time setup below. On iOS the app must be on the Home Screen (16.4+). |
 | Delete account | `supabase/functions/delete-account` (needs deploying). |
-| Apple Health | iPhone app only (browsers can't reach HealthKit): writes *Mindful Minutes*. Code + tests written; Swift compiled only by the macOS CI job / your Mac — see docs/IOS.md. |
+| Apple Health | iPhone app only (browsers can't reach HealthKit): writes *Mindful Minutes*. Compiles on a macOS CI runner (simulator); not yet run on a physical phone — see docs/IOS.md. |
 | Insights / SOS logic | Unit-tested (`npm test`). Not clinically validated; breathing/grounding techniques are standard CBT-style self-help. |
 | Gemini (live) | Request/response handling is unit- and e2e-tested against a **mocked** API. Not yet run against the real service. |
 | Voice memos on iPhone | Uses MediaRecorder (Safari 14.1+, mp4/AAC). Recording inside an installed Home-Screen app works on recent iOS, but is untested here. |
