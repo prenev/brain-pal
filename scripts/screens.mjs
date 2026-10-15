@@ -87,6 +87,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('text=Start'); await p.waitForTimeout(5200); await snap('breathe-running'); await p.click('text=End session')
   // SOS flow
   await p.click('.sos-card'); await snap('sos-rate')
+  await p.click('text=Need more support right now?'); await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await snap('sos-support'); await p.click('text=Hide support options')
   await p.fill('input[type=range]', '8'); await p.click('text=Continue'); await snap('sos-choose')
   await p.click('.tool >> text=Ground yourself'); await snap('sos-grounding')
   for (let i = 0; i < 5; i++) await p.click('text=I noticed one'); await p.waitForTimeout(700); await p.click('text=Skip this step'); await p.waitForTimeout(200); await snap('sos-grounding-step2')

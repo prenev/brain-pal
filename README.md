@@ -56,7 +56,7 @@ The same code runs as a native iPhone app via Capacitor — see **[docs/IOS.md](
 ## Testing
 
 ```bash
-npm test            # 7 unit suites (native logic, AI client w/ mocked network, audio/WAV encoding, insights, reminders, worries, streaks)
+npm test            # 9 unit suites (breathing timer, native logic, AI client w/ mocked network, audio/WAV encoding, insights, reminders, worries, streaks)
 npm run test:e2e    # 20 browser flows (incl. simulated iPhone-app bridge) (fake microphone, mocked Gemini): create/delete, legacy-data migration, voice memo,
                     # AI helper, crisis guard, XSS, worry time, SOS, photos, export, offline PWA, accessible names
 npm run screens     # screenshots of every screen -> screenshots/

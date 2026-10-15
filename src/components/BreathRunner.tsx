@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { chime, haptic, hapticSuccess, stopHaptic } from '../lib/haptics'
 import { isNative, Mindful } from '../lib/native'
+import { breathAt, cycleLength } from '../lib/breathing'
 import type { BreathPattern } from '../lib/types'
 
 const LABEL = { inhale: 'Inhale', hold1: 'Hold', exhale: 'Exhale', hold2: 'Hold' } as const
@@ -28,8 +29,7 @@ export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish
   const [cycle, setCycle] = useState(1)
 
   useEffect(() => {
-    const phases = (Object.keys(LABEL) as (keyof BreathPattern)[]).map(k => ({ k, s: pattern[k] })).filter(p => p.s > 0)
-    const cycleLen = phases.reduce((a, p) => a + p.s, 0)
+    const cycleLen = cycleLength(pattern)
     const t0 = performance.now()
     let raf = 0, finished = false, lastKey = ''
     let lock: WakeLockSentinel | null = null
@@ -47,11 +47,10 @@ export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish
 
     const tick = (now: number) => {
       const el = (now - t0) / 1000
-      if (el >= cycleLen * cycles) return end(true, cycleLen * cycles, cycles)
-      const inCycle = el % cycleLen
-      let acc = 0, idx = 0
-      while (idx < phases.length - 1 && inCycle >= acc + phases[idx].s) acc += phases[idx++].s
-      const ph = phases[idx], into = inCycle - acc, c = Math.floor(el / cycleLen), prog = into / ph.s
+      const st = breathAt(el, pattern, cycles)
+      if (st.done) return end(true, cycleLen * cycles, cycles)
+      const { cycle: c, index: idx, key: phase, into, dur } = st, prog = into / dur
+      const ph = { k: phase, s: dur }
       const scale = ph.k === 'inhale' ? MIN + (1 - MIN) * ease(prog) : ph.k === 'exhale' ? 1 - (1 - MIN) * ease(prog) : ph.k === 'hold1' ? 1 : MIN
       if (orb.current) orb.current.style.transform = `scale(${scale})`
       setCount(Math.max(1, Math.ceil(ph.s - into)))

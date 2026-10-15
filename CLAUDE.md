@@ -1,4 +1,59 @@
-# Working agreements
-- Work in phases (see ROADMAP.md); commit and **push after every update**.
-- After every UI change run `npm run screens` and show the user **all** screens (`screenshots/*.png`, plus the contact sheet `screenshots/_all.png`).
-- Run `npm test` and `npx tsc --noEmit` before pushing.
+# Brain Pal — instructions for the agent
+
+Mood diary + CBT thought records + anxiety toolkit (SOS, breathing, grounding, worry time), as a PWA and an iPhone app (Capacitor).
+Stack: React 18 + TypeScript + Vite, local-first (localStorage + IndexedDB) with optional Supabase sync, Capacitor 8 for iOS.
+Read `ROADMAP.md` (phases + status), `README.md` (features, limits) and `docs/IOS.md` (iPhone app) before big changes.
+
+## How to work (follow this every time)
+
+1. **Plan in phases.** Pick the next item from `ROADMAP.md`. Say briefly what you'll build; for anything non-trivial, split into small steps.
+2. **Branch.** Develop on the branch the session names. Commit + **push after every update** (`git push -u origin <branch>`). Never open a PR unless asked.
+3. **Write tests with the change** (see *Testing*). New logic → unit test in `scripts/test-*.mjs`. New/changed user flow → e2e in `scripts/e2e.mjs`. A bug fix → a test that fails without the fix.
+4. **Verify before pushing** — all of these must pass:
+   ```bash
+   npx tsc --noEmit && npm test && npm run build && npm run test:e2e -- --no-build
+   ```
+   (`npm run test:e2e -- --grep="part of name"` runs one test; failures save a screenshot + page text in `test-results/`.)
+5. **After any UI change run `npm run screens` and send the user ALL screens** (`screenshots/*.png` plus the contact sheet `screenshots/_all.png`) with `SendUserFile`. Mention which are new. Add new screens to `scripts/screens.mjs` for new UI. The sheet may be scaled down when very tall — say so.
+6. **Check CI after pushing.** Use the GitHub MCP tools (`actions_list` → `list_workflow_runs` for the branch, `get_job_logs` with `failed_only`). Fix red runs before moving on; say plainly what failed. The `iOS build` job (macOS) only runs when `ios/**`, `ios-native/**`, `capacitor.config.ts` or `package*.json` change.
+7. **Update docs:** `ROADMAP.md` status, `README.md` if behaviour/limits changed, `docs/IOS.md` for iOS. Keep "not verified" notes honest.
+8. **Report honestly.** Say what is verified, what is only mocked/simulated, and what needs the user (a Mac, a phone, accounts/keys). Never claim something works that you only typed. If you can't test it, say so.
+
+## Commands
+
+| | |
+|---|---|
+| `npm run dev` | local dev server (works with no backend) |
+| `npm test` | unit suites (`scripts/test-*.mjs`, Node strips TS types; library files they import must use **no extensionless relative imports**) |
+| `npm run test:e2e` | ~20 headless-Chromium flows: fake mic, mocked Gemini, simulated iOS bridge (`scripts/native-stub.mjs`) |
+| `npm run screens` | builds + screenshots every screen into `screenshots/` (git-ignored) |
+| `npm run ios:sync` / `ios:open` | build web → `cap sync ios` → re-apply our native patch / open Xcode (Mac only) |
+| `node scripts/extract-emoji.mjs` | regenerate `src/lib/emojiData.ts` (Fluent Emoji, MIT) after adding names to the script |
+| `python3 scripts/ios-patch.py` | copy `ios-native/*` into `ios/` and wire project/plist/entitlements (idempotent) |
+
+The sandbox's browser is auto-detected by `scripts/chromium.mjs` (never hardcode a path; CI uses Playwright's own).
+
+## Map
+
+- `src/pages/` screens · `src/components/` UI pieces (`Sos`, `WorryTime`, `VoiceRecorder`, `AiSettings`, `Celebrate`, …) · `src/lib/` logic.
+- **Data:** `lib/repo.ts` (one `Repo` interface; `localRepo` = localStorage + IndexedDB blobs via `blobstore.ts`, `cloudRepo` = Supabase), `lib/store.tsx` (React context). Schema: `supabase/schema.sql` (+ commented upgrade `alter table` lines at the bottom — **keep them updated** when adding columns).
+- **Pure, unit-tested logic** (no DOM imports on purpose): `aiCore.ts` (Gemini client), `audio.ts`, `insights.ts`, `worries.ts`, `dates.ts`, `nativeCore.ts`, `supabase/functions/_shared/reminder.ts`.
+- **iPhone:** `native.ts` (Capacitor facade + our `Mindful` plugin interface), `health.ts`, `nativeReminders.ts`, `nativeInit.ts`, `haptics.ts`. Swift lives in `ios-native/` (source of truth) and is copied into `ios/` by `ios-patch.py`.
+- Supabase edge functions: `supabase/functions/send-reminders`, `delete-account` (untested against a live project).
+- Design: `src/styles.css` — chunky Duolingo-style dark theme (3D buttons, thick-bordered cards, Nunito, Fluent emoji). Reuse the existing classes (`.card`, `.btn`, `.chip`, `.ig`, `.bar`, `.sheet`, `.overlay`) rather than inventing new styling.
+
+## Rules that matter
+
+- **Safety first (mental-health app).** Text that looks like self-harm must never be sent to an AI and must surface `components/Support.tsx` (`looksLikeCrisis` in `aiCore.ts`). Keep `components/Support.tsx` reachable from the SOS flow and More. No diagnosis or medical claims in copy; the app is self-help.
+- **Privacy.** AI (Gemini) is **opt-in**, bring-your-own-key, key stays in the browser, with the explicit free-tier data-use disclosure in `AiSettings`. Never add analytics/telemetry or send entry text anywhere by default. Model output is untrusted: sanitise against allow-lists (`sanitizeStructured`/`sanitizeReframes`) and render as text only.
+- **Local-first must keep working with no keys.** Don't make a feature depend on Supabase/Gemini/native being present; guard native calls with `isNative()` and swallow plugin failures (a failed Health sync or haptic must never break logging).
+- **Old data must keep loading.** New fields get defaults in `localRepo.hydrate` / the cloud row mappers; `e2e` has a legacy-data test — extend it if you change stored shapes.
+- **Gemini model names churn.** Never hardcode a model; `aiCore.createClient` discovers one from the user's key.
+- **iOS native code:** edit `ios-native/*.swift`, then run `python3 scripts/ios-patch.py` and commit the `ios/` result. `scripts/test-ios.mjs` fails if the copies drift or JS/Swift method names disagree. You cannot compile Swift in this Linux sandbox — rely on the macOS CI job, and tell the user what is unverified on a real device.
+- **Tests must not be racy.** Wait on the specific element/state you mean (not text that also appears elsewhere); beware selectors whose text changes while busy (e.g. "Transcribe" → "Transcribing…"). Don't loosen an assertion to make it pass — find the cause. If a test is flaky, reproduce it (`--grep`, repeat runs), fix the root cause.
+- **Don't commit** secrets, `.env`, `node_modules`, `dist`, `screenshots/*.png`, `test-results/`.
+- Match the surrounding code style: small modules, comments only where the *why* isn't obvious, TypeScript strict (`noUnusedLocals`).
+
+## Definition of done
+
+Typecheck + unit + build + e2e green locally → committed and pushed → CI green on GitHub → screens sent (if UI changed) → docs/roadmap updated → honest summary of what is and isn't verified.

@@ -215,6 +215,9 @@ test('worry time: park, let go, make a plan, persist, stats', async () => {
 
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
+  // support options are one tap away from the very first SOS screen, and don't disturb the flow
+  await p.click('.sos-card'); await p.click('text=Need more support right now?'); await p.waitForSelector('text=You don’t have to do this alone'); await p.waitForSelector('a[href="tel:988"]')
+  await p.click('text=Hide support options'); await p.click('[aria-label=Close]')
   await p.click('.sos-card'); await p.fill('input[type=range]', '8'); await p.click('text=Continue'); await p.click('.tool >> text=Slow breathing')
   await p.waitForTimeout(11000); await p.click('text=End session')
   await p.fill('input[type=range]', '3'); await p.click('button:has-text("Save")'); await p.waitForSelector('text=Down 5 points')
@@ -256,8 +259,9 @@ test('iPhone app mode: breathing uses the Taptic Engine and keeps the screen awa
   const s = await open(null, { native: true }); const p = s.page
   await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6'); await p.click('button:has-text("Start")')
   await p.waitForFunction(() => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= 4, null, { timeout: 8000 })
-  const impacts = (await calls(p, 'Haptics', 'impact')).slice(0, 4).map(c => c.options.style)
-  assert.deepEqual(impacts, ['LIGHT', 'MEDIUM', 'MEDIUM', 'HEAVY'], 'inhale swells light → heavy')
+  const raw = await calls(p, 'Haptics', 'impact'), t0 = raw[0].at
+  const impacts = raw.slice(0, 4).map(c => c.options.style)
+  assert.deepEqual(impacts, ['LIGHT', 'MEDIUM', 'MEDIUM', 'HEAVY'], 'inhale swells light → heavy; calls: ' + JSON.stringify(raw.map(c => [c.options.style, c.at - t0])))
   assert.equal((await calls(p, 'Mindful', 'keepAwake'))[0].options.enabled, true)
   await p.click('button:has-text("End session")')
   await p.waitForFunction(() => window.__native.filter(c => c.method === 'keepAwake').at(-1)?.options.enabled === false)

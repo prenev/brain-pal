@@ -4,6 +4,7 @@ import { Emoji } from '../lib/emoji'
 import { burst } from '../lib/confetti'
 import BreathRunner, { type BreathResult } from './BreathRunner'
 import Grounding from './Grounding'
+import Support from './Support'
 import { Toggle } from './ui'
 import { useStore } from '../lib/store'
 import type { BreathPattern } from '../lib/types'
@@ -29,6 +30,7 @@ export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: ()
   const [tool, setTool] = useState<Tool['id']>('calm')
   const [vibrate, setVibrate] = useState(true)
   const [saved, setSaved] = useState(false)
+  const [help, setHelp] = useState(false)
   const result = useRef<{ kind: 'breathing' | 'grounding'; pattern: BreathPattern; sec: number; cycles: number; completed: boolean }>()
 
   const finishBreath = (r: BreathResult) => {
@@ -105,6 +107,12 @@ export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: ()
         <button className="btn primary block" onClick={onLog}>Write down what triggered it</button>
         <button className="btn block" style={{ marginTop: 10 }} onClick={onClose}>Done</button>
       </>}
+      {step !== 'breath' && step !== 'ground' && <div style={{ marginTop: 18 }}>
+        <button className="btn block" style={{ background: 'none', color: 'var(--muted)' }} aria-expanded={help} onClick={() => setHelp(!help)}>
+          {help ? 'Hide support options' : 'Need more support right now?'}
+        </button>
+        {help && <div style={{ marginTop: 10 }}><Support /></div>}
+      </div>}
     </div></div>
   )
 }
