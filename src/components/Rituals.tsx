@@ -45,7 +45,7 @@ export default function Rituals() {
                 const [h, m] = e.target.value.split(':').map(Number)
                 if (Number.isInteger(h) && Number.isInteger(m)) patch(r.id, { hour: h, minute: m })
               }} /></label>
-            <div className="chips" role="group" aria-label={`${r.label} days`}>
+            <div className="chips days" role="group" aria-label={`${r.label} days`}>
               {ALL_DAYS.map(d => <button key={d} type="button" className={`chip ${r.days.includes(d) ? 'on' : ''}`} aria-pressed={r.days.includes(d)} aria-label={DAY_NAME[d]} onClick={() => toggleDay(r, d)}>{DAY_LETTER[d]}</button>)}
             </div>
           </>}

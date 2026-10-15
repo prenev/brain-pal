@@ -17,6 +17,8 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "authorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "keepAwake", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestSleepAuthorization", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "webAuth", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "appleSignIn", returnType: CAPPluginReturnPromise)
     ]
@@ -28,6 +30,8 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private let store = HKHealthStore()
     private var mindfulType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .mindfulSession) }
+    /// The only thing we ever read from Health: sleep analysis (Apple Watch / iPhone sleep tracking). Only after the person turns it on.
+    private var sleepType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .sleepAnalysis) }
 
     private func statusString(_ type: HKCategoryType) -> String {
         switch store.authorizationStatus(for: type) {
@@ -80,6 +84,46 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         store.save(sample) { _, error in
             if let error = error { call.reject(error.localizedDescription) } else { call.resolve() }
         }
+    }
+
+    /// Asks for permission to READ sleep (and keeps write access for Mindful Minutes). iOS never tells an app whether *read* access
+    /// was granted, so `granted` only means the sheet was handled; an empty result from `readSleep` is how "no access / no data" shows.
+    @objc func requestSleepAuthorization(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable(), let sleep = sleepType else { call.resolve(["granted": false]); return }
+        var share = Set<HKSampleType>(); if let m = mindfulType { share.insert(m) }
+        store.requestAuthorization(toShare: share, read: [sleep]) { success, error in
+            if let error = error { call.reject(error.localizedDescription); return }
+            call.resolve(["granted": success])
+        }
+    }
+
+    /// Sleep segments between `from` and `to` (ms since 1970). kind: inBed | asleep | core | deep | rem | awake.
+    @objc func readSleep(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable(), let sleep = sleepType,
+              let fromMs = call.getDouble("from"), let toMs = call.getDouble("to"), toMs > fromMs else {
+            call.reject("from and to (ms, to > from) are required"); return
+        }
+        let predicate = HKQuery.predicateForSamples(withStart: Date(timeIntervalSince1970: fromMs / 1000), end: Date(timeIntervalSince1970: toMs / 1000), options: [])
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        let query = HKSampleQuery(sampleType: sleep, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+            if let error = error { call.reject(error.localizedDescription); return }
+            let segments: [[String: Any]] = (samples as? [HKCategorySample] ?? []).compactMap { s in
+                // raw values: 0 inBed, 1 asleep (unspecified), 2 awake, 3 core, 4 deep, 5 REM (core/deep/REM need iOS 16+)
+                let kind: String
+                switch s.value {
+                case 0: kind = "inBed"
+                case 1: kind = "asleep"
+                case 2: kind = "awake"
+                case 3: kind = "core"
+                case 4: kind = "deep"
+                case 5: kind = "rem"
+                default: return nil
+                }
+                return ["start": s.startDate.timeIntervalSince1970 * 1000, "end": s.endDate.timeIntervalSince1970 * 1000, "kind": kind]
+            }
+            call.resolve(["segments": segments])
+        }
+        store.execute(query)
     }
 
     /// Stops the screen auto-locking during a breathing session.

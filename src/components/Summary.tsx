@@ -12,11 +12,11 @@ const RANGES = [
 
 /** Plain-language recap of today / the last 7 / the last 30 days, written from templates (no AI, works offline). */
 export default function Summary() {
-  const { thoughts, sessions, worries, anchorHistory, journal, focusSessions } = useStore()
+  const { thoughts, sessions, worries, anchorHistory, journal, focusSessions, sleepNights } = useStore()
   const [range, setRange] = useState<(typeof RANGES)[number]['id']>('week')
   const [msg, setMsg] = useState('')
   const r = RANGES.find(x => x.id === range)!
-  const sum = useMemo(() => summarize({ thoughts, sessions, worries, journal, focus: focusSessions, anchorDays: anchorHistory }, dayKey(new Date()), r.days), [thoughts, sessions, worries, journal, focusSessions, anchorHistory, r.days])
+  const sum = useMemo(() => summarize({ thoughts, sessions, worries, journal, focus: focusSessions, sleep: sleepNights, anchorDays: anchorHistory }, dayKey(new Date()), r.days), [thoughts, sessions, worries, journal, focusSessions, sleepNights, anchorHistory, r.days])
   const lines = sentences(sum, r.label2, r.prev)
 
   async function share() {

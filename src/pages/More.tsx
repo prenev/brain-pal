@@ -125,7 +125,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       </>}
       {view === 'health' && (isNative() ? <div className="card">
         <p style={{ marginTop: 0 }}>Save your breathing and grounding sessions to Apple Health as <b>Mindful Minutes</b>.</p>
-        <p className="muted small">Brain Pal only <i>writes</i> sessions — it never reads your health data.</p>
+        <p className="muted small">Sessions are only ever <i>written</i>. The one thing Brain Pal can <i>read</i> is your sleep, and only if you turn that on under Stats → Sleep.</p>
         <Toggle label="Save sessions to Apple Health" on={health} onChange={async on => {
           setHealthMsg('')
           if (!on) { disconnectHealth(); setHealth(false); return }

@@ -497,6 +497,69 @@ test('small step: stopping early is neutral and never counts as finished; your o
 })
 
 
+const HR = 3_600_000
+/** Ten mornings of Watch-style sleep segments ending at 07:00 (k days ago): alternating 8 h / 5 h nights with deep + REM stages. */
+const sleepFixture = () => Array.from({ length: 10 }, (_, k) => {
+  const wake = new Date(); wake.setDate(wake.getDate() - k); wake.setHours(7, 0, 0, 0)
+  const hours = k % 2 === 0 ? 8 : 5, end = wake.getTime(), start = end - hours * HR, seg = (kind, a, b) => ({ kind, start: a, end: b })
+  return [seg('core', start, start + HR), seg('deep', start + HR, start + 2 * HR), seg('core', start + 2 * HR, end - 2.5 * HR), seg('rem', end - 2.5 * HR, end - HR), seg('core', end - HR, end)]
+}).flat()
+const moodAfterSleep = () => Array.from({ length: 10 }, (_, k) => rec('m' + k, k, { mood: k % 2 === 0 ? 4 : 2, createdAt: (() => { const d = new Date(); d.setDate(d.getDate() - k); d.setHours(12, 0, 0, 0); return d.toISOString() })() }))
+const openSleep = async p => { await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Sleep")') }
+
+test('iPhone app: sleep from Apple Health — opt-in, read-only, last night + week + consistency + sleep/mood link', async () => {
+  const s = await open({ 'bp.thoughts': moodAfterSleep(), 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }, { native: true }); const p = s.page
+  await p.evaluate(segments => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.readSleep': { segments } } }, sleepFixture())
+  await openSleep(p)
+  await p.waitForSelector('text=Connect Apple Health sleep'); assert.equal((await calls(p, 'Mindful', 'readSleep')).length, 0, 'nothing is read until you opt in')
+  assert.match(await p.locator('.card:has-text("Show your sleep")').innerText(), /only sleep/)
+  await p.click('button:has-text("Connect Apple Health sleep")')
+  await p.waitForSelector('[aria-label="Last night"] >> text=8h 00m')
+  assert.equal((await calls(p, 'Mindful', 'requestSleepAuthorization')).length, 1)
+  const read = (await calls(p, 'Mindful', 'readSleep'))[0].options; assert.ok(read.to - read.from >= 44 * 864e5 && read.to - read.from <= 46 * 864e5, 'asks for about six weeks')
+  const card = p.locator('[aria-label="Last night"]'); const text = await card.innerText()
+  assert.match(text, /Apple Health/); assert.match(text, /Deep 1h 00m/); assert.match(text, /REM 1h 30m/); assert.match(text, /Core 5h 30m/)
+  assert.equal(await p.locator('.sleep-bars [role=listitem]').count(), 7)
+  assert.match(await p.locator('.card:has-text("On average you slept")').innerText(), /On average you slept 6h 43m/, '4 nights of 8 h and 3 of 5 h')
+  assert.match(await p.locator('.card:has-text("Your bedtime varies")').innerText(), /varies by about \d+ minutes/)
+  assert.match(await p.locator('[aria-label="Sleep and mood"]').innerText(), /tended to be higher/)
+  assert.equal(await p.evaluate(() => localStorage.getItem('bp.sleep.health')), '1')
+
+  await reload(p); await openSleep(p); await p.waitForSelector('[aria-label="Last night"] >> text=8h 00m')      // cached, and still connected
+  await p.evaluate(() => { window.__reply = { 'Mindful.readSleep': { __reject: 'X', message: 'denied' } } })
+  await p.click('button:has-text("Refresh")'); await p.waitForSelector('text=Could not read Apple Health right now.'); await p.waitForSelector('[aria-label="Last night"] >> text=8h 00m')   // keeps what it had
+  await p.click('button:has-text("Disconnect")'); await p.waitForSelector('text=Connect Apple Health sleep'); await p.waitForSelector('[aria-label="Last night"] >> text=No sleep logged yet')
+  assert.equal(await p.evaluate(() => localStorage.getItem('bp.sleep.health')), null)
+  await done(s)
+})
+
+test('sleep: log a night by hand (web), it persists, bad times are refused, and measured data wins over a hand-logged night', async () => {
+  const s = await open({ 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  await openSleep(p)
+  assert.equal(await p.locator('text=Connect Apple Health sleep').count(), 0, 'no Health on the web')
+  await p.fill('[aria-label=Bedtime]', '23:30'); await p.fill('[aria-label="Woke up"]', '07:15'); await p.click('[aria-label="Rested: good"]'); await p.click('button:has-text("Save night")')
+  await p.waitForSelector('[aria-label="Last night"] >> text=7h 45m'); assert.match(await p.locator('[aria-label="Last night"]').innerText(), /logged by hand/)
+  await reload(p); await openSleep(p); await p.waitForSelector('[aria-label="Last night"] >> text=7h 45m')
+  await p.fill('[aria-label=Bedtime]', '08:00'); await p.fill('[aria-label="Woke up"]', '07:00'); await p.click('button:has-text("Save night")')
+  await p.waitForSelector('text=That doesn’t look like one night'); assert.match(await p.locator('[aria-label="Last night"]').innerText(), /7h 45m/, 'a refused entry changes nothing')
+  await p.click('[aria-label^="Delete night"]'); await p.waitForSelector('[aria-label="Last night"] >> text=No sleep logged yet'); await done(s)
+
+  const n = await open({ 'bp.sleep.manual': [], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }, { native: true }); const q = n.page
+  await q.evaluate(segments => { window.__reply = { 'Mindful.readSleep': { segments } } }, sleepFixture())
+  await openSleep(q); await q.fill('[aria-label=Bedtime]', '23:00'); await q.fill('[aria-label="Woke up"]', '05:00'); await q.click('button:has-text("Save night")')
+  await q.waitForSelector('[aria-label="Last night"] >> text=6h 00m')
+  await q.click('button:has-text("Connect Apple Health sleep")'); await q.waitForSelector('[aria-label="Last night"] >> text=8h 00m')
+  assert.match(await q.locator('[aria-label="Last night"]').innerText(), /Apple Health/, 'the measured night replaces the hand-logged one for the same morning')
+  await done(n)
+})
+
+test('sleep shows up in the weekly summary', async () => {
+  const s = await open({ 'bp.sleep.manual': [{ date: new Date().toISOString().slice(0, 10), start: Date.now() - 8 * HR, end: Date.now(), asleepMin: 450, inBedMin: 450, awakeMin: 0, deepMin: 0, remMin: 0, coreMin: 0, unspecifiedMin: 450, efficiency: null, source: 'manual', quality: null }], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=You slept 7h 30m on average (1 night with sleep data).')
+  await done(s)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow

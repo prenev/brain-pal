@@ -11,6 +11,7 @@ import Face from '../components/Face'
 import { monthLabel } from '../components/ui'
 import Progress from '../components/Progress'
 import Summary from '../components/Summary'
+import Sleep from '../components/Sleep'
 
 function MoodChart({ points, days }: { points: Map<number, number>; days: number }) {
   const W = 320, H = 200, L = 34, T = 14, B = 26
@@ -177,19 +178,20 @@ function Insights() {
   )
 }
 
-const VIEWS = [{ id: 'insights', label: 'Insights' }, { id: 'progress', label: 'Progress' }, { id: 'summary', label: 'Summary' }] as const
+const VIEWS = [{ id: 'insights', label: 'Insights' }, { id: 'progress', label: 'Progress' }, { id: 'summary', label: 'Summary' }, { id: 'sleep', label: 'Sleep' }] as const
 
 /** Stats tab: your charts and insights, your skill levels with proof you're improving, and plain-language summaries. */
 export default function Stats() {
   const [view, setView] = useState<(typeof VIEWS)[number]['id']>('insights')
   return (
     <>
-      <div className="seg" role="tablist" aria-label="Stats view" style={{ marginBottom: 14 }}>
+      <div className="seg four" role="tablist" aria-label="Stats view" style={{ marginBottom: 14 }}>
         {VIEWS.map(v => <button key={v.id} role="tab" aria-selected={view === v.id} className={view === v.id ? 'on' : ''} onClick={() => setView(v.id)}>{v.label}</button>)}
       </div>
       {view === 'insights' && <Insights />}
       {view === 'progress' && <Progress />}
       {view === 'summary' && <Summary />}
+      {view === 'sleep' && <Sleep />}
     </>
   )
 }

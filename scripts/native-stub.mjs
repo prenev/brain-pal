@@ -5,12 +5,12 @@ function nativeStub() {
   window.__listeners = []
   window.__fire = (plugin, event, data) => window.__listeners.filter(l => l.plugin === plugin && l.event === event).forEach(l => l.callback(data))   // tests simulate native events (e.g. a tapped notification)
   const reply = {
-    'Mindful.isAvailable': { available: true }, 'Mindful.requestAuthorization': { granted: true }, 'Mindful.authorizationStatus': { status: 'authorized' },
+    'Mindful.isAvailable': { available: true }, 'Mindful.requestAuthorization': { granted: true }, 'Mindful.authorizationStatus': { status: 'authorized' }, 'Mindful.requestSleepAuthorization': { granted: true }, 'Mindful.readSleep': { segments: [] },
     'LocalNotifications.checkPermissions': { display: 'prompt' }, 'LocalNotifications.requestPermissions': { display: 'granted' }, 'LocalNotifications.schedule': { notifications: [] },
   }
   const methods = {
     Haptics: ['impact', 'notification', 'vibrate', 'selectionStart', 'selectionChanged', 'selectionEnd'],
-    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn'],
+    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep'],
     LocalNotifications: ['checkPermissions', 'requestPermissions', 'schedule', 'cancel', 'getPending', 'addListener', 'removeListener'],
     StatusBar: ['setStyle', 'setBackgroundColor', 'show', 'hide', 'setOverlaysWebView'],
     SplashScreen: ['hide', 'show'],

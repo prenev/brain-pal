@@ -13,6 +13,10 @@ export interface MindfulPlugin {
   saveSession(opts: { start: number; end: number }): Promise<void>
   /** Prevents the screen auto-locking (so breathing sessions aren't interrupted). */
   keepAwake(opts: { enabled: boolean }): Promise<void>
+  /** Asks Health for permission to READ sleep (the only thing we read). `granted` only means the sheet was handled — iOS never reveals read access. */
+  requestSleepAuthorization(): Promise<{ granted: boolean }>
+  /** Sleep segments between two times (ms since 1970); kind is inBed | asleep | core | deep | rem | awake. */
+  readSleep(opts: { from: number; to: number }): Promise<{ segments: { start: number; end: number; kind: string }[] }>
   /** System web-auth sheet (ASWebAuthenticationSession): opens `url`, resolves with the brainpal://… URL it is redirected to. Rejects with code CANCELLED if dismissed. */
   webAuth(opts: { url: string; callbackScheme: string }): Promise<{ url: string }>
   /** Native "Sign in with Apple" sheet. `nonce` is the raw nonce (its SHA-256 was sent to Apple). Rejects with code CANCELLED if dismissed. */

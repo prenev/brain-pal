@@ -307,3 +307,12 @@ textarea.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
 .focus-clock { font-size: 72px; font-weight: 900; text-align: center; margin: 18px 0 6px; font-variant-numeric: tabular-nums; }
 .step-choice { display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 8px; }
 .step-choice.on { border-color: var(--accent); background: rgba(53,208,127,.12); }
+
+.chips.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.chips.days .chip { text-align: center; padding: 9px 0; }
+.seg.four button { flex: 1 0 22%; padding: 10px 4px; font-size: 14px; }
+.stagebar { display: flex; height: 18px; border-radius: 9px; overflow: hidden; margin: 10px 0 6px; background: var(--card2); }
+.stagebar i { display: block; height: 100%; }
+.sleep-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 130px; margin-top: 14px; }
+.sleep-bars .col { display: grid; justify-items: center; align-items: end; gap: 4px; height: 100%; font-size: 11px; color: var(--muted); }
+.sleep-bars .col i { display: block; width: 100%; border-radius: 8px 8px 4px 4px; background: var(--blue, #4aa8ff); min-height: 3px; }

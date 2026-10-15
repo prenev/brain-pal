@@ -52,6 +52,12 @@ const fsum = summarize({ thoughts: [], sessions: [], worries: [], focus: [{ crea
 assert.deepEqual([fsum.focusSteps, fsum.focusMinutes, fsum.activeDays], [2, 16, 2]); assert.ok(sentences(fsum).includes('You finished 2 small steps (16 minutes of focus).'))
 assert.ok(sentences(summarize({ thoughts: [], sessions: [], worries: [], focus: [{ createdAt: at('2026-10-15'), completed: true, actualSec: 60 }] }, '2026-10-15', 1)).includes('You finished 1 small step (1 minute of focus).'))
 
+// sleep average over the nights inside the window only
+const slp = summarize({ thoughts: [], sessions: [], worries: [], sleep: [{ date: '2026-10-15', asleepMin: 420 }, { date: '2026-10-14', asleepMin: 465 }, { date: '2026-10-01', asleepMin: 100 }] }, '2026-10-15', 7)
+assert.deepEqual([slp.sleepNights, slp.avgSleepMin], [2, 443]); assert.ok(sentences(slp).includes('You slept 7h 23m on average (2 nights with sleep data).'))
+assert.equal(summarize({ thoughts: [], sessions: [], worries: [] }, '2026-10-15', 7).avgSleepMin, null)
+assert.ok(!sentences(slp).join(' ').includes('showed up'), 'sleep alone does not claim you showed up'); assert.ok(!sentences(slp)[0].startsWith('Nothing logged'))
+
 // wording edge cases
 const one = summarize({ thoughts: [th('2026-10-15', 3)], sessions: [ses('2026-10-15', 1)], worries: [wor('2026-10-15', 'open')] }, '2026-10-15', 1)
 const s1 = sentences(one, 'today')

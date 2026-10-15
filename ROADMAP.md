@@ -39,7 +39,7 @@ Order of work (changed after the competitor analysis in [`docs/COMPETITORS.md`](
 | 5 | 15 | **Summaries** — daily recap, weekly/monthly digest, shareable | Understand your week in 20 seconds | ✅ Summary view (today/week/month) + share; evening "wind down" recap on the Today card pending |
 | 6 | 16 | **Level-up proof** — skill levels backed by your own before/after data | Evidence, not points | ✅ skills, proof cards, milestones, level-up moment; Journaling/Focus skills appear when P8/P14 ship |
 | 7 | 9 | **Rituals & reminders** — breathe at 07:00 and at night | Reminders that *do* something | ✅ iPhone: 4 rituals with times/weekdays, tap-to-open, skip-when-done, migration; delivery on a real phone not verified; web multi-time needs `send-reminders` deployed |
-| 8 | 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood | ⏳ (device-verified part needs you) |
+| 8 | 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood | ✅ pure logic (mutation-checked), Swift read-only query (compiles on macOS CI), Sleep view, manual log, weekly-summary line; real Watch data not verified (see TODO.md) |
 | 9 | 11 | **Coins & rewards** | Showing up feels good, no shame mechanics | ⏳ |
 | 10 | 12 | **Cloud sync for the new data** | Everything on every device | ⏳ |
 | 11 | 13 | **Reflection extras** — theme picker, optional AI "reflect with me" | Polish | ⏳ |

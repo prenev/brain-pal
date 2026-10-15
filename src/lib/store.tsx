@@ -12,9 +12,11 @@ import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadFocus, loadJournal, loadRituals, saveAnchors, saveChecks, saveFocus, saveJournal, saveRituals } from './extras'
+import { loadAnchors, loadChecks, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadRituals, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, saveRituals } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
+import { manualNight, mergeNights, type Night } from './sleep.ts'
+import { connectSleep, disconnectSleep, lastSleepSync, readNights, sleepConnected, type ConnectResult } from './sleepHealth'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
 
 interface Ctx {
@@ -37,6 +39,13 @@ interface Ctx {
   addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
+  sleepNights: Night[]
+  sleepOn: boolean
+  connectSleepNow(): Promise<ConnectResult>
+  disconnectSleepNow(): void
+  syncSleepNow(): Promise<number | null>
+  addManualNight(bed: number, wake: number, quality: number | null): boolean
+  deleteManualNight(date: string): void
   rituals: Ritual[]
   setRituals(next: Ritual[]): void
   focusSessions: FocusSession[]
@@ -74,6 +83,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [journal, setJournal] = useState<JournalEntry[]>(loadJournal)
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>(loadFocus)
   const [rituals, setRitualsState] = useState<Ritual[]>(loadRituals)
+  const [healthNights, setHealthNights] = useState<Night[]>(loadHealthNights)
+  const [manualNights, setManualNights] = useState<Night[]>(loadManualNights)
+  const [sleepOn, setSleepOn] = useState(sleepConnected)
+  const sleepNights = useMemo(() => mergeNights(healthNights, manualNights), [healthNights, manualNights])
+  const syncSleepNow = useCallback(async () => {
+    const n = await readNights(); if (!n) return null
+    setHealthNights(n); saveHealthNights(n); return n.length
+  }, [])
+  // Keep measured sleep fresh: on launch and when the app comes back to the foreground (at most every 10 minutes).
+  useEffect(() => {
+    if (!loaded || !sleepOn) return
+    const run = () => { const last = lastSleepSync(); if (!last || Date.now() - last > 10 * 60_000) void syncSleepNow() }
+    run(); document.addEventListener('visibilitychange', run)
+    return () => document.removeEventListener('visibilitychange', run)
+  }, [loaded, sleepOn, syncSleepNow])
   const updateJournalList = (next: JournalEntry[]) => { const sorted = [...next].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); setJournal(sorted); saveJournal(sorted) }
   const [today, setToday] = useState(() => dayKey(new Date()))
   useEffect(() => { // roll "today" over at midnight, and when the app comes back to the foreground
@@ -168,6 +192,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
+    sleepNights, sleepOn, syncSleepNow,
+    async connectSleepNow() { const r = await connectSleep(); if (r === 'ok') { setSleepOn(true); await syncSleepNow() } return r },
+    disconnectSleepNow() { disconnectSleep(); setSleepOn(false); setHealthNights([]); saveHealthNights([]) },
+    addManualNight(bed, wake, quality) {
+      const n = manualNight(bed, wake, quality); if (!n) return false
+      const next = [n, ...manualNights.filter(x => x.date !== n.date)]; setManualNights(next); saveManualNights(next); return true
+    },
+    deleteManualNight(date) { const next = manualNights.filter(x => x.date !== date); setManualNights(next); saveManualNights(next) },
     rituals,
     setRituals(next) { setRitualsState(next); saveRituals(next) },
     focusSessions,

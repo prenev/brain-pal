@@ -73,7 +73,7 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Brain Pal saves your breathing sessions to Apple Health as Mindful Minutes.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Brain Pal checks whether it is allowed to save Mindful Minutes. It does not read your health data.</string>
+	<string>Brain Pal can read your sleep from Apple Health (for example from your Apple Watch) to show it next to your mood. It reads nothing else and never sends it anywhere.</string>
 	<key>CFBundleURLTypes</key>
 	<array><dict><key>CFBundleURLName</key><string>com.brainpal.app</string><key>CFBundleURLSchemes</key><array><string>brainpal</string></array></dict></array>
 </dict>

@@ -31,7 +31,7 @@
 | Voice memo → transcript → pre-filled thought record | – | – | – | – | – | – | ✅ (opt-in AI) **unique** |
 | Capped daily "non-negotiables" (anchors) | ◐ habits | ◐ habits | ◐ habits | – | ◐ habits | ◐ habits | ✅ P7 (max 5, by design) |
 | Habit/streak without shame | ? | ? | ◐ | – | ◐ | ? | ✅ (no loss mechanics) |
-| Sleep from Apple Watch ↔ mood link | – | – | – | – | – | – | 🛠 P10 **unique** |
+| Sleep from Apple Watch ↔ mood link | – | – | – | – | – | – | ✅ P10 **unique** |
 | Plain-language summaries (daily / weekly / monthly) | – | – | ◐ | – | ◐ stats | – | ✅ P15 |
 | **Evidence you're levelling up** (skill levels backed by *your own* before/after data) | – streak/score | – streaks | ◐ pet growth (cosmetic) | – | – | – | ✅ P16 **unique** |
 | Reward loop that isn't cosmetic-only or manipulative | – | – | ✅ pet (energy-gated) | – | – | – | 🛠 P11 |

@@ -1,6 +1,7 @@
 import type { Anchor } from './anchors.ts'
 import type { JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
+import type { Night } from './sleep.ts'
 import { migrateOldReminder, normalizeRituals, type Ritual } from './rituals.ts'
 
 /**
@@ -64,3 +65,11 @@ export const loadRituals = (): Ritual[] => {
   return raw === null ? migrateOldReminder(read<{ enabled?: boolean; hour?: number } | null>('bp.reminder', null)) : normalizeRituals(raw)
 }
 export const saveRituals = (r: Ritual[]) => write(K_RITUALS, r)
+
+const K_NIGHTS = 'bp.sleep.nights', K_MANUAL = 'bp.sleep.manual'
+const validNight = (n: unknown): n is Night => !!n && typeof (n as Night).date === 'string' && typeof (n as Night).asleepMin === 'number' && typeof (n as Night).start === 'number' && typeof (n as Night).end === 'number'
+/** Measured nights (from Apple Health), cached so the Sleep screen works offline. */
+export const loadHealthNights = (): Night[] => { const r = read<unknown>(K_NIGHTS, []); return Array.isArray(r) ? r.filter(validNight) : [] }
+export const saveHealthNights = (n: Night[]) => write(K_NIGHTS, n)
+export const loadManualNights = (): Night[] => { const r = read<unknown>(K_MANUAL, []); return Array.isArray(r) ? r.filter(validNight) : [] }
+export const saveManualNights = (n: Night[]) => write(K_MANUAL, n)

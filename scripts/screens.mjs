@@ -170,6 +170,19 @@ await session('http://localhost:4173', true, async (p, snap) => {   // one small
   await p.clock.fastForward('04:00'); await p.waitForSelector('text=Done — nice.'); await snap('step-done')
 })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // sleep (Apple Watch data via Health, simulated)
+  const H = 3600000
+  const segs = Array.from({ length: 10 }, (_, k) => {
+    const wake = new Date(); wake.setDate(wake.getDate() - k); wake.setHours(7, 0, 0, 0)
+    const hours = [8, 6.5, 7.5, 5.5, 7, 8, 6, 7.5, 6.5, 7][k], end = wake.getTime(), start = end - hours * H, sg = (kind, a, b) => ({ kind, start: a, end: b })
+    return [sg('core', start, start + H), sg('deep', start + H, start + 2 * H), sg('core', start + 2 * H, end - 2.5 * H), sg('rem', end - 2.5 * H, end - H), sg('core', end - H, end)]
+  }).flat()
+  await p.evaluate(segments => { window.__reply = { 'Mindful.readSleep': { segments } } }, segs)
+  await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Sleep")'); await snap('sleep-connect')
+  await p.click('button:has-text("Connect Apple Health sleep")'); await p.waitForSelector('[aria-label="Last night"] >> text=8h'); await snap('sleep')
+  await p.locator('[aria-label="Sleep and mood"]').scrollIntoViewIfNeeded(); await snap('sleep-mood')
+}, { native: true })
+
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')

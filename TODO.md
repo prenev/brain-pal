@@ -18,7 +18,7 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 ## Needs a real device (CI can't verify) — the agent will add items here per phase
 - [ ] Haptics during breathing; keep-awake; Apple Health Mindful Minutes written
 - [ ] Rituals fire at the set times (try 07:00 + a time 2 minutes from now), and tapping one opens Breathe / journal / check-in *(Phase 9)*
-- [ ] Sleep data from Apple Watch appears (needs a Watch with sleep tracking + Health permission) *(Phase 10)*
+- [ ] Stats → Sleep → *Connect Apple Health sleep*: last night's hours and (with a Watch) Deep/REM/Core match what the Health app shows *(Phase 10)*
 - [ ] Delete-account function end-to-end on a throwaway account
 
 ## Later / App Store (if you decide to publish)
