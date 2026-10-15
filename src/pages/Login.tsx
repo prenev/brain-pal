@@ -14,9 +14,9 @@ export default function Login() {
 
   return (
     <div className="center-screen">
-      <form className="glass card" style={{ width: 'min(420px, 100%)', padding: 28 }} onSubmit={submit}>
-        <h1>Brain Pal</h1>
-        <p className="sub">Sign in with a magic link — no password.</p>
+      <form className="card" style={{ width: 'min(420px, 100%)', padding: 28 }} onSubmit={submit}>
+        <h1 style={{ margin: "0 0 4px" }}>Brain Pal</h1>
+        <p className="muted" style={{ margin: "0 0 18px" }}>Sign in with a magic link — no password.</p>
         {sent ? <p>Check <b>{email}</b> for your sign-in link.</p> : <>
           <input className="input" type="email" required placeholder="you@email.com" value={email} onChange={e => setEmail(e.target.value)} style={{ marginBottom: 12 }} />
           <button className="btn primary block" type="submit">Send link</button>

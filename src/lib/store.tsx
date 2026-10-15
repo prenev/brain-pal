@@ -66,7 +66,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value: Ctx = {
     ready: authChecked && (needsLogin || loaded),
     mode: repo.mode, needsLogin, session: authSession, thoughts, sessions, streak, allTags,
-    async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p]) },
+    async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]) },
     async signOut() { await supabase?.auth.signOut() },

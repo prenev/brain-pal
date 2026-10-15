@@ -21,10 +21,10 @@ const write = (k: string, v: unknown) => localStorage.setItem(k, JSON.stringify(
 
 export const localRepo: Repo = {
   mode: 'local',
-  async listThoughts() { return read<Thought>(K_T) },
+  async listThoughts() { return read<Thought>(K_T).map(t => ({ ...t, mood: t.mood ?? 3 })) },
   async addThought({ photoFiles, ...rest }) {
     const photos = await Promise.all(photoFiles.map(async f => blobToDataUrl(await shrinkImage(f, 1000, 0.7))))
-    const t: Thought = { ...rest, id: uid(), createdAt: new Date().toISOString(), photos }
+    const t: Thought = { ...rest, id: uid(), createdAt: rest.createdAt ?? new Date().toISOString(), photos }
     write(K_T, [t, ...read<Thought>(K_T)])
     return t
   },
@@ -47,7 +47,7 @@ async function signPhotos(paths: string[]): Promise<string[]> {
 }
 
 const rowToThought = async (r: any): Promise<Thought> => ({
-  id: r.id, createdAt: r.created_at, situation: r.situation, thought: r.thought,
+  id: r.id, createdAt: r.created_at, mood: r.mood ?? 3, situation: r.situation, thought: r.thought,
   emotions: r.emotions, internalBehaviour: r.internal_behaviour, externalBehaviour: r.external_behaviour,
   alternateThought: r.alternate_thought, outcomeIntensity: r.outcome_intensity, tags: r.tags,
   photos: await signPhotos(r.photos),
@@ -70,7 +70,7 @@ export const cloudRepo: Repo = {
       paths.push(path)
     }
     const { data, error } = await sb().from('thoughts').insert({
-      situation: t.situation, thought: t.thought, emotions: t.emotions,
+      mood: t.mood, ...(t.createdAt && { created_at: t.createdAt }), situation: t.situation, thought: t.thought, emotions: t.emotions,
       internal_behaviour: t.internalBehaviour, external_behaviour: t.externalBehaviour,
       alternate_thought: t.alternateThought, outcome_intensity: t.outcomeIntensity,
       tags: t.tags, photos: paths,

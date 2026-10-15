@@ -1,6 +1,6 @@
 # Brain Pal
 
-Thought records (situation → thought → emotions → internal/external behaviour → alternate thought), box breathing with haptic pulses, streaks, tags and photos. An installable PWA: runs in any browser, and on iPhone via **Share → Add to Home Screen**.
+Mood diary with CBT thought records: pick a mood, tag emotions, log the situation → thought → internal/external behaviour → alternate thought, plus box breathing with haptic pulses, streaks, calendar, stats, tags and photos. Dark, glass-style UI laid out like a classic mood-tracker app. An installable PWA: runs in any browser, and on iPhone via **Share → Add to Home Screen**.
 
 ## Run
 

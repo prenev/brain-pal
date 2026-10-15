@@ -4,8 +4,9 @@ export const DEFAULT_TAGS = [
 ]
 
 export const EMOTIONS = [
-  'anxious', 'sad', 'angry', 'ashamed', 'guilty', 'lonely',
-  'overwhelmed', 'frustrated', 'jealous', 'hopeless', 'afraid', 'calm', 'hopeful', 'grateful',
+  'happy', 'excited', 'grateful', 'relaxed', 'content', 'hopeful',
+  'tired', 'unsure', 'bored', 'anxious', 'angry', 'stressed', 'sad', 'lonely',
+  'overwhelmed', 'ashamed', 'guilty', 'afraid', 'desperate',
 ]
 
 export const DISTORTIONS_HINT = [

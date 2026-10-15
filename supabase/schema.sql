@@ -4,7 +4,8 @@ create table if not exists public.thoughts (
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
   created_at timestamptz not null default now(),
   situation text not null default '',
-  thought text not null,
+  mood int not null default 3,                     -- 1 awful … 5 rad
+  thought text not null default '',
   emotions jsonb not null default '[]',          -- [{name, intensity 0-100}]
   internal_behaviour text not null default '',
   external_behaviour text not null default '',

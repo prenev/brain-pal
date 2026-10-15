@@ -3,6 +3,8 @@ export interface EmotionRating { name: string; intensity: number }
 export interface Thought {
   id: string
   createdAt: string
+  /** 1 (awful) … 5 (rad) */
+  mood: number
   situation: string
   thought: string
   emotions: EmotionRating[]
@@ -26,4 +28,4 @@ export interface BreathSession {
   completed: boolean
 }
 
-export type NewThought = Omit<Thought, 'id' | 'createdAt' | 'photos'> & { photoFiles: File[] }
+export type NewThought = Omit<Thought, 'id' | 'createdAt' | 'photos'> & { photoFiles: File[]; createdAt?: string }

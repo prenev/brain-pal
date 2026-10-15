@@ -87,16 +87,16 @@ export default function Breathe() {
 
   return (
     <>
-      <h1>Breathe</h1>
-      <p className="sub">Box breathing steadies your nervous system. Follow the orb — or just feel the pulses.</p>
+      <div className="topbar"><span className="title">Breathe</span></div>
+      <p className="muted" style={{ margin: '0 8px 16px', textAlign: 'center' }}>Box breathing steadies your nervous system. Follow the orb — or just feel the pulses.</p>
 
-      <div className="glass card">
+      <div className="card">
         <div className="breath-stage">
           <div className="orb" ref={orb} style={{ transform: `scale(${MIN})` }}>
             <div><b>{label}</b>{running && <span>{count}</span>}</div>
           </div>
         </div>
-        {running && <p className="center muted" style={{ textAlign: 'center' }}>Round {cycle} of {cycles}</p>}
+        {running && <p className="muted" style={{ textAlign: 'center' }}>Round {cycle} of {cycles}</p>}
         {done && !running && (
           <p style={{ textAlign: 'center' }}>Nice work — {done.cycles} rounds, {Math.floor(done.sec / 60)}m {done.sec % 60}s logged. 🌿</p>
         )}
@@ -106,7 +106,7 @@ export default function Breathe() {
       </div>
 
       {!running && (
-        <div className="glass card">
+        <div className="card">
           <div className="seg" role="tablist" aria-label="Pattern">
             {Object.keys(PRESETS).map(p => <button key={p} className={p === preset ? 'on' : ''} onClick={() => setPreset(p)}>{p}</button>)}
           </div>
