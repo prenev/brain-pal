@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { chime, haptic, stopHaptic } from '../lib/haptics'
+import { chime, haptic, hapticSuccess, stopHaptic } from '../lib/haptics'
+import { isNative, Mindful } from '../lib/native'
 import type { BreathPattern } from '../lib/types'
 
 const LABEL = { inhale: 'Inhale', hold1: 'Hold', exhale: 'Exhale', hold2: 'Hold' } as const
@@ -34,11 +35,12 @@ export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish
     let lock: WakeLockSentinel | null = null
     navigator.wakeLock?.request('screen').then(l => { if (finished) l.release().catch(() => {}); else lock = l }).catch(() => {})
 
-    const cleanup = () => { finished = true; cancelAnimationFrame(raf); stopHaptic(); lock?.release().catch(() => {}) }
+    if (isNative()) Mindful.keepAwake({ enabled: true }).catch(() => {})   // wake lock isn't reliable in the app's web view
+    const cleanup = () => { finished = true; cancelAnimationFrame(raf); stopHaptic(); lock?.release().catch(() => {}); if (isNative()) Mindful.keepAwake({ enabled: false }).catch(() => {}) }
     const end = (completed: boolean, elapsed: number, cyclesDone: number) => {
       if (finished) return
       cleanup()
-      if (completed && vibrate) haptic([80, 60, 80])
+      if (completed && vibrate) hapticSuccess()
       done.current({ completed, elapsedSec: Math.round(elapsed), cyclesDone })
     }
     stop.current = () => { const el = (performance.now() - t0) / 1000; end(false, el, Math.floor(el / cycleLen)) }

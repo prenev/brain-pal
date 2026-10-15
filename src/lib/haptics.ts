@@ -5,7 +5,12 @@
  *   <input type="checkbox" switch> is toggled, so we click one as a fallback.
  *   iOS may ignore it outside a user gesture; a native (Capacitor) build fixes that.
  */
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
+import { isNative } from './native'
+import { toImpactSequence } from './nativeCore'
+
 let iosLabel: HTMLLabelElement | null = null
+let timers: number[] = []
 
 function iosTap() {
   if (!iosLabel) {
@@ -23,12 +28,27 @@ function iosTap() {
 export const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator
 
 export function haptic(pattern: number | number[]) {
+  if (isNative()) {   // iPhone app: real Taptic Engine taps shaped like the pattern
+    stopHaptic()
+    for (const { at, style } of toImpactSequence(pattern))
+      timers.push(window.setTimeout(() => { Haptics.impact({ style: ImpactStyle[style === 'LIGHT' ? 'Light' : style === 'MEDIUM' ? 'Medium' : 'Heavy'] }).catch(() => {}) }, at))
+    return
+  }
   if (canVibrate) { navigator.vibrate(pattern); return }
   const taps = Array.isArray(pattern) ? Math.ceil(pattern.filter((_, i) => i % 2 === 0).length) : 1
   for (let i = 0; i < Math.min(taps, 3); i++) setTimeout(iosTap, i * 120)
 }
 
-export const stopHaptic = () => { if (canVibrate) navigator.vibrate(0) }
+export const stopHaptic = () => {
+  timers.forEach(clearTimeout); timers = []
+  if (canVibrate) navigator.vibrate(0)
+}
+
+/** Short "well done" feedback. */
+export function hapticSuccess() {
+  if (isNative()) { Haptics.notification({ type: NotificationType.Success }).catch(() => {}); return }
+  haptic([60, 50, 90])
+}
 
 let ctx: AudioContext | null = null
 /** Soft sine chime so the timer still works with the phone muted-haptic. */

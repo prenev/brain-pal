@@ -5,6 +5,7 @@ import { preview } from 'vite'
 import { execSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
+import { nativeStub } from './native-stub.mjs'
 
 const root = new URL('..', import.meta.url).pathname
 if (!process.argv.includes('--no-build')) execSync('npx vite build', { cwd: root, stdio: 'pipe' })
@@ -19,7 +20,9 @@ const STRUCTURED = { situation: 'Presentation tomorrow', thought: 'I will mess i
   internalBehaviour: 'Tight chest', externalBehaviour: '', alternateThought: '', distortions: ['catastrophizing', 'not-a-trap'], tags: ['work', 'nope'] }
 
 /** Fresh browser context + page with error capture and a mocked Gemini API. */
-async function open(seed) {
+const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filter(c => c.plugin === a && (!b || c.method === b)), [plugin, method])
+
+async function open(seed, { native = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
   const gemini = { calls: [], mode: 'ok' }
   await ctx.route('https://generativelanguage.googleapis.com/**', async route => {
@@ -37,6 +40,7 @@ async function open(seed) {
     if (body.includes('CBT-informed helper')) return text(JSON.stringify({ distortions: ['mind reading'], reframes: ['I have prepared and can cope with a wobble.', 'Most people are focused on themselves, not me.', 'One slip would not ruin the whole talk.'], crisis: false }))
     return json({ error: { message: 'unexpected request' } }, 400)
   })
+  if (native) await ctx.addInitScript(nativeStub)
   if (seed) await ctx.addInitScript(([k, v]) => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, ['seed', seed])
   const page = await ctx.newPage()
   const errors = []
@@ -234,6 +238,87 @@ test('export downloads valid JSON without media blobs', async () => {
   await tab(p, 'More'); const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.li >> text=Export data')])
   const data = JSON.parse(readFileSync(await dl.path(), 'utf8'))
   assert.equal(data.thoughts.length, 1); assert.equal(data.thoughts[0].thought, 'export me'); assert.ok(!('photos' in data.thoughts[0])); assert.ok(Array.isArray(data.worries))
+  await done(s)
+})
+
+test('iPhone app mode: boots without a service worker, styles the status bar, never crashes on missing plugins', async () => {
+  const s = await open(null, { native: true }); const p = s.page
+  assert.equal(await p.evaluate(() => window.Capacitor.getPlatform()), 'ios')
+  assert.equal((await p.evaluate(() => navigator.serviceWorker.getRegistrations())).length, 0, 'no service worker inside the app')
+  await p.waitForFunction(() => window.__native.some(c => c.plugin === 'StatusBar' && c.method === 'setStyle'))
+  assert.equal((await calls(p, 'StatusBar', 'setStyle'))[0].options.style, 'DARK')
+  for (const t of ['Entries', 'Stats', 'Calendar', 'Breathe', 'More']) await tab(p, t)
+  await done(s)
+})
+
+test('iPhone app mode: breathing uses the Taptic Engine and keeps the screen awake', async () => {
+  const s = await open(null, { native: true }); const p = s.page
+  await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6'); await p.click('button:has-text("Start")')
+  await p.waitForFunction(() => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= 4, null, { timeout: 8000 })
+  const impacts = (await calls(p, 'Haptics', 'impact')).slice(0, 4).map(c => c.options.style)
+  assert.deepEqual(impacts, ['LIGHT', 'MEDIUM', 'MEDIUM', 'HEAVY'], 'inhale swells light → heavy')
+  assert.equal((await calls(p, 'Mindful', 'keepAwake'))[0].options.enabled, true)
+  await p.click('button:has-text("End session")')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'keepAwake').at(-1)?.options.enabled === false)
+  await done(s)
+})
+
+test('iPhone app mode: Apple Health saves mindful minutes (only when connected, never twice)', async () => {
+  const s = await open(null, { native: true }); const p = s.page
+  await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /Off/)
+  await p.click('.li >> text=Apple Health'); await p.waitForSelector('text=Mindful Minutes')
+  // a session before connecting is NOT written
+  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
+  await p.waitForSelector('text=Nice work'); assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 0)
+  // connect
+  await tab(p, 'More'); await p.click('.li >> text=Apple Health'); await p.click('[role=switch]'); await p.waitForSelector('text=Connected.')
+  assert.equal((await calls(p, 'Mindful', 'requestAuthorization')).length, 1)
+  // backfill saves the earlier session once, then reports nothing left
+  await p.click('text=Save past sessions'); await p.waitForSelector('text=Saved 1 past session')
+  const first = (await calls(p, 'Mindful', 'saveSession'))[0].options
+  assert.ok(first.end > first.start && Math.abs((first.end - first.start) / 1000 - 10) < 3, 'start/end span the session')
+  await p.click('text=Save past sessions'); await p.waitForSelector('text=Everything is already saved'); assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 1)
+  // a new session is written automatically
+  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'saveSession').length === 2)
+  // switch off: later sessions are not written
+  await tab(p, 'More'); await p.click('.li >> text=Apple Health'); await p.click('[role=switch]')
+  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")'); await p.waitForTimeout(500)
+  assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 2)
+  await reload(p); await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /Off/)
+  await done(s)
+})
+
+test('iPhone app mode: reminders are scheduled on-device and skip today once you have checked in', async () => {
+  const s = await open(null, { native: true }); const p = s.page
+  const lateHour = new Date().getHours() < 22 ? 23 : null   // only meaningful if today's reminder time hasn't passed yet
+  await tab(p, 'More'); await p.click('.li >> text=Reminders')
+  if (lateHour) await p.selectOption('select', String(lateHour))
+  await p.click('[role=switch]'); await p.waitForSelector('text=Reminder set for')
+  assert.equal((await calls(p, 'LocalNotifications', 'requestPermissions')).length, 1)
+  const batch = async () => (await calls(p, 'LocalNotifications', 'schedule')).at(-1).options.notifications
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule'))
+  const before = await batch()
+  assert.ok(before.length >= 13 && before.length <= 14); assert.deepEqual(before.map(n => n.id), before.map((_, i) => 7000 + i))
+  assert.equal(before[0].title, 'How are you feeling?')
+  if (lateHour) {
+    assert.equal(before.length, 14, 'today is included before checking in')
+    await p.click('[aria-label=Back]'); await tab(p, 'Entries'); await newEntry(p, { mood: 3 }); await save(p)
+    await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 2)
+    const after = await batch()
+    assert.equal(after.length, 13, 'today dropped after checking in'); assert.match(after[0].title, /streak/i)
+  }
+  await tab(p, 'More'); await p.click('.li >> text=Reminders'); await p.click('[role=switch]')
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'cancel'))
+  await reload(p); await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Reminders")').innerText(), /Off/)
+  await done(s)
+})
+
+test('in a normal browser nothing talks to native code and Apple Health explains itself', async () => {
+  const s = await open(); const p = s.page
+  assert.equal(await p.evaluate(() => window.__native), undefined)
+  await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /iPhone app/)
+  await p.click('.li >> text=Apple Health'); await p.waitForSelector('text=part of the iPhone app'); assert.equal(await p.locator('[role=switch]').count(), 0)
   await done(s)
 })
 

@@ -1,9 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { cloudRepo, localRepo, type Repo } from './repo'
 import { supabase } from './supabase'
 import { computeStreak, dayKey, type Streak } from './dates'
 import { DEFAULT_TAGS } from './constants'
+import { syncSession } from './health'
+import { isNative } from './native'
+import { getReminder } from './push'
+import { scheduleNativeReminders } from './nativeReminders'
 import { deleteBlob, getBlob } from './blobstore'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
 
@@ -69,6 +73,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return computeStreak(days)
   }, [thoughts, sessions])
 
+  // iPhone app: keep on-device reminders in step with your activity (drops today's nudge once you've checked in).
+  const act = useRef({ activeToday: false, current: 0 })
+  act.current = { activeToday: streak.activeToday, current: streak.current }
+  useEffect(() => {
+    if (!loaded || !isNative()) return
+    const run = () => { const r = getReminder(); if (r.enabled) scheduleNativeReminders(r.hour, { skipToday: act.current.activeToday, streak: act.current.current }).catch(e => console.warn('reminder schedule failed', e)) }
+    run(); window.addEventListener('bp:reminder', run)
+    return () => window.removeEventListener('bp:reminder', run)
+  }, [loaded, streak.activeToday, streak.current])
+
+  useEffect(() => {
+    const on = () => setRecovery(true)
+    window.addEventListener('bp:recovery', on); return () => window.removeEventListener('bp:recovery', on)
+  }, [])
+
   const allTags = useMemo(() => {
     const custom = thoughts.flatMap(t => t.tags).filter(t => !DEFAULT_TAGS.includes(t))
     return [...DEFAULT_TAGS, ...new Set(custom)]
@@ -101,7 +120,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async deleteWorry(id) { await repo.deleteWorry(id); setWorries(p => p.filter(w => w.id !== id)) },
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
-    async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]) },
+    async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
     async signOut() { await supabase?.auth.signOut() },
   }
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>

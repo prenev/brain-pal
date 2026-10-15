@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Emoji } from '../lib/emoji'
 import { burst } from '../lib/confetti'
-import { haptic } from '../lib/haptics'
+import { hapticSuccess } from '../lib/haptics'
 import { useStore } from '../lib/store'
 
 export interface Celebration { emoji: string; title: string; sub: string }
@@ -9,7 +9,7 @@ export interface Celebration { emoji: string; title: string; sub: string }
 /** "Lesson complete"-style reward screen: big emoji, streak, one chunky button. */
 export default function Celebrate({ c, onClose }: { c: Celebration; onClose: () => void }) {
   const { streak } = useStore()
-  useEffect(() => { burst(); haptic([40, 40, 80]) }, [])
+  useEffect(() => { burst(); hapticSuccess() }, [])
   return (
     <div className="overlay celebrate" role="dialog" aria-modal aria-label={c.title}>
       <div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>

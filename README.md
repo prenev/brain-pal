@@ -42,6 +42,10 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 - **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
 - **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.
 
+## iPhone app (Apple Health, real haptics, on-device reminders)
+
+The same code runs as a native iPhone app via Capacitor — see **[docs/IOS.md](docs/IOS.md)** for the Mac steps (`npm ci && npm run ios:sync && npm run ios:open`, then ▶ Run).
+
 ## Voice memos, transcripts & the optional AI helper
 
 - **Voice memo** — in the new-entry editor, record up to 5 minutes. Stored on-device (IndexedDB) in local mode, or in your private Supabase bucket in cloud mode. Play it back from the entry; you can type or edit a transcript by hand.
@@ -52,8 +56,8 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 ## Testing
 
 ```bash
-npm test            # 6 unit suites (AI client w/ mocked network, audio/WAV encoding, insights, reminders, worries, streaks)
-npm run test:e2e    # 15 browser flows (fake microphone, mocked Gemini): create/delete, legacy-data migration, voice memo,
+npm test            # 7 unit suites (native logic, AI client w/ mocked network, audio/WAV encoding, insights, reminders, worries, streaks)
+npm run test:e2e    # 20 browser flows (incl. simulated iPhone-app bridge) (fake microphone, mocked Gemini): create/delete, legacy-data migration, voice memo,
                     # AI helper, crisis guard, XSS, worry time, SOS, photos, export, offline PWA, accessible names
 npm run screens     # screenshots of every screen -> screenshots/
 ```
@@ -65,10 +69,10 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 |---|---|
 | Thought records, tags, photos, streaks, search, JSON export | ✅ |
 | Box breathing timer + session log | ✅ |
-| Vibration | ✅ Android/desktop. **iPhone Safari has no Vibration API**; a best-effort Safari 17.4+ fallback is included but iOS may ignore it outside a tap. Reliable iOS haptics need the native wrapper. |
+| Vibration | ✅ Android/desktop. iPhone Safari has no Vibration API (best-effort fallback only) — **the iPhone app uses the Taptic Engine**. |
 | Web push reminders | Client, service worker and sender (`supabase/functions/send-reminders`) written; the scheduling logic is unit-tested (`npm test`) but the deployed pipeline is not. Needs one-time setup below. On iOS the app must be on the Home Screen (16.4+). |
 | Delete account | `supabase/functions/delete-account` (needs deploying). |
-| Apple Health | ❌ Not possible from a web app. Next step: wrap with Capacitor and write *Mindful Minutes* through a HealthKit plugin (needs a Mac + Apple Developer account). |
+| Apple Health | iPhone app only (browsers can't reach HealthKit): writes *Mindful Minutes*. Code + tests written; Swift compiled only by the macOS CI job / your Mac — see docs/IOS.md. |
 | Insights / SOS logic | Unit-tested (`npm test`). Not clinically validated; breathing/grounding techniques are standard CBT-style self-help. |
 | Gemini (live) | Request/response handling is unit- and e2e-tested against a **mocked** API. Not yet run against the real service. |
 | Voice memos on iPhone | Uses MediaRecorder (Safari 14.1+, mp4/AAC). Recording inside an installed Home-Screen app works on recent iOS, but is untested here. |

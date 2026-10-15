@@ -2,6 +2,7 @@
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
 import { execSync } from 'node:child_process'
+import { nativeStub } from './native-stub.mjs'
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -58,9 +59,10 @@ async function mockGemini(ctx) {
   })
 }
 
-async function session(base, seed, fn) {
+async function session(base, seed, fn, { native = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications', 'microphone'] })
   await mockGemini(ctx)
+  if (native) await ctx.addInitScript(nativeStub)
   if (seed) await ctx.addInitScript(([t, s, w]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)) } }, [thoughts, sessions, worries])
   const p = await ctx.newPage()
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && !/Failed to load resource|ERR_/.test(m.text()) && errors.push(m.text()))
@@ -125,6 +127,12 @@ await session('http://localhost:4173', true, async (p, snap) => {   // AI helper
   await p.click('button:has-text("Fill my thought record")'); await p.waitForSelector('text=Filled in from your memo'); await snap('ai-filled')
   await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card'); await p.locator('.reframe-card').first().scrollIntoViewIfNeeded(); await snap('ai-reframes')
 })
+
+await session('http://localhost:4173', true, async (p, snap) => {   // iPhone app (native bridge simulated)
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Apple Health'); await snap('iphone-apple-health')
+  await p.click('[role=switch]'); await p.waitForSelector('text=Connected.'); await p.click('text=Save past sessions'); await p.waitForTimeout(300); await snap('iphone-apple-health-connected')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Reminders'); await p.click('[role=switch]'); await p.waitForSelector('text=Reminder set for'); await snap('iphone-reminders')
+}, { native: true })
 
 await session('http://localhost:4174', false, async (p, snap) => {
   await snap('login-signin')

@@ -6,6 +6,8 @@ import { useStore } from '../lib/store'
 import Support from '../components/Support'
 import AiSettings from '../components/AiSettings'
 import { aiEnabled } from '../lib/gemini'
+import { isNative } from '../lib/native'
+import { connectHealth, disconnectHealth, healthEnabled, syncAll } from '../lib/health'
 import { worryStats } from '../lib/worries'
 import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sendTest } from '../lib/push'
 import { Toggle } from '../components/ui'
@@ -23,6 +25,8 @@ export default function More({ initial = null, onWorry }: { initial?: 'support' 
   const { mode, session, signOut, thoughts, sessions, worries, importLocal } = useStore()
   const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai'>(initial)
   const [rem, setRem] = useState(getReminder)
+  const [health, setHealth] = useState(healthEnabled)
+  const [healthMsg, setHealthMsg] = useState('')
   const [msg, setMsg] = useState('')
   const photos = thoughts.flatMap(t => t.photos)
   const meta = session?.user.user_metadata?.name as string | undefined
@@ -111,10 +115,24 @@ export default function More({ initial = null, onWorry }: { initial?: 'support' 
         <button className="btn danger block" onClick={signOut}>Sign out</button>
         <button className="btn block" style={{ marginTop: 10, color: 'var(--danger)', background: 'none' }} onClick={deleteAccount}>Delete account…</button>
       </>}
-      {view === 'health' && <div className="card">
-        <p style={{ marginTop: 0 }}>Apple Health sync isn’t available in the web app.</p>
-        <p className="muted">Browsers can’t access HealthKit — only native apps can. The plan is to wrap this same app with Capacitor so every breathing session is saved as Mindful Minutes. Nothing is synced yet.</p>
-      </div>}
+      {view === 'health' && (isNative() ? <div className="card">
+        <p style={{ marginTop: 0 }}>Save your breathing and grounding sessions to Apple Health as <b>Mindful Minutes</b>.</p>
+        <p className="muted small">Brain Pal only <i>writes</i> sessions — it never reads your health data.</p>
+        <Toggle label="Save sessions to Apple Health" on={health} onChange={async on => {
+          setHealthMsg('')
+          if (!on) { disconnectHealth(); setHealth(false); return }
+          try {
+            const r = await connectHealth()
+            setHealth(r === 'ok')
+            setHealthMsg(r === 'ok' ? 'Connected. New sessions will appear in Health → Mindfulness.' : r === 'denied' ? 'Permission was declined. You can allow it in Settings → Health → Data Access → Brain Pal.' : 'Apple Health isn’t available on this device.')
+          } catch (e: any) { setHealthMsg(e?.message ?? 'Could not connect.') }
+        }} />
+        {health && <button className="btn" style={{ marginTop: 10 }} onClick={async () => { const n = await syncAll(sessions); setHealthMsg(n ? `Saved ${n} past session${n === 1 ? '' : 's'} to Apple Health.` : 'Everything is already saved.') }}>Save past sessions</button>}
+        {healthMsg && <p className="small" role="status">{healthMsg}</p>}
+      </div> : <div className="card">
+        <p style={{ marginTop: 0 }}>Apple Health sync is part of the <b>iPhone app</b>.</p>
+        <p className="muted">Browsers can’t access HealthKit — only native apps can. Build the iPhone app from this project (see <code>docs/IOS.md</code>) and every breathing session is saved as Mindful Minutes.</p>
+      </div>)}
     </>
   )
 
@@ -133,7 +151,7 @@ export default function More({ initial = null, onWorry }: { initial?: 'support' 
         <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />
         <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
         <Row icon={<Emoji name="blueheart" size={30} />} color="var(--card2)" label="Get support" onClick={() => setView('support')} />
-        <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Apple Health" value="Soon" onClick={() => setView('health')} />
+        <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Apple Health" value={isNative() ? (healthEnabled() ? 'On' : 'Off') : 'iPhone app'} onClick={() => setView('health')} />
       </div>
       <div className="list">
         <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
