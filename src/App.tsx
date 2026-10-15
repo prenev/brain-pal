@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, CalendarDays, Ellipsis, NotebookText, Plus, Wind, ArrowLeft, Pencil, Calendar, History } from 'lucide-react'
+import { BarChart3, CalendarDays, Ellipsis, NotebookText, Plus, Wind, ArrowLeft, Pencil, Calendar, History, LifeBuoy } from 'lucide-react'
 import { Sheet } from './components/ui'
 import { StoreProvider, useStore } from './lib/store'
 import Entries from './pages/Entries'
@@ -9,6 +9,7 @@ import Breathe from './pages/Breathe'
 import More from './pages/More'
 import Login from './pages/Login'
 import NewEntry from './pages/NewEntry'
+import Sos from './components/Sos'
 
 const TABS = [
   { id: 'entries', label: 'Entries', icon: NotebookText },
@@ -25,6 +26,9 @@ function Shell() {
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
+  const [sos, setSos] = useState(false)
+  const [moreView, setMoreView] = useState<'support' | null>(null)
+  const [composeMood, setComposeMood] = useState<number | null>(null)
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
   if (needsLogin || recovery) return <Login />
@@ -35,17 +39,17 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries />}
+        {tab === 'entries' && <Entries onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
-        {tab === 'breathe' && <Breathe />}
-        {tab === 'more' && <More />}
+        {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
+        {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} />}
       </div>
 
       <div className="dock">
         <nav className="tabbar glass" aria-label="Main">
           {TABS.map(({ id, label, icon: I }) => (
-            <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => setTab(id)}>
+            <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => { setMoreView(null); setTab(id) }}>
               <I size={24} />{label}
             </button>
           ))}
@@ -63,6 +67,7 @@ function Shell() {
               start(new Date(y, m - 1, d, n.getHours(), n.getMinutes()))
             }} />
           </> : <>
+            <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic" style={{ color: '#ff8a65' }}><LifeBuoy /></span>I’m anxious right now</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Wind /></span>Start breathing</button>
             <div className="sheet-label">Create Entry</div>
             <button className="sheet-item" onClick={() => setOtherDay(true)}><span className="ic"><Calendar /></span>Other day</button>
@@ -71,7 +76,8 @@ function Shell() {
           </>}
         </Sheet>
       )}
-      {composeAt && <NewEntry date={composeAt} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {sos && <Sos onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
+      {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
     </>
   )
 }

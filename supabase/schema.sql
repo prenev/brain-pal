@@ -12,6 +12,7 @@ create table if not exists public.thoughts (
   alternate_thought text not null default '',
   outcome_intensity int,                          -- re-rated emotion after alternate thought
   tags text[] not null default '{}',
+  distortions text[] not null default '{}',       -- thinking traps spotted
   photos text[] not null default '{}'             -- storage paths in bucket "photos"
 );
 create index on public.thoughts (user_id, created_at desc);
@@ -23,7 +24,10 @@ create table if not exists public.breath_sessions (
   pattern jsonb not null,                         -- {inhale, hold1, exhale, hold2}
   cycles int not null,
   duration_sec int not null,
-  completed boolean not null default true
+  completed boolean not null default true,
+  kind text not null default 'breathing',         -- 'breathing' | 'grounding'
+  anxiety_before int,                             -- 0-10 self-rating around SOS sessions
+  anxiety_after int
 );
 create index on public.breath_sessions (user_id, created_at desc);
 
@@ -54,3 +58,7 @@ create policy "own photos delete" on storage.objects for delete using (bucket_id
 -- Upgrading from an earlier version of this schema:
 --   alter table public.thoughts add column if not exists mood int not null default 3;
 --   alter table public.push_subscriptions add column if not exists last_sent_on text;
+--   alter table public.thoughts add column if not exists distortions text[] not null default '{}';
+--   alter table public.breath_sessions add column if not exists kind text not null default 'breathing';
+--   alter table public.breath_sessions add column if not exists anxiety_before int;
+--   alter table public.breath_sessions add column if not exists anxiety_after int;

@@ -36,6 +36,7 @@ export default function EntryCard({ t, onDelete }: { t: Thought; onDelete?: (id:
         )}
         {open && <>
           {t.situation && <div className="kv"><b>Situation</b>{t.situation}</div>}
+          {t.distortions.length > 0 && <div className="kv"><b>Thinking traps</b><div className="chips">{t.distortions.map(d => <span key={d} className="chip">{d}</span>)}</div></div>}
           {t.internalBehaviour && <div className="kv"><b>Internal reaction</b>{t.internalBehaviour}</div>}
           {t.externalBehaviour && <div className="kv"><b>External behaviour</b>{t.externalBehaviour}</div>}
           {t.photos.length > 0 && <div className="photos">{t.photos.map((p, i) => <img key={i} src={p} alt="" />)}</div>}

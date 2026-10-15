@@ -21,15 +21,24 @@ const errors = []
 const names = []
 
 const photo = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3fa869"/><stop offset="1" stop-color="#5e6ad2"/></linearGradient></defs><rect width="400" height="400" fill="url(#g)"/><circle cx="280" cy="120" r="50" fill="#ffd36b"/></svg>')
-const thoughts = [[0, 3, 'anxious', 'Everyone will notice I messed up the demo'], [1, 2, 'stressed', 'I will never catch up on this work'], [3, 4, 'happy', 'Good walk and a chat with a friend'],
-  [4, 1, 'angry', 'They ignored my message on purpose'], [5, 5, 'grateful', 'Slept well and finished the project'], [8, 2, 'sad', 'I never finish anything'], [9, 4, 'relaxed', 'Quiet evening, breathing exercise helped']]
-  .map(([ago, mood, emo, text], i) => {
-    const d = new Date(); d.setDate(d.getDate() - ago); d.setHours(9 + i * 2 % 12, 10)
-    return { id: 's' + i, createdAt: d.toISOString(), mood, situation: i === 0 ? 'Team presentation' : '', thought: text,
-      emotions: [{ name: emo, intensity: 70 }], internalBehaviour: i === 0 ? 'Tight chest, racing heart' : '', externalBehaviour: i === 0 ? 'Spoke quickly, skipped slides' : '',
-      alternateThought: i % 2 === 0 ? 'I prepared well and can handle a wobble' : '', outcomeIntensity: i % 2 === 0 ? 35 : null, tags: ['work'], photos: i === 2 ? [photo, photo] : [] }
-  })
-const sessions = [0, 1, 2, 4].map((ago, i) => { const d = new Date(); d.setDate(d.getDate() - ago); return { id: 'b' + i, createdAt: d.toISOString(), pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 384, completed: true } })
+const rows = [
+  [0, 3, 'anxious', 70, ['work'], ['catastrophizing', 'mind reading'], 'Everyone will notice I messed up the demo'],
+  [1, 2, 'stressed', 80, ['work'], ['fortune telling'], 'I will never catch up on this work'],
+  [3, 4, 'happy', 40, ['social'], [], 'Good walk and a chat with a friend'],
+  [4, 1, 'afraid', 65, ['sleep'], ['catastrophizing'], 'What if I never sleep properly again'],
+  [5, 5, 'grateful', 30, ['family'], [], 'Slept well and finished the project'],
+  [8, 2, 'overwhelmed', 75, ['sleep'], ['all-or-nothing'], 'I never finish anything'],
+  [9, 4, 'relaxed', 20, ['social'], [], 'Quiet evening, breathing exercise helped']]
+const thoughts = rows.map(([ago, mood, emo, inten, tags, distortions, text], i) => {
+  const d = new Date(); d.setDate(d.getDate() - ago); d.setHours(i % 2 ? 22 : 9 + i, 10)
+  return { id: 's' + i, createdAt: d.toISOString(), mood, situation: i === 0 ? 'Team presentation' : '', thought: text,
+    emotions: [{ name: emo, intensity: inten }], internalBehaviour: i === 0 ? 'Tight chest, racing heart' : '', externalBehaviour: i === 0 ? 'Spoke quickly, skipped slides' : '',
+    alternateThought: i % 2 === 0 ? 'I prepared well and can handle a wobble' : '', outcomeIntensity: i % 2 === 0 ? 35 : null, tags, distortions, photos: i === 2 ? [photo, photo] : [] }
+})
+const sessions = [[0, 8, 4, 'breathing'], [1, 7, 3, 'grounding'], [2, 6, 5, 'breathing'], [4, null, null, 'breathing']].map(([ago, b, a, kind], i) => {
+  const d = new Date(); d.setDate(d.getDate() - ago)
+  return { id: 'b' + i, createdAt: d.toISOString(), pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 384, completed: true, kind, anxietyBefore: b, anxietyAfter: a }
+})
 
 async function session(base, seed, fn) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications'] })
@@ -46,20 +55,34 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('[aria-label=Search]'); await p.fill('.searchbar input', 'work'); await snap('entries-search'); await p.click('[aria-label=Search]')
   await p.click('.entry >> nth=0'); await snap('entry-expanded')
   await p.click('.tab >> text=Stats'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('stats')
+  await p.locator('h3:has-text("Anxiety Insights")').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -80)); await snap('stats-anxiety-insights')
   await p.evaluate(() => window.scrollTo(0, 99999)); await snap('stats-bottom')
   await p.click('.tab >> text=Calendar'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('calendar')
   await p.click('.cell:not(.off) .bub:has(svg) >> nth=-1'); await p.evaluate(() => window.scrollTo(0, 700)); await snap('calendar-day')
   await p.click('.tab >> text=Breathe'); await snap('breathe')
+  await p.click('.seg >> text=Calm 4-6'); await snap('breathe-calm-preset')
   await p.click('text=Start'); await p.waitForTimeout(5200); await snap('breathe-running'); await p.click('text=End session')
+  // SOS flow
+  await p.click('.sos-card'); await snap('sos-rate')
+  await p.fill('input[type=range]', '8'); await p.click('text=Continue'); await snap('sos-choose')
+  await p.click('.tool >> text=Ground yourself'); await snap('sos-grounding')
+  for (let i = 0; i < 5; i++) await p.click('text=I noticed one'); await p.waitForTimeout(700); await p.click('text=Skip this step'); await p.waitForTimeout(200); await snap('sos-grounding-step2')
+  for (let i = 0; i < 2; i++) { await p.click('text=Skip this step') } await p.click('text=Finish'); await snap('sos-after-rate')
+  await p.fill('input[type=range]', '4'); await p.click('text=Save'); await snap('sos-result')
+  await p.click('text=Done')
+  await p.click('.sos-card'); await p.click('text=Continue'); await p.click('.tool >> text=Slow breathing'); await p.waitForTimeout(5200); await snap('sos-breathing')
+  await p.click('text=End session'); await p.click('text=Save'); await p.click('text=Done')
   await p.click('.tab >> text=More'); await snap('more')
   await p.click('text=Photo Gallery'); await snap('gallery'); await p.click('[aria-label=Back]')
   await p.click('text=Reminders'); await p.click('[role=switch]'); await p.waitForTimeout(500); await snap('reminders'); await p.click('[aria-label=Back]')
   await p.click('.li >> text=Apple Health'); await snap('apple-health'); await p.click('[aria-label=Back]')
+  await p.click('.li >> text=Get support'); await snap('support'); await p.click('[aria-label=Back]')
   await p.click('.fab'); await snap('new-entry-menu')
   await p.click('.btn.primary >> text=Today'); await snap('mood-picker')
   await p.click('.datelink'); await snap('mood-picker-date'); await p.click('.datelink')
   await p.click('.faces button >> nth=3'); await p.click('.ig >> text=anxious'); await p.click('.ig >> text=stressed'); await snap('editor-emotions')
-  await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await snap('editor-thought-record')
+  await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await p.locator('text=Thinking traps').scrollIntoViewIfNeeded(); await p.click('.chip >> text=catastrophizing'); await p.click('.chip >> text=mind reading'); await snap('editor-thinking-traps')
+  await p.locator('text=Questions that help').scrollIntoViewIfNeeded(); await p.click('.qbtn >> nth=1'); await p.evaluate(() => document.querySelector('.overlay').scrollBy(0, 200)); await snap('editor-reframe-questions')
 })
 
 await session('http://localhost:4174', false, async (p, snap) => {

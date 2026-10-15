@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Flame, Search } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
+import { roughPatch } from '../lib/insights'
 import { monthLabel } from '../components/ui'
 import EntryCard from '../components/EntryCard'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
-export default function Entries() {
+export default function Entries({ onSos, onSupport }: { onSos: () => void; onSupport: () => void }) {
   const { thoughts, deleteThought, streak } = useStore()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [q, setQ] = useState('')
@@ -39,6 +40,15 @@ export default function Entries() {
         <div className="card row" style={{ background: 'rgba(255,179,64,.14)', border: '1px solid rgba(255,179,64,.4)' }}>
           <Flame color="#ffb340" /><span>Your {streak.current}-day streak ends tonight — log a mood or a breathing session to keep it.</span>
         </div>
+      )}
+      <button className="sos-card" onClick={onSos}>
+        <span style={{ fontSize: 24 }}>🆘</span>
+        <span style={{ flex: 1 }}><b>Anxious right now?</b><span className="sub">Calm your body in under 3 minutes</span></span>
+      </button>
+      {roughPatch(thoughts) && (
+        <button className="card row" style={{ width: '100%', textAlign: 'left', background: 'rgba(94,106,210,.18)', border: '1px solid rgba(94,106,210,.45)' }} onClick={onSupport}>
+          <span>💙</span><span style={{ flex: 1 }}>It’s been a rough patch lately. You don’t have to handle it alone — tap for support options.</span>
+        </button>
       )}
       {searching && <div className="searchbar"><Search size={20} /><input autoFocus placeholder="Search entries, emotions, tags" value={q} onChange={e => setQ(e.target.value)} /></div>}
 

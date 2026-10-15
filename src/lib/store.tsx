@@ -4,7 +4,7 @@ import { cloudRepo, localRepo, type Repo } from './repo'
 import { supabase } from './supabase'
 import { computeStreak, dayKey, type Streak } from './dates'
 import { DEFAULT_TAGS } from './constants'
-import type { BreathSession, NewThought, Thought } from './types'
+import type { BreathSession, NewSession, NewThought, Thought } from './types'
 
 interface Ctx {
   ready: boolean
@@ -20,7 +20,7 @@ interface Ctx {
   allTags: string[]
   addThought(t: NewThought): Promise<void>
   deleteThought(id: string): Promise<void>
-  addSession(s: Omit<BreathSession, 'id' | 'createdAt'>): Promise<void>
+  addSession(s: NewSession): Promise<void>
   signOut(): Promise<void>
 }
 

@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ArrowLeft, Bell, ChevronRight, Download, HeartPulse, Image, LogOut, Cloud, UserRound } from 'lucide-react'
+import { ArrowLeft, Bell, LifeBuoy, ChevronRight, Download, HeartPulse, Image, LogOut, Cloud, UserRound } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../lib/store'
+import Support from '../components/Support'
 import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sendTest } from '../lib/push'
 import { Toggle } from '../components/ui'
 
@@ -14,9 +15,9 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
   )
 }
 
-export default function More() {
+export default function More({ initial = null }: { initial?: 'support' | null }) {
   const { mode, session, signOut, thoughts, sessions, importLocal } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account'>(null)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [msg, setMsg] = useState('')
   const photos = thoughts.flatMap(t => t.photos)
@@ -72,7 +73,7 @@ export default function More() {
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -86,6 +87,7 @@ export default function More() {
         <button className="btn" onClick={async () => setMsg((await sendTest()) ? 'Test sent.' : 'Enable the reminder first so notifications are allowed.')}>Send test notification</button>
         {msg && <p className="small" role="status">{msg}</p>}
       </div>}
+      {view === 'support' && <Support />}
       {view === 'account' && <>
         <div className="card">
           <p className="muted small" style={{ marginTop: 0 }}>Signed in as {session?.user.email}</p>
@@ -123,6 +125,7 @@ export default function More() {
         {mode === 'cloud' && <Row icon={<UserRound size={24} />} color="#3b82f6" label="Account" value={name} onClick={() => setView('account')} />}
         <Row icon={<Image size={24} />} color="#e8873a" label="Photo Gallery" onClick={() => setView('gallery')} />
         <Row icon={<Bell size={24} />} color="#3fa869" label="Reminders" value={rem.enabled ? fmtHour(rem.hour) : 'Off'} onClick={() => setView('reminders')} />
+        <Row icon={<LifeBuoy size={24} />} color="#5e6ad2" label="Get support" onClick={() => setView('support')} />
         <Row icon={<HeartPulse size={24} />} color="#e0364a" label="Apple Health" value="Soon" onClick={() => setView('health')} />
       </div>
       <div className="list">

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Camera, Check, ChevronLeft, ChevronUp, Images, Plus, Search, X } from 'lucide-react'
 import { IconGrid } from '../components/ui'
 import Face from '../components/Face'
-import { EMOTIONS } from '../lib/constants'
+import { EMOTIONS, REFRAME_QUESTIONS, TRAPS } from '../lib/constants'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
 import type { EmotionRating } from '../lib/types'
@@ -14,11 +14,11 @@ const fmtWhen = (d: Date) => {
   return `${day}, ${d.getDate()} ${d.toLocaleDateString(undefined, { month: 'short' })} at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
 }
 
-export default function NewEntry({ date, onClose }: { date: Date; onClose: () => void }) {
+export default function NewEntry({ date, onClose, initialMood = null }: { date: Date; onClose: () => void; initialMood?: number | null }) {
   const { addThought, allTags } = useStore()
   const [when, setWhen] = useState(date)
   const [pickDate, setPickDate] = useState(false)
-  const [mood, setMood] = useState<number | null>(null)
+  const [mood, setMood] = useState<number | null>(initialMood)
   const [emotions, setEmotions] = useState<EmotionRating[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [q, setQ] = useState('')
@@ -30,6 +30,7 @@ export default function NewEntry({ date, onClose }: { date: Date; onClose: () =>
   const [external, setExternal] = useState('')
   const [alt, setAlt] = useState('')
   const [outcome, setOutcome] = useState<number | null>(null)
+  const [traps, setTraps] = useState<string[]>([])
   const [files, setFiles] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -53,7 +54,7 @@ export default function NewEntry({ date, onClose }: { date: Date; onClose: () =>
       await addThought({
         mood: mood!, createdAt: when.toISOString(), situation: situation.trim(), thought: thought.trim(), emotions,
         internalBehaviour: internal.trim(), externalBehaviour: external.trim(), alternateThought: alt.trim(),
-        outcomeIntensity: outcome, tags, photoFiles: files,
+        outcomeIntensity: outcome, tags, distortions: traps, photoFiles: files,
       })
       onClose()
     } catch (e: any) { setError(e?.message ?? 'Could not save'); setSaving(false) }
@@ -119,8 +120,18 @@ export default function NewEntry({ date, onClose }: { date: Date; onClose: () =>
         <div className="card-head"><h3 style={{ fontWeight: 500 }}>Thought record</h3></div>
         <label className="field"><span>Situation</span><textarea className="input" value={situation} onChange={e => setSituation(e.target.value)} placeholder="What was happening?" /></label>
         <label className="field"><span>The thought</span><textarea className="input" value={thought} onChange={e => setThought(e.target.value)} placeholder="What went through your mind?" /></label>
+        <div className="field"><span>Thinking traps — does this thought fit any?</span>
+          <div className="chips">{TRAPS.map(t => (
+            <button type="button" key={t.name} className={`chip ${traps.includes(t.name) ? 'on' : ''}`} aria-pressed={traps.includes(t.name)}
+              onClick={() => setTraps(traps.includes(t.name) ? traps.filter(x => x !== t.name) : [...traps, t.name])}>{t.name}</button>))}</div>
+          {TRAPS.filter(t => traps.includes(t.name)).map(t => (
+            <div className="trap" key={t.name} style={{ marginTop: 8 }}><b>{t.name}</b> — {t.blurb}<div className="muted" style={{ marginTop: 4 }}>Try asking: {t.ask}</div></div>))}
+        </div>
         <label className="field"><span>Internal reaction</span><textarea className="input" value={internal} onChange={e => setInternal(e.target.value)} placeholder="Body sensations, urges, what you told yourself…" /></label>
         <label className="field"><span>External behaviour</span><textarea className="input" value={external} onChange={e => setExternal(e.target.value)} placeholder="What did you actually do or say?" /></label>
+        <div className="field"><span>Questions that help you reframe (tap to add)</span>
+          {REFRAME_QUESTIONS.map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => (a ? a + '\n' : '') + q + ' ')}>{q}</button>)}
+        </div>
         <label className="field"><span>Alternate thought</span><textarea className="input" value={alt} onChange={e => setAlt(e.target.value)} placeholder="What would you tell a friend? What’s the evidence?" /></label>
         {emotions.length > 0 && alt.trim() && <div>
           <div className="row spread"><span className="muted small">Feeling now (was {peak}%)</span><b>{outcome ?? peak}%</b></div>

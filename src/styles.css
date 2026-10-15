@@ -181,3 +181,19 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
 .orb b { font-size: 22px; display: block; } .orb span { font-size: 46px; font-weight: 800; }
 .center-screen { min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* SOS / grounding */
+.sos-num { font-size: 72px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+.tool { display: flex; align-items: center; gap: 14px; width: 100%; margin-bottom: 12px; }
+.tool-ic { background: rgba(63,168,105,.18); color: var(--accent); width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; flex: none; }
+.ground-n { font-size: 120px; font-weight: 800; line-height: 1; color: var(--accent); margin: 16px 0 6px; }
+.ground-dots { display: flex; justify-content: center; gap: 12px; }
+.ground-dots i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #48484a; transition: all .25s; }
+.ground-dots i.on { background: var(--accent); border-color: var(--accent); transform: scale(1.15); }
+.progress { display: flex; gap: 6px; margin: 4px 0 8px; } .progress i { flex: 1; height: 4px; border-radius: 4px; background: #38383a; } .progress i.on { background: var(--accent); }
+.sos-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; margin-bottom: 14px; border-radius: 22px; text-align: left;
+  background: linear-gradient(135deg, rgba(255,107,106,.22), rgba(245,139,31,.18)); border: 1px solid rgba(255,140,100,.35); }
+.sos-card b { display: block; font-size: 17px; } .sos-card span.sub { color: #d9b8a8; font-size: 13px; }
+.trap { padding: 10px 14px; border-radius: 16px; background: var(--card2); margin-bottom: 8px; font-size: 14px; }
+.qbtn { display: block; width: 100%; text-align: left; padding: 10px 14px; margin-bottom: 8px; border-radius: 14px; background: var(--card2); color: #d1d1d6; font-size: 14px; }
+.seg { flex-wrap: wrap; } .seg button { flex: 1 0 30%; }

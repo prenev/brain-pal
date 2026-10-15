@@ -3,6 +3,7 @@ import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { dayKey, lastNDays } from '../lib/dates'
 import { MOODS } from '../lib/mood'
+import { reliefStats, timeOfDay, trapStats, triggerStats } from '../lib/insights'
 import { NameIcon } from '../lib/icons'
 import Face from '../components/Face'
 import { monthLabel } from '../components/ui'
@@ -64,6 +65,11 @@ export default function Stats() {
     ? Math.round(reframed.reduce((a, t) => a + (Math.max(...t.emotions.map(e => e.intensity)) - t.outcomeIntensity!), 0) / reframed.length) : null
   const breathMin = Math.round(ms.reduce((a, s) => a + s.durationSec, 0) / 60)
   const week = lastNDays(5)
+  const relief = reliefStats(sessions)
+  const triggers = triggerStats(thoughts)
+  const traps = trapStats(thoughts)
+  const tod = timeOfDay(thoughts)
+  const todMax = Math.max(1, ...tod.map(x => x.count))
 
   const badges = [
     { em: '🔥', label: '3-day streak', ok: streak.longest >= 3 },
@@ -115,6 +121,22 @@ export default function Stats() {
             <b>{c}</b>
           </div>
         ))}
+      </div>
+
+      <div className="card">
+        <div className="card-head"><h3>Anxiety Insights</h3></div>
+        <div className="muted small" style={{ marginBottom: 6 }}>What helps</div>
+        {relief
+          ? <p style={{ margin: '0 0 14px' }}><b style={{ color: 'var(--accent)', fontSize: 28 }}>−{relief.avgDrop}</b> points on average (0–10) after calming exercises — helped {relief.helped} of {relief.n} times.</p>
+          : <p className="muted" style={{ margin: '0 0 14px' }}>Use “Anxious right now?” and rate before/after to see which tools work for you.</p>}
+        <div className="muted small" style={{ marginBottom: 6 }}>Likely triggers</div>
+        {triggers.length ? triggers.map(t => <div key={t.tag} className="row spread" style={{ marginBottom: 6 }}><span>#{t.tag}</span><span className="muted">avg {t.avg}% · {t.n} entries</span></div>)
+          : <p className="muted" style={{ margin: '0 0 14px' }}>Tag anxious entries (work, sleep, social…) — patterns appear after a few.</p>}
+        <div className="muted small" style={{ margin: '14px 0 6px' }}>Your common thinking traps</div>
+        {traps.length ? <div className="chips">{traps.map(([n, c]) => <span key={n} className="chip">{n} · {c}</span>)}</div>
+          : <p className="muted" style={{ margin: 0 }}>Spot traps in the thought record to see which ones you fall into most.</p>}
+        <div className="muted small" style={{ margin: '14px 0 6px' }}>When anxiety shows up</div>
+        {tod.map(x => <div key={x.label} className="row" style={{ marginBottom: 6 }}><span style={{ width: 84 }}>{x.label}</span><div className="bar" style={{ flex: 1 }}><i style={{ width: `${(x.count / todMax) * 100}%` }} /></div><b style={{ width: 20, textAlign: 'right' }}>{x.count}</b></div>)}
       </div>
 
       <div className="card">

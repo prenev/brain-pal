@@ -9,7 +9,7 @@
     "preview": "vite preview --host",
     "icons": "node scripts/make-icons.mjs",
     "screens": "node scripts/screens.mjs",
-    "test": "node --experimental-strip-types scripts/test-reminder.mjs"
+    "test": "node --experimental-strip-types scripts/test-reminder.mjs && node --experimental-strip-types scripts/test-insights.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

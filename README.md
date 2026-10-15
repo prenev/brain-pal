@@ -31,6 +31,13 @@ supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=ma
 ```
 Then fill the two placeholders in `supabase/cron.sql` and run it in the SQL editor (hourly job). Users pick their hour in More → Reminders; they're only nudged if they haven't checked in that day.
 
+## Anxiety toolkit
+
+- **SOS ("Anxious right now?")** — on the Entries tab, Breathe tab and the + menu. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
+- **Thinking traps** — the thought record lists 10 common cognitive distortions with a "try asking" prompt for each, plus tap-to-add reframing questions.
+- **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
+- **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.
+
 ## What works / what doesn't
 
 | Feature | Status |
@@ -41,6 +48,7 @@ Then fill the two placeholders in `supabase/cron.sql` and run it in the SQL edit
 | Web push reminders | Client, service worker and sender (`supabase/functions/send-reminders`) written; the scheduling logic is unit-tested (`npm test`) but the deployed pipeline is not. Needs one-time setup below. On iOS the app must be on the Home Screen (16.4+). |
 | Delete account | `supabase/functions/delete-account` (needs deploying). |
 | Apple Health | ❌ Not possible from a web app. Next step: wrap with Capacitor and write *Mindful Minutes* through a HealthKit plugin (needs a Mac + Apple Developer account). |
+| Insights / SOS logic | Unit-tested (`npm test`). Not clinically validated; breathing/grounding techniques are standard CBT-style self-help. |
 | Cloud (Supabase) path | Written but not yet tested against a live project. |
 
 ## Roadmap
