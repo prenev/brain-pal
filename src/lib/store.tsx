@@ -9,6 +9,8 @@ import { isNative } from './native'
 import { getReminder } from './push'
 import { scheduleNativeReminders } from './nativeReminders'
 import { deleteBlob, getBlob } from './blobstore'
+import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
+import { loadAnchors, loadChecks, saveAnchors, saveChecks } from './extras'
 import type { BreathSession, NewSession, NewThought, Thought, Worry } from './types'
 
 interface Ctx {
@@ -28,9 +30,17 @@ interface Ctx {
   addWorry(text: string): Promise<void>
   updateWorry(id: string, patch: Parameters<Repo['updateWorry']>[1]): Promise<void>
   deleteWorry(id: string): Promise<void>
-  addThought(t: NewThought): Promise<void>
+  addThought(t: NewThought): Promise<Thought>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
+  anchors: Anchor[]
+  anchorsToday: DayProgress
+  anchorStreak: AnchorStreak
+  addAnchor(label: string, emoji: string, link: AnchorLink | null): boolean
+  renameAnchor(id: string, label: string): void
+  removeAnchor(id: string): void
+  moveAnchor(id: string, dir: -1 | 1): void
+  toggleAnchor(id: string): void
   signOut(): Promise<void>
 }
 
@@ -45,6 +55,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [worries, setWorries] = useState<Worry[]>([])
   const [loaded, setLoaded] = useState(false)
   const [recovery, setRecovery] = useState(false)
+  const [anchors, setAnchors] = useState<Anchor[]>(loadAnchors)
+  const [checks, setChecks] = useState<Set<string>>(loadChecks)
+  const [today, setToday] = useState(() => dayKey(new Date()))
+  useEffect(() => { // roll "today" over at midnight, and when the app comes back to the foreground
+    const tick = () => setToday(dayKey(new Date()))
+    const t = setInterval(tick, 60_000); document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', tick) }
+  }, [])
 
   useEffect(() => {
     if (!supabase) return
@@ -73,12 +91,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return computeStreak(days)
   }, [thoughts, sessions])
 
+  const act = useMemo(() => activityFrom({ thoughts, sessions, worries }), [thoughts, sessions, worries])
+  const anchorsToday = useMemo(() => dayProgress(anchors, today, checks, act), [anchors, today, checks, act])
+  const anchorStreakVal = useMemo(() => anchorStreak(anchors, checks, act, new Date()), [anchors, checks, act, today])
+  const updateAnchors = (next: Anchor[]) => { setAnchors(next); saveAnchors(next) }
+
   // iPhone app: keep on-device reminders in step with your activity (drops today's nudge once you've checked in).
-  const act = useRef({ activeToday: false, current: 0 })
-  act.current = { activeToday: streak.activeToday, current: streak.current }
+  const activity = useRef({ activeToday: false, current: 0 })
+  activity.current = { activeToday: streak.activeToday, current: streak.current }
   useEffect(() => {
     if (!loaded || !isNative()) return
-    const run = () => { const r = getReminder(); if (r.enabled) scheduleNativeReminders(r.hour, { skipToday: act.current.activeToday, streak: act.current.current }).catch(e => console.warn('reminder schedule failed', e)) }
+    const run = () => { const r = getReminder(); if (r.enabled) scheduleNativeReminders(r.hour, { skipToday: activity.current.activeToday, streak: activity.current.current }).catch(e => console.warn('reminder schedule failed', e)) }
     run(); window.addEventListener('bp:reminder', run)
     return () => window.removeEventListener('bp:reminder', run)
   }, [loaded, streak.activeToday, streak.current])
@@ -118,9 +141,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addWorry(text) { const w = await repo.addWorry(text); setWorries(p => [w, ...p]) },
     async updateWorry(id, patch) { const w = await repo.updateWorry(id, patch); setWorries(p => p.map(x => (x.id === id ? w : x))) },
     async deleteWorry(id) { await repo.deleteWorry(id); setWorries(p => p.filter(w => w.id !== id)) },
-    async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) },
+    async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
+    anchors, anchorsToday, anchorStreak: anchorStreakVal,
+    addAnchor(label, emoji, link) {
+      const clean = cleanLabel(label)
+      if (!clean || !canAdd(anchors)) return false
+      const order = anchors.reduce((m, a) => Math.max(m, a.order), 0) + 1
+      updateAnchors([...anchors, { id: crypto.randomUUID(), label: clean, emoji, link, order, createdAt: new Date().toISOString(), archivedAt: null }])
+      return true
+    },
+    renameAnchor(id, label) { const clean = cleanLabel(label); if (clean) updateAnchors(anchors.map(a => (a.id === id ? { ...a, label: clean } : a))) },
+    removeAnchor(id) { updateAnchors(anchors.map(a => (a.id === id && !a.archivedAt ? { ...a, archivedAt: new Date().toISOString() } : a))) },
+    moveAnchor(id, dir) { updateAnchors(reorder(anchors, id, dir)) },
+    toggleAnchor(id) {
+      const k = checkKey(id, today), next = new Set(checks)
+      if (next.has(k)) next.delete(k); else next.add(k)
+      setChecks(next); saveChecks(next)
+    },
     async signOut() { await supabase?.auth.signOut() },
   }
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>

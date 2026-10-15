@@ -248,3 +248,30 @@ select.input { appearance: none; }
 .reframe-card:active { transform: translateY(2px); border-bottom-width: 2px; }
 .etranscript { margin-top: 12px; padding: 10px 14px; border-radius: 16px; background: var(--card2); border: 2px solid var(--edge); font-weight: 600; font-style: italic; white-space: pre-wrap; }
 .entry audio { width: 100%; margin-top: 12px; color-scheme: dark; }
+
+/* Daily anchors */
+.anchor-empty { width: 100%; background: rgba(53,208,127,.08); border-style: dashed; }
+.anchor-list { display: grid; gap: 10px; margin-top: 14px; }
+.anchor-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 14px 8px 8px; border-radius: 16px; background: var(--card2); border: 2px solid var(--edge); border-bottom-width: 4px; font-weight: 800; font-size: 16px; }
+.anchor-item:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 2px; }
+.anchor-box { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); border: 2px solid var(--edge); flex: none; }
+.anchor-item.done { border-color: var(--accent); background: rgba(53,208,127,.12); color: var(--accent); }
+.anchor-item.done .anchor-box { border-color: var(--accent); background: rgba(53,208,127,.18); }
+.anchor-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anchor-item .auto { font-size: 11px; font-style: normal; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.anchor-item:disabled { opacity: 1; cursor: default; }
+.linkbtn { color: var(--accent); font-weight: 800; font-size: 14px; padding: 4px 6px; }
+.anchor-edit { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.iconbtn { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--card2); border: 2px solid var(--edge); color: var(--muted); flex: none; }
+.iconbtn:disabled { opacity: .3; }
+.sheet-scroll { max-height: 78dvh; overflow-y: auto; padding: 4px; }
+
+/* Today card */
+.today { padding: 16px; }
+.quickmood { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.quickmood button { display: grid; justify-items: center; gap: 4px; padding: 6px 0; border-radius: 16px; font-weight: 800; font-size: 12px; }
+.quickmood button:active:not(:disabled) { transform: scale(.94); }
+.today-line { display: flex; align-items: center; gap: 12px; margin: 0; width: 100%; font-size: 15px; }
+.today-line.linklike { text-align: left; }
+.toast-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -4px 0 12px; padding: 8px 12px; border-radius: 12px; background: rgba(53,208,127,.14); border: 2px solid var(--accent); color: var(--accent); font-weight: 800; font-size: 14px; }
+.morebtn { display: block; margin: 12px auto 0; font-size: 15px; }

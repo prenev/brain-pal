@@ -43,6 +43,14 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 - **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
 - **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.
 
+## Daily wellbeing (anchors, Today card)
+
+- **Today card** — one obvious next thing. Before you've checked in it's five faces: **one tap logs a mood** (with Undo / "Add details"). After that it points at what's left: unfinished anchors, parked worries, or "you're all set".
+- **Daily anchors** — pick **up to 5** small non-negotiables (walk, sunlight, slow breathing, …). Tick them on the home screen; some tick themselves (e.g. a breathing session). Streak = days with *every* anchor done. The cap is deliberate — it is not a to-do list.
+- **Short lists** — the emotion/tag pickers start with your most-used six; *More* or search shows everything.
+- Anchors are stored **on this device** (not yet synced to your account — planned in Phase 12).
+- Why these choices: see `docs/COMPETITORS.md` (gap matrix + design principles) and `ROADMAP.md`.
+
 ## iPhone app (Apple Health, real haptics, on-device reminders)
 
 The same code runs as a native iPhone app via Capacitor — see **[docs/IOS.md](docs/IOS.md)** for the Mac steps (`npm ci && npm run ios:sync && npm run ios:open`, then ▶ Run).

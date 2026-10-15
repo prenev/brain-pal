@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import DailyGoal from '../components/DailyGoal'
+import TodayCard from '../components/TodayCard'
+import { AnchorCard, AnchorsManager } from '../components/Anchors'
+import { Sheet } from '../components/ui'
+import { activeAnchors } from '../lib/anchors.ts'
 import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
 import { roughPatch } from '../lib/insights'
@@ -10,8 +14,9 @@ import EntryCard from '../components/EntryCard'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
-export default function Entries({ onSos, onSupport }: { onSos: () => void; onSupport: () => void }) {
-  const { thoughts, deleteThought, streak } = useStore()
+export default function Entries({ onSos, onSupport, onAllAnchors, onCompose, onWorry, onBreathe }: { onSos: () => void; onSupport: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onBreathe: () => void }) {
+  const { thoughts, deleteThought, streak, anchors } = useStore()
+  const [editAnchors, setEditAnchors] = useState(false)
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [q, setQ] = useState('')
   const [searching, setSearching] = useState(false)
@@ -43,7 +48,9 @@ export default function Entries({ onSos, onSupport }: { onSos: () => void; onSup
           <Emoji name="fire" size={32} /><span>Your {streak.current}-day streak ends tonight — log a mood or a breathing session to keep it.</span>
         </div>
       )}
-      <DailyGoal />
+      <TodayCard onDetails={onCompose} onWorry={onWorry} onBreathe={onBreathe} />
+      {activeAnchors(anchors).length === 0 && <DailyGoal />}
+      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
       <button className="sos-card" onClick={onSos}>
         <Emoji name="sos" size={34} />
         <span style={{ flex: 1 }}><b>Anxious right now?</b><span className="sub">Calm your body in under 3 minutes</span></span>
@@ -55,6 +62,7 @@ export default function Entries({ onSos, onSupport }: { onSos: () => void; onSup
       )}
       {searching && <div className="searchbar"><Search size={20} /><input autoFocus placeholder="Search entries, emotions, tags" value={q} onChange={e => setQ(e.target.value)} /></div>}
 
+      {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
       {list.length === 0 && <div className="card empty">{q ? 'No entries match.' : 'No entries this month. Tap + to log how you feel.'}</div>}
       {list.map((t, i) => {
         const gap = i > 0 ? dayNum(list[i - 1].createdAt) - dayNum(t.createdAt) - 1 : 0

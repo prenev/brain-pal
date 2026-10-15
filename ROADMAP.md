@@ -28,16 +28,22 @@ Each phase ships as its own commit(s) and is pushed to the branch when done.
 Order is deliberate: each phase is shippable on its own, small enough to finish + test in one sitting, and later phases build on earlier ones.
 Every phase follows the CLAUDE.md loop: plan → build → unit + e2e tests → `tsc && npm test && build && e2e` → screens → push → CI green → docs.
 
-| # | Phase | Why it matters | Status |
-|---|---|---|---|
-| 7 | **Daily Anchors** — up to 5 non-negotiables | The "do these and the day counts" habit loop; the heart of wellbeing | ⏳ next |
-| 8 | **Journal** — free writing + gentle prompts | A place for thoughts that aren't a CBT record | ⏳ |
-| 9 | **Rituals & reminders** — breathe at 7:00 and at night, custom times | Reminders that *do* something (breathe / journal / anchors), not just "open the app" | ⏳ |
-| 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood; show the link | ⏳ |
-| 11 | **Coins & rewards** — earn for showing up, spend on cosmetics + rest days | Make consistency feel good without shame mechanics | ⏳ |
-| 12 | **Cloud sync for the new data** — migrations, RLS, tests | Journal / anchors / sleep / coins on every device | ⏳ |
-| 13 | **Reflection** — weekly review, sleep↔mood insights, theme picker | Turn the data into understanding | ⏳ |
-| 14+ | Idea backlog (see bottom) | | 💡 |
+Order of work (changed after the competitor analysis in [`docs/COMPETITORS.md`](docs/COMPETITORS.md): differentiators first, device-dependent work later):
+
+| Order | # | Phase | Why it matters | Status |
+|---|---|---|---|---|
+| 1 | 7 | **Daily Anchors** — up to 5 non-negotiables | The "do these and the day counts" habit loop | ✅ done (device-local until P12) |
+| 2 | 7b | **Today & ease of use** — one next action, ≤2-tap logging, short lists, tap-budget tests | "Easy to use af" | 🔨 Today card, one-tap mood + undo, short lists ✅; first-run screens + reduced-motion pending |
+| 3 | 8 | **Journal** — free writing + gentle prompts | A place for thoughts that aren't a CBT record | ⏳ |
+| 4 | 14 | **Worry → Focus bridge** ("Start tiny") | Our unique anxiety→action loop; competitors only have a timer | ⏳ |
+| 5 | 15 | **Summaries** — daily recap, weekly/monthly digest, shareable | Understand your week in 20 seconds | ⏳ |
+| 6 | 16 | **Level-up proof** — skill levels backed by your own before/after data | Evidence, not points | ⏳ |
+| 7 | 9 | **Rituals & reminders** — breathe at 07:00 and at night | Reminders that *do* something | ⏳ |
+| 8 | 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood | ⏳ (device-verified part needs you) |
+| 9 | 11 | **Coins & rewards** | Showing up feels good, no shame mechanics | ⏳ |
+| 10 | 12 | **Cloud sync for the new data** | Everything on every device | ⏳ |
+| 11 | 13 | **Reflection extras** — theme picker, optional AI "reflect with me" | Polish | ⏳ |
+| – | 17+ | Idea backlog (bottom of this file) | | 💡 |
 
 ## Cross-cutting rules for these phases
 - **Privacy first.** Sleep data is health data: read only after an explicit opt-in, stays on-device unless you're signed in (then it syncs only to *your* row-level-secured account), never goes to an AI. Update the "write-only" promise honestly (`test-ios.mjs` is changed to allow reading **sleep analysis only**, still no other types).
@@ -62,6 +68,36 @@ Every phase follows the CLAUDE.md loop: plan → build → unit + e2e tests → 
 Local: `bp.anchors`, `bp.anchorChecks`. Pure logic in `src/lib/anchors.ts` (no DOM): `dayProgress`, `anchorStreak`, `autoChecks(links, thoughts, sessions, journal)`, `canAdd`.
 **Tests:** unit — cap, progress, streak across month/year boundary, DST-safe day keys, auto-links, archived anchors don't break old days; e2e — add/tick/untick/persist across reload/cap message/auto-tick via breathing; legacy data (no anchors key).
 **Risks:** over-engineering into a todo app → hard cap + no extra fields. **Done =** CLAUDE.md definition of done.
+
+## Phase 7b — Today & ease of use ("easy to use af")
+**Goal:** a person who is anxious and tired can use this with one thumb and no thinking.
+- **Today card** at the top of Entries: a single primary button whose label adapts — *"How are you feeling?"* (no entry yet) → *"Next small step"* (a parked worry has a plan; Phase 14) → *"Wind down"* (after 20:00 once anchors done). Quick-mood row: tap a face on the home screen to log a mood-only entry in **one tap** (editable afterwards).
+- **Short lists:** emotions sorted by *your* recent use with the top 6 shown, rest behind "More"; tags likewise.
+- **Tap budgets (tested):** log a mood ≤ 2 taps from cold start; start breathing ≤ 2; tick an anchor 1; park a worry ≤ 3. An e2e test counts the taps.
+- **First-run:** 3 skippable screens (what it is, privacy promise, pick anchors) — never a paywall, never an account wall in local mode.
+- **Reduced motion** honoured for confetti / breathing animation; larger tap targets (≥ 44 pt) audit via the existing accessible-name scan + a size check.
+**Tests:** e2e tap-budget tests; unit for `topEmotions` ordering; a11y scan extended.
+
+## Phase 14 — Worry → Focus bridge ("Start tiny")
+**Why:** Flourish/Umbrella/HolistiQ each have a timer; none start from *your anxiety* and *your parked worries*.
+- After an SOS/breathing session (relief rated) or a worry review where you chose "make a plan", offer **"One small step?"** — shows your parked worry actions as one-tap choices (or type one).
+- **Calm start:** 60-second box-breathing → **5 / 10 / 25-minute focus** with a gentle end chime/haptic → "Done? Nice." → mark the worry's step done (status stays yours) → log a *focus session* (counts toward summaries and levels).
+- No gamified pressure: pausing is free, no "failed session", no leaderboards.
+**Data:** `FocusSession { id, createdAt, minutes, completed, worryId|null, note }` (device-local until Phase 12). Pure `focus.ts` (timer maths with pause/resume, drift-proof via timestamps) unit-tested; e2e uses a faked clock.
+
+## Phase 15 — Summaries
+- **Daily recap** (evening card, also the "Wind down" Today state): what you did today in one sentence each — mood, anchors n/m, breathing minutes, one thing you wrote.
+- **Weekly & monthly digest** ("Your week"): mood trend vs previous week, best day, most common emotion/trap, what helped (tools with the best relief), anchors consistency, worries let go, focus minutes, sleep average (when available). Each line has a plain-language sentence generated **by templates, not AI** (works offline; AI "reflect" is a later opt-in).
+- **Share** as text or print-friendly page (local, user-initiated) — useful for a therapist visit.
+**Pure `summaries.ts`** (`weekSummary`, `monthSummary`, `sentenceFor`) with fixtures + unit tests (empty weeks, partial data, DST, month edges). Wording reviewed against the safety rule: no diagnosis, correlations phrased as "tended to".
+
+## Phase 16 — Level-up proof
+**Goal:** show, with evidence from *your* data, that you're getting better at coping — the thing no streak counter proves.
+- **Skills** (each Level 1→10 from consistent practice, thresholds in a pure table): *Breathing*, *Reframing* (alternate thoughts written, traps named), *Worry mastery* (let-go / planned), *Consistency* (days active), *Focus*, *Journaling*, *Sleep rhythm* (when data exists).
+- **Proof cards** (the point of the phase): before/after comparisons over rolling 30 days — "relief after SOS: 1.8 → 3.4", "time to log after a bad mood: shorter", "worries let go: 12% → 41%", "alternate thought written on 3 of 10 entries → 7 of 10". Shown only with enough data (≥ 5 points per side) and labelled as *your* trend, not a clinical measure.
+- **Level-up moments:** a quiet celebration with the evidence line ("Reframing → Level 4: you've rewritten 15 thoughts") and a **timeline** of milestones (first SOS, first let-go, 7-day anchors…).
+- Levels never go down; no comparisons with other people.
+**Pure `levels.ts` + `proof.ts`** with exhaustive unit tests (thresholds, edge counts, insufficient data returns null, monotonic levels).
 
 ## Phase 8 — Journal
 **Goal:** a calm place to just write — separate from the structured thought record.

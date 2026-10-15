@@ -137,6 +137,14 @@ await session('http://localhost:4173', true, async (p, snap) => {   // iPhone ap
   await p.click('[aria-label=Back]'); await p.click('.li >> text=Reminders'); await p.click('[role=switch]'); await p.waitForSelector('text=Reminder set for'); await snap('iphone-reminders')
 }, { native: true })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // daily anchors
+  await p.click('text=Choose your daily anchors'); await snap('anchors-picker')
+  for (const l of ['Slow breathing', 'Walk 10 minutes', 'Get some sunlight', 'Drink water']) await p.click(`.sheet .chip >> text=${l}`)
+  await snap('anchors-manage'); await p.click('button:has-text("Done")'); await snap('anchors-home')
+  await p.click('[role=checkbox][aria-label="Walk 10 minutes"]'); await p.click('[role=checkbox][aria-label="Drink water"]'); await snap('anchors-progress')
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Daily anchors'); await snap('anchors-more')
+})
+
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')

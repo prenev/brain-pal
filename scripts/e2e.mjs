@@ -217,6 +217,85 @@ test('worry time: park, let go, make a plan, persist, stats', async () => {
   await done(s)
 })
 
+test('daily anchors: choose up to 5, tick, persist, cap, auto-tick from a breathing session, all-done moment', async () => {
+  const now = new Date().toISOString()
+  const s = await open({ 'bp.sessions': [{ id: 'b1', createdAt: now, pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 100, completed: true }] }); const p = s.page
+  assert.equal(await p.locator('text=Daily goals').count(), 1, 'the simple goals card shows until anchors are chosen')
+  await p.click('text=Choose your daily anchors')
+  await p.click('.sheet .chip >> text=Slow breathing'); await p.click('.sheet .chip >> text=Walk 10 minutes')
+  await p.fill('input[placeholder="e.g. Call a friend"]', 'Call a friend'); await p.click('button:has-text("Add anchor")')
+  assert.equal(await p.locator('.anchor-edit li').count(), 3)
+  await p.click('.sheet .chip >> text=Drink water'); await p.click('.sheet .chip >> text=Get some sunlight')
+  await p.waitForSelector('text=that’s the maximum')
+  assert.equal(await p.locator('.sheet .chip').count(), 0, 'no more ideas offered at the cap'); assert.equal(await p.locator('button:has-text("Add anchor")').count(), 0)
+  await p.click('[aria-label="Remove Drink water"]'); assert.equal(await p.locator('.anchor-edit li').count(), 4)
+  await p.click('[aria-label="Move Walk 10 minutes up"]')
+  assert.equal(await p.locator('.anchor-edit li').first().innerText().then(t => t.includes('Walk 10 minutes')), true, 'reordering works')
+  await p.click('button:has-text("Done")')
+
+  assert.equal(await p.locator('text=Daily goals').count(), 0, 'anchors replace the simple goals card')
+  const box = l => p.locator(`[role=checkbox][aria-label="${l}"]`)
+  await p.waitForSelector('[aria-label="1 of 4 done"]')
+  assert.equal(await box('Slow breathing').getAttribute('aria-checked'), 'true'); assert.equal(await box('Slow breathing').isDisabled(), true, 'auto-ticked by today’s breathing session')
+  await box('Walk 10 minutes').click(); await p.waitForSelector('[aria-label="2 of 4 done"]')
+  await reload(p); await p.waitForSelector('[aria-label="2 of 4 done"]')
+  await box('Walk 10 minutes').click(); await p.waitForSelector('[aria-label="1 of 4 done"]')
+  await box('Walk 10 minutes').click(); await box('Call a friend').click()
+  await box('Get some sunlight').click()
+  await p.waitForSelector('.celebrate >> text=Every anchor done!'); await p.click('.celebrate .btn'); await p.waitForSelector('[aria-label="4 of 4 done"]')
+  await p.waitForSelector('text=1 day with every anchor done')
+
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Daily anchors") >> text=4/5')
+  await p.click('.li >> text=Daily anchors'); await p.waitForSelector('.anchor-edit li')
+  await done(s)
+})
+
+
+test('Today card: one tap logs a mood (undo / add details), then points at what is left', async () => {
+  const s = await open(); const p = s.page
+  assert.equal(await p.locator('.entry').count(), 0)
+  await p.click('[aria-label="Log mood: bad"]')                       // tap budget: 1 tap from the home screen
+  await p.waitForSelector('.toast-row >> text=Mood logged.'); await p.waitForSelector('.entry')
+  await p.waitForSelector('text=You’re all set today')
+  await p.click('.toast-row >> text=Undo'); await p.waitForFunction(() => !document.querySelector('.entry'))
+  await p.waitForSelector('[aria-label="Log mood: bad"]')              // asks again once the entry is undone
+  await p.click('[aria-label="Log mood: awful"]'); await p.waitForSelector('.entry')
+  await p.click('.toast-row >> text=Add details')                      // swaps the quick entry for the full editor, mood kept
+  await p.waitForSelector('text=What’s going on?'); await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn')
+  await p.waitForSelector('.topbar'); assert.equal(await p.locator('.entry').count(), 1, 'quick entry was replaced, not duplicated')
+  await reload(p); assert.equal(await p.locator('.entry').count(), 1)
+  await done(s)
+})
+
+test('Today card follows your anchors and parked worries', async () => {
+  const now = new Date().toISOString()
+  const s = await open({ 'bp.thoughts': [{ id: 't1', createdAt: now, mood: 4, situation: '', thought: 'ok day', emotions: [], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: [], distortions: [], photos: [] }],
+    'bp.worries': [{ id: 'w1', createdAt: now, text: 'the deadline', status: 'open', action: null, reviewedAt: null }] }); const p = s.page
+  await p.waitForSelector('.today >> text=1 parked worry')
+  await p.click('.today >> text=1 parked worry'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
+  await p.click('text=Choose your daily anchors'); await p.click('.sheet .chip >> text=Walk 10 minutes'); await p.click('button:has-text("Done")')
+  await p.waitForSelector('.today >> text=1 anchor left today')
+  await p.click('[role=checkbox][aria-label="Walk 10 minutes"]'); await p.waitForSelector('.today >> text=1 parked worry')
+  await done(s)
+})
+
+test('emotion and tag lists start short, learn what you use, and "More" / search reveal the rest', async () => {
+  const mk = (i, emo) => ({ id: 'e' + i, createdAt: new Date(Date.now() - i * 864e5).toISOString(), mood: 3, situation: '', thought: 'x', emotions: [{ name: emo, intensity: 50 }], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: ['money'], distortions: [], photos: [] })
+  const s = await open({ 'bp.thoughts': [mk(1, 'bored'), mk(2, 'bored'), mk(3, 'bored')] }); const p = s.page
+  await p.click('.fab'); await p.click('.sheet .btn.primary >> text=Today'); await p.click('.faces button >> nth=2')
+  const emo = p.locator('.card:has(h3:has-text("Emotions")) .ig'), tags = p.locator('.card:has(h3:has-text("Tags")) .ig')
+  await p.waitForSelector('.card:has(h3:has-text("Emotions")) .ig'); assert.equal(await emo.count(), 6)
+  assert.equal(await emo.first().innerText().then(t => t.trim().toLowerCase()), 'bored', 'your most-used emotion leads')
+  assert.equal(await p.locator('.card:has(h3:has-text("Emotions")) .ig:has-text("anxious")').count(), 1, 'sensible starters are still there')
+  assert.equal(await tags.count(), 6); assert.equal(await tags.first().innerText().then(t => t.trim().toLowerCase()), 'money')
+  await p.click('text=/More emotions \\(\\d+\\)/'); assert.equal(await emo.count(), 19)
+  await p.click('text=Show fewer'); assert.equal(await emo.count(), 6)
+  await p.fill('.searchbar input', 'sad'); await p.waitForFunction(() => document.querySelectorAll('.card .ig').length > 0)
+  assert.ok(await p.locator('.card:has(h3:has-text("Emotions")) .ig:has-text("sad")').count() >= 1, 'search looks through the full list')
+  await done(s)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow

@@ -19,7 +19,7 @@ const KEYS = {
   herb: 'herb', star: 'star', sparkles: 'sparkles', chart: 'bar-chart', calendar: 'calendar', notebook: 'notebook-with-decorative-cover', wind: 'wind-face',
   gear: 'gear', camera: 'camera', bell: 'bell', party: 'party-popper', muscle: 'flexed-biceps', check: 'check-mark-button', target: 'bullseye', lotus: 'person-in-lotus-position',
   heartfire: 'heart-on-fire', rocket: 'rocket', sunglasses: 'smiling-face-with-sunglasses', hug: 'hugging-face', tada: 'confetti-ball', medal: 'sports-medal',
-  photo: 'framed-picture', mic: 'microphone', balloon: 'balloon', thought: 'thought-balloon', robot: 'robot', key: 'key', brain: 'brain', worry: 'thought-balloon', hourglass: 'hourglass-done', health2: 'red-heart', cloud: 'cloud', lock: 'locked', phone: 'mobile-phone',
+  photo: 'framed-picture', mic: 'microphone', balloon: 'balloon', thought: 'thought-balloon', robot: 'robot', key: 'key', brain: 'brain', worry: 'thought-balloon', hourglass: 'hourglass-done', walk: 'person-walking', sun: 'sun', water: 'droplet', pill: 'pill', book: 'open-book', salad: 'green-salad', bed: 'bed', dumbbell: 'person-lifting-weights', pen: 'pen', tooth: 'tooth', shower: 'shower', run: 'person-running', music: 'musical-note', pray: 'folded-hands', apple: 'red-apple', coffeeoff: 'teacup-without-handle', phoneoff: 'mobile-phone-off', plus: 'plus', health2: 'red-heart', cloud: 'cloud', lock: 'locked', phone: 'mobile-phone',
 }
 const out = {}, missing = []
 for (const [k, name] of Object.entries(KEYS)) {
