@@ -33,6 +33,7 @@ create table if not exists public.push_subscriptions (
   subscription jsonb not null,
   reminder_hour int not null default 20,          -- local hour to nudge
   tz text not null default 'UTC',
+  last_sent_on text,                              -- local YYYY-MM-DD of the last reminder, to send once per day
   created_at timestamptz not null default now()
 );
 
@@ -49,3 +50,7 @@ insert into storage.buckets (id, name, public) values ('photos', 'photos', false
 create policy "own photos read" on storage.objects for select using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "own photos write" on storage.objects for insert with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "own photos delete" on storage.objects for delete using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Upgrading from an earlier version of this schema:
+--   alter table public.thoughts add column if not exists mood int not null default 3;
+--   alter table public.push_subscriptions add column if not exists last_sent_on text;

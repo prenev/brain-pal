@@ -35,6 +35,11 @@ export default function Entries() {
         <button className="glass round green" aria-label="Search" onClick={() => { setSearching(!searching); setQ('') }}><Search size={24} /></button>
       </div>
 
+      {!streak.activeToday && streak.current > 0 && new Date().getHours() >= 17 && (
+        <div className="card row" style={{ background: 'rgba(255,179,64,.14)', border: '1px solid rgba(255,179,64,.4)' }}>
+          <Flame color="#ffb340" /><span>Your {streak.current}-day streak ends tonight — log a mood or a breathing session to keep it.</span>
+        </div>
+      )}
       {searching && <div className="searchbar"><Search size={20} /><input autoFocus placeholder="Search entries, emotions, tags" value={q} onChange={e => setQ(e.target.value)} /></div>}
 
       {list.length === 0 && <div className="card empty">{q ? 'No entries match.' : 'No entries this month. Tap + to log how you feel.'}</div>}

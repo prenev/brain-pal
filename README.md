@@ -22,6 +22,15 @@ Anyone who used local mode first can sign in and tap **More → Account → Impo
 
 See `ROADMAP.md` for the phases.
 
+## Reminders & account-deletion setup (one time)
+
+```bash
+npx web-push generate-vapid-keys                  # public key -> .env VITE_VAPID_PUBLIC_KEY
+supabase functions deploy send-reminders delete-account
+supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com CRON_SECRET=<random>
+```
+Then fill the two placeholders in `supabase/cron.sql` and run it in the SQL editor (hourly job). Users pick their hour in More → Reminders; they're only nudged if they haven't checked in that day.
+
 ## What works / what doesn't
 
 | Feature | Status |
@@ -29,7 +38,8 @@ See `ROADMAP.md` for the phases.
 | Thought records, tags, photos, streaks, search, JSON export | ✅ |
 | Box breathing timer + session log | ✅ |
 | Vibration | ✅ Android/desktop. **iPhone Safari has no Vibration API**; a best-effort Safari 17.4+ fallback is included but iOS may ignore it outside a tap. Reliable iOS haptics need the native wrapper. |
-| Web push | Client, schema and service worker done; **sender not built yet** (needs VAPID keys + a scheduled edge function). On iOS the app must be on the Home Screen (16.4+). |
+| Web push reminders | Client, service worker and sender (`supabase/functions/send-reminders`) written; the scheduling logic is unit-tested (`npm test`) but the deployed pipeline is not. Needs one-time setup below. On iOS the app must be on the Home Screen (16.4+). |
+| Delete account | `supabase/functions/delete-account` (needs deploying). |
 | Apple Health | ❌ Not possible from a web app. Next step: wrap with Capacitor and write *Mindful Minutes* through a HealthKit plugin (needs a Mac + Apple Developer account). |
 | Cloud (Supabase) path | Written but not yet tested against a live project. |
 
