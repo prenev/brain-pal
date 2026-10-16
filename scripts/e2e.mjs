@@ -31,7 +31,7 @@ const STRUCTURED = { situation: 'Presentation tomorrow', thought: 'I will mess i
 /** Fresh browser context + page with error capture and a mocked Gemini API. */
 const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filter(c => c.plugin === a && (!b || c.method === b)), [plugin, method])
 
-async function open(seed, { native = false, time = null, onboarding = false } = {}) {
+async function open(seed, { native = false, time = null, onboarding = false, reply = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
   if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })   // the first-run screens have their own test
   if (time) await ctx.clock.install({ time })      // for tests whose outcome depends on the time of day: pin it so they don't flake near midnight
@@ -52,6 +52,7 @@ async function open(seed, { native = false, time = null, onboarding = false } = 
     return json({ error: { message: 'unexpected request' } }, 400)
   })
   if (native) await ctx.addInitScript(nativeStub)
+  if (native && reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
   if (seed) await ctx.addInitScript(([k, v]) => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, ['seed', seed])
   const page = await ctx.newPage()
   const errors = []
@@ -137,7 +138,7 @@ test('create, persist, expand and delete an entry', async () => {
   await reload(s.page)
   await s.page.click('.entry'); await s.page.waitForSelector('text=Thinking traps'); assert.ok(await s.page.locator('.entry .chip >> text=catastrophizing').count())
   s.page.once('dialog', d => d.accept()); await s.page.click('text=Delete entry')
-  await s.page.click('.home-seg >> text=Entries'); await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.click('.home-seg >> text=Entries'); await s.page.waitForSelector('text=No entries this month')
+  await s.page.click('.all-entries'); await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.click('.all-entries'); await s.page.waitForSelector('text=No entries this month')
   await done(s)
 })
 
@@ -403,9 +404,9 @@ test('journal: write, list, search, filter, edit, delete — and it persists', a
   const s = await open(); const p = s.page
   await openJournal(p)
   await p.fill('[aria-label="Title"]', 'Quiet morning'); await p.fill('[aria-label="Journal entry"]', 'Walked by the river and felt lighter.')
-  await p.waitForSelector('text=7 words'); await p.click('[aria-label="Mood: good"]'); await p.click('.chip:has-text("health")')
+  await p.waitForSelector('text=7 words'); await p.click('[aria-label=Mood]'); await p.click('[aria-label="Mood: good"]'); await p.click('[aria-label=Tags]'); await p.click('.chip:has-text("health")')
   await saveJournalEntry(p)
-  await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'Deadline stress is building.'); await p.click('.chip:has-text("work")'); await saveJournalEntry(p)
+  await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'Deadline stress is building.'); await p.click('[aria-label=Tags]'); await p.click('.chip:has-text("work")'); await saveJournalEntry(p)
 
   await tab(p, 'More'); await p.waitForSelector('.li:has-text("Journal") >> text=2'); await p.click('.li >> text=Journal')
   assert.equal(await p.locator('.jentry').count(), 2)
@@ -423,7 +424,7 @@ test('journal: write, list, search, filter, edit, delete — and it persists', a
   assert.equal(await p.locator('.jentry').count(), 2, 'edited, not duplicated')
 
   p.once('dialog', d => d.accept())
-  await p.click('.jentry:has-text("Deadline")'); await p.click('button:has-text("Delete entry")')
+  await p.click('.jentry:has-text("Deadline")'); await p.click('[aria-label="Delete entry"]')
   await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
   await done(s)
 })
@@ -455,7 +456,7 @@ test('journal: crisis wording shows support, corrupted journal data is ignored, 
   await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'I want to end my life')
   await p.waitForSelector('[role=alert] >> text=You don’t have to do this alone')
   await p.fill('[aria-label="Journal entry"]', 'Feeling a bit better now.'); await saveJournalEntry(p)
-  await p.click('.home-seg >> text=Today'); await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')
+  await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Journaling: level 1"]')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=You wrote 1 journal entry.')
   await done(s)
@@ -634,7 +635,7 @@ test('cloud sync: what you write on one device appears on another; edits and del
   const account = fakeAccount()
   const A = await openCloud({ signedIn: true, account, seed: seenAll }); const a = A.page
   await openJournal(a); await a.fill('[aria-label=Title]', 'From my phone'); await a.fill('[aria-label="Journal entry"]', 'Written on device A'); await saveJournalEntry(a)
-  await a.click('.home-seg >> text=Today'); await a.click('text=Choose your daily anchors'); await a.click('.sheet .chip >> text=Drink water'); await a.click('button:has-text("Done")')
+  await a.click('text=Choose your daily anchors'); await a.click('.sheet .chip >> text=Drink water'); await a.click('button:has-text("Done")')
   await until(() => hasDoc(account, 'journal') && hasDoc(account, 'anchor'))
   assert.ok(account.rows.has('rituals|all'), 'settings sync too')
   for (const r of account.rows.values()) assert.equal(r.deleted, r.data === null, 'the shape the real table accepts')
@@ -649,7 +650,7 @@ test('cloud sync: what you write on one device appears on another; edits and del
   await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("Edited on device A")')
   assert.equal(await b.locator('.jentry').count(), 1, 'edited, not duplicated')
 
-  a.once('dialog', d => d.accept()); await a.click('.jentry'); await a.click('button:has-text("Delete entry")')
+  a.once('dialog', d => d.accept()); await a.click('.jentry'); await a.click('[aria-label="Delete entry"]')
   await until(() => [...account.rows.values()].some(r => r.kind === 'journal' && r.deleted))
   await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('text=Nothing here yet')
   await done(A); await done(B)
@@ -699,10 +700,12 @@ test('cloud sync: data that predates sync is pushed on first sign-in; sign-out c
 })
 
 
-test('first run: three skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
+test('first run: Pal explains the app in skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
   const s = await open(null, { onboarding: true }); const p = s.page
-  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await p.waitForSelector('text=A calm place to check in'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
-  await p.click('button:has-text("Next")'); await p.waitForSelector('text=Your data stays yours'); assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
+  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await p.waitForSelector('text=Hi, I’m Pal!'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
+  assert.ok(await p.locator('.onboarding .pal svg').count() >= 1, 'Pal explains it')
+  for (const t of ['Check in with one tap', 'Calm down, together', 'Grow a little each day', 'Your data stays yours']) { await p.click('button:has-text("Next")'); await p.waitForSelector(`.onboarding h1:has-text("${t}")`) }
+  assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
   await p.click('button:has-text("Next")'); await p.waitForSelector('text=Pick up to three daily anchors')
   for (const l of ['Slow breathing', 'Walk 10 minutes', 'Get some sunlight', 'Write one line']) await p.click(`.onboarding .chip:has-text("${l}")`)
   assert.equal(await p.locator('.onboarding .chip.on').count(), 3, 'at most three')
@@ -937,16 +940,20 @@ test('every interactive control has an accessible name', async () => {
   await done(s)
 })
 
-test('home: Today / Entries / Journal switch at the top, and the + menu groups what you can add', async () => {
+test('home: tools row (Focus guard, Worry time, Journal) sits above the anchors and opens each screen; All entries; the + menu groups what you can add', async () => {
   const s = await open({ 'bp.thoughts': [rec('t1', 0, { thought: 'today thought' }), rec('t2', 3, { thought: 'older thought' })] }); const p = s.page
-  await p.waitForSelector('.home-seg')
+  await p.waitForSelector('.tools-row')
   assert.equal(await p.locator('.tab[aria-current=true]').innerText(), 'Home', 'the first tab is called Home')
-  assert.equal(await p.locator('.home-seg button[aria-pressed=true]').innerText(), 'Today')
-  assert.equal(await p.locator('.entry').count(), 1, 'Today only shows today’s entries')
-  await p.click('.home-seg >> text=Entries'); assert.equal(await p.locator('.entry').count(), 2, 'Entries shows the whole month')
-  assert.equal(await p.locator('[aria-label="Log mood: good"]').count(), 0, 'the mood picker belongs to Today, not the list')
-  await p.click('.home-seg >> text=Journal'); await p.waitForSelector('text=Write something')
-  assert.equal(await p.locator('.entry').count(), 0)
+  assert.equal(await p.locator('[aria-label="Home sections"]').count(), 0, 'no section switch any more')
+  assert.deepEqual(await p.$$eval('.tool b', els => els.map(e => e.textContent)), ['Focus guard', 'Worry time', 'Journal'])
+  assert.ok(await p.evaluate(() => document.querySelector('.tools-row').nextElementSibling.matches('.anchors, .anchor-empty, .goal, .card')), 'the anchors come straight after the tools')
+  assert.equal(await p.locator('.entry').count(), 1, 'Home only shows today’s entries')
+  await p.click('.tool >> text=Journal'); await p.waitForSelector('.overlay >> text=Write something'); await p.click('[aria-label=Back]')
+  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.overlay .title >> text=Focus guard'); await p.click('[aria-label=Back]')
+  await p.click('.tool >> text=Worry time'); await p.waitForSelector('.overlay >> text=Parked'); await p.click('[aria-label=Back]')
+  await p.click('.all-entries'); await p.waitForFunction(() => document.querySelectorAll('.overlay .entry').length === 2)
+  assert.equal(await p.locator('[aria-label="Log mood: good"]').count(), 0, 'the mood picker belongs to Home, not the list')
+  await p.click('[aria-label=Back]')
   await p.click('.fab')
   const labels = await p.$$eval('.sheet .sheet-label', els => els.map(e => e.textContent))
   assert.deepEqual(labels, ['Write', 'Calm & focus', 'Entry for another day'])
@@ -954,10 +961,131 @@ test('home: Today / Entries / Journal switch at the top, and the + menu groups w
   assert.deepEqual(items, ['Thought entry', 'Journal entry', 'Park a worry', 'I’m anxious right now', 'Start breathing', 'Start a small step'])
   await p.click('.sheet-item >> text=Journal entry'); await p.waitForSelector('[aria-label="Journal entry"]')
   await p.fill('[aria-label="Journal entry"]', 'from the menu'); await saveJournalEntry(p)
-  await p.waitForSelector('.jentry >> text=from the menu')
+  await p.click('.tool >> text=Journal'); await p.waitForSelector('.jentry >> text=from the menu'); await p.click('[aria-label=Back]')
   await tab(p, 'More'); assert.equal(await p.locator('.fab').count(), 0, 'no + button on More (it sat on top of the settings)')
   await tab(p, 'Calendar'); assert.equal(await p.locator('.fab').count(), 1)
   await done(s)
+})
+
+test('iPhone app: the real native tab bar takes over (Liquid Glass on iOS 26); web bar steps aside; overlays hide it; failure keeps the web bar', async () => {
+  const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
+  await p.waitForSelector('html.native-tabs'); assert.equal(await p.locator('.tabbar').count(), 0, 'the web tab bar is gone')
+  const calls = () => p.evaluate(() => window.__native.filter(c => c.plugin === 'Mindful' && /Tab/.test(c.method)).map(c => ({ m: c.method, o: c.options })))
+  const first = (await calls()).find(c => c.m === 'setTabs')
+  assert.deepEqual(first.o.items.map(i => [i.id, i.label, i.symbol]), [['entries', 'Home', 'house'], ['stats', 'Stats', 'chart.bar'], ['calendar', 'Calendar', 'calendar'], ['breathe', 'Breathe', 'wind'], ['more', 'More', 'ellipsis.circle']])
+  assert.equal(first.o.selected, 'entries')
+  assert.equal(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--native-tab-h').trim()), '83px', 'web content leaves room for the bar')
+  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'calendar' })); await p.waitForSelector('.cal')
+  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'more' })); await p.waitForSelector('.li >> text=Reminders')
+  assert.ok((await calls()).some(c => c.m === 'selectTab' && c.o.id === 'more'), 'the native highlight follows')
+  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'entries' })); await p.waitForSelector('.tools-row')
+  await p.click('.fab'); await p.waitForSelector('.sheet')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === true)
+  await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
+  await done(s)
+  const f = await open(null, { native: true, reply: { 'Mindful.setTabs': { __reject: 'UNIMPLEMENTED', message: 'old shell' } } })   // an older app build without the native bar
+  await f.page.waitForSelector('.tools-row'); await f.page.waitForTimeout(300)
+  assert.equal(await f.page.locator('.tabbar').count(), 1, 'the web tab bar stays when native fails'); assert.equal(await f.page.locator('html.native-tabs').count(), 0)
+  await done(f)
+})
+
+test('About & legal: version, privacy policy, terms, support and open-source notices are readable offline inside the app', async () => {
+  const s = await open(); const p = s.page
+  await tab(p, 'More'); await p.click('.li >> text=About & legal'); await p.waitForSelector('text=Version 1.0.0')
+  assert.deepEqual(await p.$$eval('.list .li', els => els.map(e => e.textContent)), ['Privacy Policy', 'Terms of Service', 'Support', 'Open-source notices'])
+  await p.click('.li >> text=Privacy Policy'); await p.waitForSelector('article.legal h3 >> text=Apple Health')
+  assert.ok(await p.locator('article.legal').innerText().then(t => /never used for advertising/.test(t) && /Delete account/.test(t)), 'says what the app really does')
+  await p.click('text=All documents'); await p.click('.li >> text=Open-source notices'); await p.waitForSelector('article.legal h3 >> text=Fluent Emoji')
+  await p.click('text=All documents'); await p.click('.li >> text=Support'); await p.waitForSelector('text=988')
+  await p.click('[aria-label=Back]'); await p.waitForSelector('.li >> text=About & legal')
+  assert.ok(await p.evaluate(() => document.body.innerText.includes('Brain Pal 1.0.0')), 'More shows the real version')
+  await done(s)
+})
+
+test('notch / status bar: the first thing on every tab clears the safe area, even after scrolling', async () => {
+  const s = await open({ 'bp.thoughts': Array.from({ length: 12 }, (_, i) => rec('n' + i, i)) }); const p = s.page
+  await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'))      // what an iPhone with a notch reports
+  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) {
+    await tab(p, t); await p.waitForTimeout(150)
+    for (const y of [0, 600]) {
+      await p.evaluate(y => window.scrollTo(0, y), y)
+      const tops = await p.$$eval('.topbar:not(.flat), .stats-head', els => els.map(e => e.firstElementChild?.getBoundingClientRect().top ?? 99))
+      assert.ok(tops.length >= 1, `${t}: has a sticky header`)
+      assert.ok(tops.every(top => top >= 46.5), `${t} (scrolled ${y}): header content starts at ${tops} but must be below the 47px notch area`)
+    }
+  }
+  await done(s)
+})
+
+test('Pal the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
+  const s = await open(); const p = s.page
+  assert.ok(await p.locator('.today .pal svg').count(), 'Pal waves on the Today card')
+  await p.click('.all-entries'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/); await p.click('[aria-label=Back]')
+  await p.click('.tool >> text=Journal'); assert.ok(await p.locator('.pal-empty .pal').count()); await p.click('[aria-label=Back]')
+  await tab(p, 'More'); await p.click('.li >> text=About & legal'); assert.ok(await p.locator('.pal svg').count(), 'About shows Pal')
+  const anim = async page => page.$eval('.pal', el => parseFloat(getComputedStyle(el).animationDuration) * 1000)
+  assert.ok(await anim(p) > 1000, 'Pal bobs normally')
+  const pm = await open(); await pm.page.emulateMedia({ reducedMotion: 'reduce' })
+  assert.ok(await anim(pm.page) < 1, 'reduced motion stops Pal’s bobbing')
+  await done(pm); await done(s)
+})
+
+const guardStatus = (p, v) => p.evaluate(v => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.screenTimeStatus': v } }, v)
+const nativeCalls = (p, m) => p.evaluate(m => window.__native.filter(c => c.plugin === 'Mindful' && c.method === m).map(c => c.options ?? {}), m)
+const openGuard = async p => { await tab(p, 'More'); await p.click('.li >> text=Focus guard') }
+
+test('Focus guard (web): explains it needs the iPhone app, and you can still practise an activity with the honour-system rep counter', async () => {
+  const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await openGuard(p); await p.waitForSelector('text=Blocking apps is part of the iPhone app')
+  assert.equal(await p.locator('[role=switch]').count(), 0, 'no switch to turn on without iOS Screen Time')
+  await p.click('button:has-text("Try an activity")'); await p.click('.challenge-opt >> text=Push-ups')
+  await p.click('.rep-btn'); await p.click('.rep-btn'); await p.click('.rep-btn')          // mashing = 1 rep
+  assert.match(await p.locator('.rep-count').innerText(), /^1\s*\/\s*10/); await p.waitForSelector('text=One rep at a time')
+  for (let i = 0; i < 9; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
+  await p.waitForSelector('text=Nice one!'); await p.waitForSelector('text=That was practice, so nothing was unlocked.')
+  await p.click('button:has-text("Done")')
+  await p.waitForSelector('text=This week: 1 activity · 10 reps')
+  await done(s)
+})
+
+test('Focus guard (iPhone): allow, choose apps, switch on (locks), earn time with push-ups (unlocks), lock again, switch off — and it persists', async () => {
+  const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: false, appCount: 0 }, 'Mindful.screenTimePickApps': { count: 3 } } }); const p = s.page
+  await openGuard(p); await p.waitForSelector('button:has-text("Allow Screen Time")')
+  assert.equal(await p.locator('button:has-text("Choose apps")').isDisabled(), true, 'apps can only be chosen after access is allowed')
+  assert.equal(await p.locator('[role=switch][aria-label="Guard on"]').getAttribute('aria-checked'), 'false')
+  await guardStatus(p, { available: true, authorized: true, appCount: 0 }); await p.click('button:has-text("Allow Screen Time")'); await p.waitForSelector('text=Allowed')
+  await guardStatus(p, { available: true, authorized: true, appCount: 3 }); await p.click('button:has-text("Choose apps")'); await p.waitForSelector('text=3 chosen')
+  assert.equal((await nativeCalls(p, 'screenTimeLock')).length, 0, 'nothing is locked until you switch the guard on')
+  await p.click('[role=switch][aria-label="Guard on"]'); await p.waitForSelector('.guard-status >> text=Locked')
+  assert.equal((await nativeCalls(p, 'screenTimeLock')).length, 1)
+  await reload(p); await openGuard(p); await p.waitForSelector('.guard-status >> text=Locked')            // config survives a restart
+  await p.click('button:has-text("Unlock with an activity")')
+  assert.deepEqual(await p.$$eval('.challenge-opt b', els => els.map(e => e.textContent)), ['Push-ups', 'Slow breathing'], 'only the activities you picked')
+  await p.click('.challenge-opt >> text=Push-ups')
+  for (let i = 0; i < 10; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
+  await p.waitForSelector('text=Earned it!'); await p.waitForSelector('text=open for 10 minutes')
+  assert.deepEqual(await nativeCalls(p, 'screenTimeUnlock'), [{ minutes: 10 }], 'finishing unlocks for exactly the chosen time')
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 3, unlockedUntil: Date.now() + 600000 } } })   // what iOS would now report
+  await p.click('button:has-text("Done")'); await p.waitForSelector('.guard-status >> text=/Unlocked · \\d+ min left/')
+  await p.click('button:has-text("Lock again now")'); await p.waitForSelector('.guard-status >> text=Locked')
+  p.once('dialog', d => d.accept()); await p.click('[role=switch][aria-label="Guard on"]')
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'screenTimeClear')); assert.equal(await p.locator('.guard-status').count(), 0, 'switching off removes the status card')
+  await done(s)
+})
+
+test('Focus guard: not available without the entitlement / iOS 16; journal-line activity unlocks and lands in the journal', async () => {
+  const s = await open(null, { native: true, reply: { 'Mindful.screenTimeStatus': { available: false, authorized: false, appCount: 0 } } }); const p = s.page
+  await openGuard(p); await p.waitForSelector('text=Not available in this build'); assert.equal(await p.locator('[role=switch]').count(), 0)
+  await done(s)
+  const t = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 2 } } }); const q = t.page
+  await q.evaluate(() => localStorage.setItem('bp.guard', JSON.stringify({ enabled: true, challenges: ['journal', 'plank'], unlockMinutes: 5, appCount: 2 })))
+  await reload(q); await openGuard(q); await q.click('button:has-text("Unlock with an activity")')
+  await q.click('.challenge-opt >> text=Write a line'); assert.equal(await q.locator('button:has-text("Save to journal")').isDisabled(), true, 'a line needs a few words')
+  await q.fill('textarea[aria-label="One honest line"]', 'Feeling a bit scattered today'); await q.click('button:has-text("Save to journal")')
+  await q.waitForSelector('text=Earned it!'); assert.deepEqual(await nativeCalls(q, 'screenTimeUnlock'), [{ minutes: 5 }]); await q.click('button:has-text("Done")')
+  await tab(q, 'Home'); await q.click('.tool >> text=Journal'); await q.waitForSelector('.jentry >> text=Feeling a bit scattered today')
+  await done(t)
 })
 
 test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {

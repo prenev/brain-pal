@@ -18,7 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run ios:sync
       - name: Patched project must match what is committed
-        run: git diff --exit-code -- ios/App/App.xcodeproj ios/App/App/Info.plist ios/App/App/SceneDelegate.swift ios/App/App/MindfulPlugin.swift ios/App/App/MainViewController.swift ios/App/App/App.entitlements
+        run: git diff --exit-code -- ios/App/App.xcodeproj ios/App/App/Info.plist ios/App/App/SceneDelegate.swift ios/App/App/MindfulPlugin.swift ios/App/App/MainViewController.swift ios/App/App/App.entitlements ios/App/App/PrivacyInfo.xcprivacy
       - name: Build for iOS Simulator (no signing)
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \

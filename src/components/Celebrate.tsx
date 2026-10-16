@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Emoji } from '../lib/emoji'
+import Pal from './Pal'
 import { burst } from '../lib/confetti'
 import { hapticSuccess } from '../lib/haptics'
 import { useStore } from '../lib/store'
@@ -14,7 +15,7 @@ export default function Celebrate({ c, onClose }: { c: Celebration; onClose: () 
     <div className="overlay celebrate" role="dialog" aria-modal aria-label={c.title}>
       <div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
         <div className="cel-body">
-          <div className="pop"><Emoji name={c.emoji} size={150} /></div>
+          <div className="pop"><Pal pose="celebrate" size={190} motion="jump" /></div>
           <h1>{c.title}</h1>
           <p className="muted">{c.sub}</p>
           <div className="cel-stats">

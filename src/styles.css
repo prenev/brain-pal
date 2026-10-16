@@ -331,8 +331,82 @@ textarea.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
 .cal .bub { flex: none; }
 input.input[type=time], input.input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; box-sizing: border-box; text-align: center; display: block; }
 .seg.three button { flex: 1 1 0; }
-.home-seg { margin: 0 0 12px; flex-wrap: nowrap; }
 .month-row { margin: 0 0 12px; }
 .sheet-label.first { border-top: 0; margin-top: 0; padding-top: 4px; }
 .anchor-empty b { display: block; }
 .anchor-empty .sub { display: block; color: var(--muted); font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+/* iPhone app: the tab bar is the real UIKit one (Liquid Glass), drawn above the web view, so we just leave room for it */
+.native-tabs .app { padding-bottom: calc(var(--native-tab-h, 0px) + 24px); }
+.native-tabs .fab { bottom: calc(var(--native-tab-h, 0px) + 12px); }
+.card.legal h3 { margin: 18px 0 4px; font-size: 17px; }
+.card.legal p, .card.legal li { line-height: 1.5; font-size: 15px; }
+.card.legal ul { padding-left: 20px; margin: 6px 0; }
+
+/* Stats: the view switch is the sticky header, so it must clear the notch / status bar; the month row under it scrolls normally */
+.stats-head { position: sticky; top: 0; z-index: 10; padding: calc(var(--safe-t) + 10px) 14px 10px; margin: 0 -14px 4px; background: linear-gradient(var(--bg) 80%, transparent); }
+.topbar.flat { position: static; padding: 0 0 12px; margin: 0; background: none; }
+
+/* ---- Pal, the mascot ---- */
+.dots { display: flex; gap: 7px; align-items: center; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--edge); transition: width .25s, background .25s; }
+.dots i.past { background: var(--accent-dark, #1f9d63); }
+.dots i.on { width: 26px; border-radius: 6px; background: var(--accent); }
+.pal { display: inline-block; line-height: 0; flex: none; }
+.pal svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.pal .eyes { transform-box: fill-box; transform-origin: center; animation: palBlink 5s infinite; }
+.pal-bob { animation: palBob 2.8s ease-in-out infinite; }
+.pal-breathe { animation: palBreathe 10s ease-in-out infinite; }
+.pal-jump { animation: palJump 1.1s cubic-bezier(.3,.7,.4,1) infinite; }
+.pal-wave .armR { transform-origin: 146px 94px; animation: palWave 1.1s ease-in-out infinite; }
+.pal-none .eyes { animation: none; }
+@keyframes palBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
+@keyframes palBreathe { 0%, 100% { transform: scale(.94); } 40%, 60% { transform: scale(1.08); } }
+@keyframes palJump { 0%, 100% { transform: translateY(0) scale(1.03, .97); } 40% { transform: translateY(-14%) scale(.98, 1.03); } }
+@keyframes palWave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-16deg); } }
+@keyframes palBlink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+.pal-says { display: flex; align-items: center; gap: 10px; }
+.pal-says .bubble { position: relative; flex: 1; background: var(--card); border: 2px solid var(--edge); border-radius: 18px; padding: 12px 14px; font-weight: 700; line-height: 1.35; }
+.pal-says .bubble::before { content: ''; position: absolute; left: -9px; top: 50%; width: 14px; height: 14px; background: var(--card); border-left: 2px solid var(--edge); border-bottom: 2px solid var(--edge); transform: translateY(-50%) rotate(45deg); }
+.pal-empty { display: grid; justify-items: center; gap: 6px; text-align: center; color: var(--muted); padding: 18px 16px; }
+.pal-empty p { margin: 0; font-weight: 700; }
+
+/* ---- Focus guard ---- */
+.guard-step { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.guard-step + .guard-step { border-top: 2px solid var(--edge); }
+.guard-step.col { flex-direction: column; align-items: stretch; }
+.guard-step .dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 900; font-size: 14px; background: var(--card2); border: 2px solid var(--edge); color: var(--muted); }
+.guard-step .dot.ok { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.small { padding: 8px 14px; min-height: 40px; font-size: 14px; }
+.lockbadge { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,93,115,.16); color: var(--danger); border: 2px solid rgba(255,93,115,.5); }
+.lockbadge.open { background: rgba(53,208,127,.16); color: var(--accent); border-color: rgba(53,208,127,.5); }
+.challenge-opt { display: flex; align-items: center; gap: 12px; width: 100%; }
+.rep-count { font-size: 56px; font-weight: 900; line-height: 1; margin: 6px 0 12px; }
+.rep-count small { font-size: 22px; color: var(--muted); }
+.rep-btn { min-height: 72px; font-size: 22px; }
+
+/* Home: secondary tools row */
+.tools-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.card.tool { margin: 0; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.tool b { font-size: 14px; line-height: 1.15; } .tool .sub { font-size: 12px; font-weight: 700; color: var(--muted); }
+.all-entries { width: 100%; text-align: left; }
+
+/* Journal editor: a Notes-style page — no boxes, the text is the page */
+.overlay.notes .inner { padding-bottom: calc(var(--safe-b) + 140px); }
+.notes-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; margin: 0 -14px; padding: calc(var(--safe-t) + 6px) 8px 6px; background: linear-gradient(var(--bg) 75%, transparent); }
+.notes-back, .notes-done { display: flex; align-items: center; min-height: 44px; padding: 0 6px; color: var(--accent); font-size: 17px; font-weight: 800; }
+.notes-done { font-weight: 900; }
+.notes-date { margin: 0 0 16px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
+.notes-prompt { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0 0 12px; text-align: left; color: var(--muted); font-size: 15px; line-height: 1.4; }
+.notes-title, .notes-body { display: block; width: 100%; padding: 0; border: 0; outline: none; background: transparent; }
+.notes-title { margin: 0 0 8px; font-size: 28px; font-weight: 900; letter-spacing: -.01em; }
+.notes-body { min-height: 55dvh; resize: none; overflow: hidden; font-size: 18px; line-height: 1.6; }
+.notes-title::placeholder, .notes-body::placeholder { color: #4b5d80; }
+.notes-tools, .notes-panel { position: fixed; left: 0; right: 0; z-index: 61; max-width: 640px; margin: 0 auto;
+  background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 60%), rgba(20,31,52,.72);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); border: 1px solid rgba(255,255,255,.12); }
+.notes-tools { bottom: 0; display: flex; align-items: center; gap: 6px; padding: 6px 14px calc(var(--safe-b) + 6px); border-width: 1px 0 0; }
+.notes-tools button { min-width: 44px; height: 44px; padding: 0 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--muted); }
+.notes-tools button.on { color: var(--accent); background: rgba(255,255,255,.1); }
+.notes-count { flex: 1; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
+.notes-panel { bottom: calc(var(--safe-b) + 66px); left: 10px; right: 10px; max-width: 620px; padding: 14px; border-radius: 24px; }

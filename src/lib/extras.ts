@@ -83,3 +83,11 @@ export const loadPurchases = (): Purchase[] => {
 export const savePurchases = (p: Purchase[]) => write(K_PURCHASES, p)
 export const loadTheme = (): string | null => { const t = read<unknown>(K_THEME, null); return typeof t === 'string' ? t : null }
 export const saveTheme = (t: string | null) => { try { t === null ? localStorage.removeItem(K_THEME) : localStorage.setItem(K_THEME, JSON.stringify(t)) } catch { /* ignore */ } }
+
+// Focus guard: device-only (the app selection is a device-specific token and never leaves the phone)
+import { normalizeGuard, normalizeEvents, type GuardConfig, type GuardEvent } from './guard.ts'
+const K_GUARD = 'bp.guard', K_GUARD_EVENTS = 'bp.guard.events'
+export const loadGuard = (): GuardConfig => normalizeGuard(read<unknown>(K_GUARD, null))
+export const saveGuard = (g: GuardConfig) => write(K_GUARD, g)
+export const loadGuardEvents = (): GuardEvent[] => normalizeEvents(read<unknown>(K_GUARD_EVENTS, []))
+export const saveGuardEvents = (e: GuardEvent[]) => write(K_GUARD_EVENTS, e)

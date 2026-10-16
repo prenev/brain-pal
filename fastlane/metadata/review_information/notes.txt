@@ -1,0 +1,12 @@
+Brain Pal is a self-help mood diary and calming toolkit. No account is needed: everything works on the device, so there are no demo credentials.
+
+Where to find things:
+• Home tab → tap a face to log a mood; the + button opens the menu (thought entry, journal entry, park a worry, breathing, "anxious right now").
+• More → Reminders (iPhone app schedules local notifications), Apple Health (writes Mindful Minutes; optionally reads sleep only, after the user turns it on under Stats → Sleep), AI helper (off by default; the user supplies their own Google Gemini key; nothing is sent unless they turn it on and tap an AI action), About & legal.
+• More → Account appears only when the optional sync backend is configured: Sign in with Apple, Google and email are offered together; Account → Delete account permanently deletes the account and its data in-app.
+
+Health data: HealthKit is used only to (1) save breathing sessions as Mindful Minutes and (2) read sleep analysis if the user opts in. Health data is never uploaded or used for advertising. Privacy policy: https://prenev.github.io/brain-pal/privacy.html
+
+Native features beyond a web view: native tab bar, Taptic Engine haptics, on-device scheduled notifications, HealthKit, Sign in with Apple, system web authentication.
+
+Safety: text that looks like self-harm is never sent to an AI and the app shows crisis support options (More → Get support). The app makes no medical claims.

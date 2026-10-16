@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import Pal from './Pal'
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
@@ -42,7 +43,7 @@ export default function Progress() {
       </div>
 
       <h2 className="sec">Proof you’re improving</h2>
-      {cards.length === 0 && <div className="card empty">
+      {cards.length === 0 && <div className="card empty"><div style={{ display: 'grid', placeItems: 'center', marginBottom: 6 }}><Pal pose="think" size={84} /></div>
         Your proof appears here as you use the tools. We only draw a comparison once there’s enough of <i>your</i> data — {MIN_OVERALL}+ rated sessions or entries for a first figure, {MIN_POINTS}+ in each of two 30-day windows for a trend.
       </div>}
       {cards.map(c => (

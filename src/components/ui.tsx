@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { NameIcon } from '../lib/icons'
 
 /** Round icon + label, used for emotion and tag grids. */
@@ -30,6 +31,20 @@ export function Sheet({ onClose, children }: { onClose: () => void; children: Re
     <div className="sheet-wrap" onClick={onClose}>
       <div className="sheet glass" role="dialog" aria-modal onClick={e => e.stopPropagation()}>{children}</div>
     </div>
+  )
+}
+
+/** Full-screen page that slides over the tabs, with a back button (used for tools opened from Home). */
+export function Screen({ title, onClose, right, children }: { title: string; onClose: () => void; right?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="overlay" role="dialog" aria-modal aria-label={title}><div className="inner">
+      <div className="topbar">
+        <button className="glass round green" aria-label="Back" onClick={onClose}><ArrowLeft /></button>
+        <span className="title">{title}</span>
+        {right ?? <span className="round" aria-hidden="true" />}
+      </div>
+      {children}
+    </div></div>
   )
 }
 

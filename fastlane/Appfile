@@ -1,0 +1,2 @@
+app_identifier("com.brainpal.app")
+# team_id is read from the APPLE_TEAM_ID environment variable by the lanes (Apple Developer → Membership → Team ID)

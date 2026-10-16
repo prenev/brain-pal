@@ -24,5 +24,18 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Stats → Sleep → *Connect Apple Health sleep*: last night's hours and (with a Watch) Deep/REM/Core match what the Health app shows *(Phase 10)*
 - [ ] Delete-account function end-to-end on a throwaway account
 
-## Later / App Store (if you decide to publish)
-- [ ] Privacy policy + health-data disclosures, screenshots, review notes (no medical claims), age rating
+## Focus guard (docs/SCREENTIME.md)
+- [ ] Dev test on your iPhone: `npm run ios:sync && npm run ios:screentime`, then More → Focus guard: allow → choose apps → on → open a chosen app (shield) → earn time → opens
+- [ ] **Request Apple's Family Controls (Distribution) entitlement** (link in docs/SCREENTIME.md) before any TestFlight/App Store build that includes the guard; until then upload builds WITHOUT `ios:screentime`
+- [ ] Tell me if you want the automatic re-lock extension (needs a Mac session)
+
+## App Store (everything else is prepared — follow docs/APPSTORE.md §3; `npm run store:check` shows what's blank)
+- [ ] Fill in **your name, public contact e-mail, governing law, copyright, App Review contact** (`src/lib/legal.ts` → `OWNER`; `scripts/store-metadata.mjs` → `APP.copyright`, `REVIEW`), then `npm run site && npm run store:meta`, commit
+- [ ] **Trademark / name search for "Brain Pal"** (App Store, USPTO, EUIPO, WIPO) — change the name now if it collides
+- [ ] GitHub repo → Settings → **Pages → Source: GitHub Actions** (publishes the privacy policy / terms / support pages the App Store links to)
+- [ ] developer.apple.com → App ID `com.brainpal.app` with **HealthKit** + **Sign in with Apple**
+- [ ] App Store Connect → new app (name, SKU, bundle id) → **App Privacy** questionnaire (answers in docs/APPSTORE.md §3 step 6) → **EU trader status** → age rating
+- [ ] Upload the build (Mac: Xcode Archive, or add the 4 secrets and run the *TestFlight upload* workflow), install via TestFlight and tick the device checklist in docs/APPSTORE.md §8
+- [ ] Replace the marketing screenshots with real-device ones if you prefer (same captions), then submit for review
+
+- [ ] **iPhone: check the native Liquid Glass tab bar** (docs/IOS.md → "Native tab bar"): glass look on iOS 26, taps switch tabs, hides behind sheets, nothing cut off at the bottom, + button position. Tell me if it should be the floating capsule (needs a UITabBarController shell).

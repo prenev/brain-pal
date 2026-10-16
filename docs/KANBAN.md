@@ -13,7 +13,8 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **UX pass** 🧱 Home tab (Today / Entries / Journal switch), grouped + menu, uniform tab icons, calendar grid fix — verified locally; pending CI + screens review
+- **P18 Pal + Focus guard** 🧱 mascot, onboarding story, notch fix, Screen Time guard — verify, CI, screens
+- (done earlier) **P17 App Store pack** 📄 mascot icon, screenshots, listing, legal pages (in-app + site), privacy manifest, fastlane/TestFlight, docs/APPSTORE.md — verify + CI, then owner steps in TODO.md
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -21,6 +22,9 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- UI: Home tools row (Focus guard · Worry time · Journal) above the anchors, each opens its own screen; Today/Entries/Journal switch removed (month list → *All entries*); Notes-style journal editor (borderless title + growing page, mood/tags in a glass toolbar)
+- Native UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback (device check pending)
+- UX pass: Home tab (Today / Entries / Journal), grouped + menu, uniform tab icons, calendar fix
 - Fix: CI flake — anchors e2e crossed midnight UTC (clock pinned)
 - Fix: calendar today cell was squashed (`.today` CSS collided with the Today card)
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time

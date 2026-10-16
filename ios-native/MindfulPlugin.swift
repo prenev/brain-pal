@@ -4,6 +4,9 @@ import HealthKit
 import UIKit
 import AuthenticationServices
 import CryptoKit
+import SwiftUI
+import FamilyControls
+import ManagedSettings
 
 /// Saves breathing / grounding sessions to Apple Health as "Mindful Minutes" (HKCategoryType .mindfulSession).
 /// JS name: "Mindful"  (see src/lib/native.ts). Write-only: we never read your health data.
@@ -20,13 +23,27 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestSleepAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "webAuth", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "appleSignIn", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "appleSignIn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTabs", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "selectTab", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTabsHidden", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "screenTimeStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "screenTimeRequestAuth", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "screenTimePickApps", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "screenTimeLock", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "screenTimeUnlock", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "screenTimeClear", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
     private var webSession: ASWebAuthenticationSession?
     private var appleController: ASAuthorizationController?
     private var appleDelegate: AppleDelegate?
+
+    // The real UIKit tab bar. We never style its background: on iOS 26 the system draws it as Liquid Glass by itself.
+    private var tabBar: UITabBar?
+    private var tabIds: [String] = []
+    private let tabDelegate = TabBarDelegate()
 
     private let store = HKHealthStore()
     private var mindfulType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .mindfulSession) }
@@ -140,6 +157,124 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// Opens `url` in the system web-auth sheet and resolves with the URL it redirects to (callbackScheme://…).
+    // MARK: native tab bar
+
+    /// Shows a native UITabBar over the web view. Resolves { native: true, height } (height = points the bar covers, for web padding).
+    @objc func setTabs(_ call: CAPPluginCall) {
+        var ids: [String] = []
+        var items: [UITabBarItem] = []
+        for entry in call.getArray("items") ?? [] {
+            guard let d = entry as? [String: Any], let id = d["id"] as? String, let title = d["label"] as? String else { continue }
+            let image = (d["symbol"] as? String).flatMap { UIImage(systemName: $0) }
+            items.append(UITabBarItem(title: title, image: image, tag: ids.count))
+            ids.append(id)
+        }
+        let selected = call.getString("selected")
+        DispatchQueue.main.async {
+            guard !items.isEmpty, let host = self.bridge?.viewController?.view else { call.resolve(["native": false, "height": 0]); return }
+            let bar = self.tabBar ?? UITabBar()
+            if bar.superview == nil {
+                bar.translatesAutoresizingMaskIntoConstraints = false
+                host.addSubview(bar)
+                NSLayoutConstraint.activate([
+                    bar.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+                    bar.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+                    bar.bottomAnchor.constraint(equalTo: host.bottomAnchor)
+                ])
+            }
+            self.tabIds = ids
+            bar.items = items
+            bar.tintColor = UIColor(red: 0.208, green: 0.816, blue: 0.498, alpha: 1)   // the app's accent green
+            bar.delegate = self.tabDelegate
+            self.tabDelegate.onSelect = { [weak self] index in
+                guard let self = self, index >= 0, index < self.tabIds.count else { return }
+                self.notifyListeners("tabSelected", data: ["id": self.tabIds[index]])
+            }
+            if let selected = selected, let index = ids.firstIndex(of: selected) { bar.selectedItem = items[index] }
+            bar.isHidden = false
+            self.tabBar = bar
+            host.layoutIfNeeded()
+            call.resolve(["native": true, "height": Double(host.bounds.height - bar.frame.minY)])
+        }
+    }
+
+    /// Moves the highlight without firing tabSelected (the web side already knows).
+    @objc func selectTab(_ call: CAPPluginCall) {
+        let id = call.getString("id") ?? ""
+        DispatchQueue.main.async {
+            if let bar = self.tabBar, let index = self.tabIds.firstIndex(of: id), let items = bar.items, index < items.count { bar.selectedItem = items[index] }
+            call.resolve()
+        }
+    }
+
+    /// Hidden while a sheet / full-screen flow is open, so it never covers the bottom of one.
+    @objc func setTabsHidden(_ call: CAPPluginCall) {
+        let hidden = call.getBool("hidden") ?? false
+        DispatchQueue.main.async {
+            self.tabBar?.isHidden = hidden
+            call.resolve()
+        }
+    }
+
+    // MARK: Focus guard (Screen Time)
+    // Needs the Family Controls entitlement (`npm run ios:screentime`, see docs/SCREENTIME.md). Without it every call fails softly and
+    // the JS side shows "not available in this build". Nothing here reads which apps you use: iOS hands us opaque tokens.
+
+    @objc func screenTimeStatus(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { call.resolve(["available": false, "authorized": false, "appCount": 0]); return }
+        let g = ScreenTimeGuard.shared
+        g.relockIfExpired()
+        var out: [String: Any] = ["available": true, "authorized": g.isAuthorized, "appCount": g.appCount]
+        if let until = g.unlockedUntil { out["unlockedUntil"] = until * 1000 }
+        call.resolve(out)
+    }
+
+    @objc func screenTimeRequestAuth(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { call.resolve(["authorized": false, "error": "Needs iOS 16 or later"]); return }
+        Task {
+            do {
+                try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+                call.resolve(["authorized": ScreenTimeGuard.shared.isAuthorized])
+            } catch {
+                call.resolve(["authorized": false, "error": error.localizedDescription])
+            }
+        }
+    }
+
+    @objc func screenTimePickApps(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { call.resolve(["count": 0]); return }
+        DispatchQueue.main.async {
+            guard let host = self.bridge?.viewController else { call.resolve(["count": ScreenTimeGuard.shared.appCount]); return }
+            var controller: UIViewController?
+            let view = GuardPickerView(initial: ScreenTimeGuard.shared.selection) { selection in
+                ScreenTimeGuard.shared.selection = selection
+                controller?.dismiss(animated: true) { call.resolve(["count": ScreenTimeGuard.shared.appCount]) }
+            }
+            controller = UIHostingController(rootView: view)
+            controller?.modalPresentationStyle = .pageSheet
+            host.present(controller!, animated: true)
+        }
+    }
+
+    @objc func screenTimeLock(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { call.resolve(["locked": false]); return }
+        ScreenTimeGuard.shared.lock()
+        call.resolve(["locked": true])
+    }
+
+    @objc func screenTimeUnlock(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { call.resolve(["until": 0]); return }
+        let until = ScreenTimeGuard.shared.unlock(minutes: call.getInt("minutes") ?? 10)
+        call.resolve(["until": until * 1000])
+    }
+
+    /// Switch the guard off completely (shields removed, nothing scheduled).
+    @objc func screenTimeClear(_ call: CAPPluginCall) {
+        guard #available(iOS 16.0, *) else { call.resolve(); return }
+        ScreenTimeGuard.shared.clear()
+        call.resolve()
+    }
+
     @objc func webAuth(_ call: CAPPluginCall) {
         guard let urlString = call.getString("url"), let url = URL(string: urlString),
               let scheme = call.getString("callbackScheme"), !scheme.isEmpty else {
@@ -227,4 +362,74 @@ private final class AppleDelegate: NSObject, ASAuthorizationControllerDelegate, 
         done(.success(out))
     }
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) { done(.failure(error)) }
+}
+
+final class TabBarDelegate: NSObject, UITabBarDelegate {
+    var onSelect: ((Int) -> Void)?
+    func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) { onSelect?(item.tag) }
+}
+
+@available(iOS 16.0, *)
+final class ScreenTimeGuard {
+    static let shared = ScreenTimeGuard()
+    private let store = ManagedSettingsStore()
+    private let selectionKey = "bp.screentime.selection"
+    private let untilKey = "bp.screentime.until"
+
+    var selection: FamilyActivitySelection {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: selectionKey),
+                  let s = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else { return FamilyActivitySelection() }
+            return s
+        }
+        set { if let data = try? JSONEncoder().encode(newValue) { UserDefaults.standard.set(data, forKey: selectionKey) } }
+    }
+    var appCount: Int { selection.applicationTokens.count + selection.categoryTokens.count + selection.webDomainTokens.count }
+    var isAuthorized: Bool { AuthorizationCenter.shared.authorizationStatus == .approved }
+    /// Seconds since 1970 when the current unlock ends, if one is running.
+    var unlockedUntil: Double? {
+        let t = UserDefaults.standard.double(forKey: untilKey)
+        return t > Date().timeIntervalSince1970 ? t : nil
+    }
+
+    func lock() {
+        let s = selection
+        store.shield.applications = s.applicationTokens.isEmpty ? nil : s.applicationTokens
+        store.shield.applicationCategories = s.categoryTokens.isEmpty ? nil : .specific(s.categoryTokens)
+        store.shield.webDomains = s.webDomainTokens.isEmpty ? nil : s.webDomainTokens
+        UserDefaults.standard.removeObject(forKey: untilKey)
+    }
+    func unlock(minutes: Int) -> Double {
+        store.clearAllSettings()
+        let until = Date().addingTimeInterval(Double(max(1, minutes)) * 60).timeIntervalSince1970
+        UserDefaults.standard.set(until, forKey: untilKey)
+        return until
+    }
+    func clear() {
+        store.clearAllSettings()
+        UserDefaults.standard.removeObject(forKey: untilKey)
+    }
+    /// An unlock that has run out is locked again whenever the app asks (reliable background re-locking needs the optional extension, docs/SCREENTIME.md).
+    func relockIfExpired() {
+        let t = UserDefaults.standard.double(forKey: untilKey)
+        if t > 0 && t <= Date().timeIntervalSince1970 { lock() }
+    }
+}
+
+@available(iOS 16.0, *)
+struct GuardPickerView: View {
+    @State var selection: FamilyActivitySelection
+    let onDone: (FamilyActivitySelection) -> Void
+    init(initial: FamilyActivitySelection, onDone: @escaping (FamilyActivitySelection) -> Void) {
+        _selection = State(initialValue: initial)
+        self.onDone = onDone
+    }
+    var body: some View {
+        NavigationView {
+            FamilyActivityPicker(selection: $selection)
+                .navigationTitle("Choose apps to guard")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { onDone(selection) } } }
+        }
+    }
 }

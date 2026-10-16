@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, Check, Search, Trash2 } from 'lucide-react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, Search, Smile, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
+import { PalEmpty } from './Pal'
 import Support from './Support'
 import { Emoji } from '../lib/emoji'
 import { MOODS } from '../lib/mood'
@@ -23,6 +24,7 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
   const [prompt, setPrompt] = useState<string | null>(entry ? null : hasDraft ? draft!.prompt : null)
   const [restored] = useState(hasDraft)
   const [err, setErr] = useState('')
+  const [panel, setPanel] = useState<'mood' | 'tags' | null>(null)
   const area = useRef<HTMLTextAreaElement>(null)
   const todayPrompt = pickPrompt(dayKey(new Date()))
   const tagChoices = useMemo(() => [...new Set([...allJournalTags(journal), ...DEFAULT_TAGS.slice(0, 6), ...tags])].slice(0, 12), [journal, tags])
@@ -35,6 +37,7 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
     return () => clearTimeout(t)
   }, [entry, title, body, mood, tags, prompt])
   useEffect(() => { area.current?.focus() }, [])
+  useLayoutEffect(() => { const a = area.current; if (a) { a.style.height = 'auto'; a.style.height = `${a.scrollHeight}px` } }, [body])
 
   function save() {
     const c = cleanText(title, body, tags)
@@ -47,42 +50,47 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
     deleteJournal(entry.id); onClose()
   }
 
+  const words = wordCount(body)
+  const when = new Date(entry?.createdAt ?? Date.now()).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
+
+  // Notes-style page: no boxes, the text is the page. Mood and tags live in a slim toolbar so they never get in the way.
   return (
-    <div className="overlay" role="dialog" aria-modal aria-label={entry ? 'Edit journal entry' : 'New journal entry'}><div className="inner">
-      <div className="topbar" style={{ background: 'linear-gradient(#000 70%, transparent)' }}>
-        <button className="glass round" aria-label="Back" onClick={onClose}><ChevronLeft size={26} /></button>
-        <span className="title">{entry ? fmtDate(entry.createdAt) : 'Journal'}</span>
-        <button className="glass pill-btn" onClick={save}>
-          <span className="round" style={{ width: 40, height: 40, background: 'var(--accent)', color: '#04130a' }}><Check size={22} /></span>Save
-        </button>
+    <div className="overlay notes" role="dialog" aria-modal aria-label={entry ? 'Edit journal entry' : 'New journal entry'}><div className="inner">
+      <div className="notes-bar">
+        <button className="notes-back" aria-label="Back" onClick={onClose}><ChevronLeft size={26} />Journal</button>
+        <button className="notes-done" onClick={save}>Save</button>
       </div>
+      <p className="notes-date">{when}</p>
 
       {restored && <p className="muted small" role="status" style={{ textAlign: 'center' }}>Picked up where you left off.</p>}
       {crisis && <div role="alert"><Support /></div>}
 
-      {!entry && !prompt && <button className="card prompt-card" onClick={() => setPrompt(todayPrompt.id)}>
-        <Emoji name="bulb" size={26} /><span style={{ flex: 1, textAlign: 'left' }}><small className="muted">Need a place to start?</small><br />{todayPrompt.text}</span>
-      </button>}
-      {prompt && <div className="card prompt-card" role="note">
-        <Emoji name="bulb" size={26} /><span style={{ flex: 1 }}>{promptText(prompt)}</span>
-        <button className="linkbtn" onClick={() => setPrompt(null)}>Clear</button>
+      {!entry && !prompt && <button className="notes-prompt" onClick={() => setPrompt(todayPrompt.id)}><Emoji name="bulb" size={20} /><span>Need a place to start? <u>{todayPrompt.text}</u></span></button>}
+      {prompt && <div className="notes-prompt" role="note"><Emoji name="bulb" size={20} /><i style={{ flex: 1 }}>{promptText(prompt)}</i><button className="linkbtn" onClick={() => setPrompt(null)}>Clear</button></div>}
+
+      <input className="notes-title" aria-label="Title" maxLength={MAX_TITLE} placeholder="Title" value={title} onChange={e => setTitle(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); area.current?.focus() } }} />
+      <textarea ref={area} className="notes-body" aria-label="Journal entry" maxLength={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={e => { setBody(e.target.value); setErr('') }} />
+
+      {panel && <div className="notes-panel" role="group" aria-label={panel === 'mood' ? 'Choose a mood' : 'Choose tags'}>
+        {panel === 'mood'
+          ? <div className="row" style={{ justifyContent: 'space-between' }}>
+              {MOODS.map(m => <button key={m.v} type="button" aria-pressed={mood === m.v} aria-label={`Mood: ${m.name}`} onClick={() => setMood(mood === m.v ? null : m.v)} style={{ opacity: mood === null || mood === m.v ? 1 : .35 }}><Face mood={m.v} size={44} /></button>)}
+            </div>
+          : <div className="chips">
+              {tagChoices.map(t => <button key={t} type="button" className={`chip ${tags.includes(t) ? 'on' : ''}`} aria-pressed={tags.includes(t)} onClick={() => setTags(tags.includes(t) ? tags.filter(x => x !== t) : [...tags, t])}>{t}</button>)}
+            </div>}
       </div>}
-
-      <input className="input" aria-label="Title" maxLength={MAX_TITLE} placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ marginBottom: 10 }} />
-      <textarea ref={area} className="input journal-area" aria-label="Journal entry" maxLength={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={e => { setBody(e.target.value); setErr('') }} />
-      <div className="row spread muted small" style={{ margin: '6px 4px 14px' }}><span>{wordCount(body)} {wordCount(body) === 1 ? 'word' : 'words'}</span>{err && <span role="alert" style={{ color: 'var(--danger)' }}>{err}</span>}</div>
-
-      <div className="card">
-        <b>How are you feeling? <span className="muted small">(optional)</span></b>
-        <div className="row" style={{ justifyContent: 'space-between', marginTop: 10 }} role="group" aria-label="Mood">
-          {MOODS.map(m => <button key={m.v} type="button" aria-pressed={mood === m.v} aria-label={`Mood: ${m.name}`} onClick={() => setMood(mood === m.v ? null : m.v)} style={{ opacity: mood === null || mood === m.v ? 1 : .35 }}><Face mood={m.v} size={46} /></button>)}
-        </div>
-        <b style={{ display: 'block', marginTop: 16 }}>Tags</b>
-        <div className="chips" style={{ marginTop: 10 }}>
-          {tagChoices.map(t => <button key={t} type="button" className={`chip ${tags.includes(t) ? 'on' : ''}`} aria-pressed={tags.includes(t)} onClick={() => setTags(tags.includes(t) ? tags.filter(x => x !== t) : [...tags, t])}>{t}</button>)}
-        </div>
+      <div className="notes-tools">
+        <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
+          {mood ? <Face mood={mood} size={26} /> : <Smile size={24} />}
+        </button>
+        <button aria-label="Tags" aria-expanded={panel === 'tags'} className={panel === 'tags' ? 'on' : ''} onClick={() => setPanel(panel === 'tags' ? null : 'tags')}>
+          <Tag size={22} />{tags.length > 0 && <span className="small">{tags.length}</span>}
+        </button>
+        <span className="notes-count">{err ? <span role="alert" style={{ color: 'var(--danger)' }}>{err}</span> : `${words} ${words === 1 ? 'word' : 'words'}`}</span>
+        {entry && <button aria-label="Delete entry" onClick={remove}><Trash2 size={22} /></button>}
       </div>
-      {entry && <button className="btn block danger" onClick={remove}><Trash2 size={18} style={{ display: 'inline', verticalAlign: -3 }} /> Delete entry</button>}
     </div></div>
   )
 }
@@ -106,7 +114,7 @@ export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => 
           {tags.map(t => <button key={t} className={`chip ${tag === t ? 'on' : ''}`} aria-pressed={tag === t} onClick={() => setTag(tag === t ? null : t)}>{t}</button>)}
         </div>}
       </>}
-      {journal.length === 0 && <div className="card empty">Nothing here yet. Write a few lines — it doesn’t have to be good, and nobody else will read it.</div>}
+      {journal.length === 0 && <PalEmpty pose="think">Nothing here yet. Write a few lines — it doesn’t have to be good, and nobody else will read it.</PalEmpty>}
       {journal.length > 0 && shown.length === 0 && <div className="card empty">No entries match.</div>}
       {groups.map(g => (
         <section key={g.key}>

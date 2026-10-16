@@ -1,0 +1,1 @@
+mood,journal,diary,anxiety,breathing,cbt,worry,gratitude,habits,sleep,calm,thoughts,selfcare,mindful
