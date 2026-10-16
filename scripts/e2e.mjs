@@ -1135,7 +1135,7 @@ test('Share: the Focus guard "brain rot, beaten" counter makes a numbers-only ca
   await p.click('[aria-label="Share sticker: Wobbi cheering"]').catch(async () => { await p.locator('.sticker').nth(3).click() })
   await p.waitForFunction(() => window.__shared.length === 1); assert.match(await p.evaluate(() => window.__shared[0].files[0].name), /^pal-.*\.png$/)
   await p.click('[aria-label=Back]'); await p.click('.li >> text=Invite a friend')
-  await p.waitForFunction(() => window.__shared.length === 2); const inv = await p.evaluate(() => window.__shared[1].text); assert.match(inv, /free, private/i); assert.match(inv, /https:\/\/prenev\.github\.io\/brain-pal/)
+  await p.waitForFunction(() => window.__shared.length === 2); const inv = await p.evaluate(() => window.__shared[1].text); assert.match(inv, /free, private/i); assert.match(inv, /https:\/\/wobbi\.app/)
   await done(s)
 })
 
