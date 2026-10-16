@@ -20,6 +20,11 @@ import ParkWorry from './components/ParkWorry'
 import { JournalEditor, JournalList } from './components/Journal'
 import FocusFlow from './components/FocusFlow'
 import Onboarding from './components/Onboarding'
+import Splash from './components/Splash'
+import Sleep from './components/Sleep'
+import Progress from './components/Progress'
+import Summary from './components/Summary'
+import Wallet from './components/Wallet'
 import type { JournalEntry } from './lib/journal.ts'
 
 type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
@@ -40,16 +45,18 @@ function Shell() {
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
   useGuardRelock()
-  const [coinToast, setCoinToast] = useState(0)
+  const [coinToast, setCoinToast] = useState<{ n: number; id: number } | null>(null)
   const lastCoins = useRef<number | null>(null)
   // A quiet "+N coins" when you earn some (never on load, never when coins drop from spending).
   useEffect(() => {
     if (!ready) return
     const prev = lastCoins.current; lastCoins.current = coins
-    if (prev !== null && coins > prev) { setCoinToast(coins - prev); const t = setTimeout(() => setCoinToast(0), 2600); return () => clearTimeout(t) }
+    if (prev !== null && coins > prev) setCoinToast({ n: coins - prev, id: Date.now() + Math.random() })
   }, [ready, coins])
+  // Its own timer: a later change in coins (spending, undoing an entry) must never cancel the hide.
+  useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
   const [tab, setTab] = useState<Tab>('entries')
-  const [screen, setScreen] = useState<'guard' | 'journal' | 'entries' | 'search' | null>(null)   // full-screen pages opened from Home
+  const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
@@ -94,7 +101,7 @@ function Shell() {
   const overlayOpen = !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
   const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || needsLogin || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
-  if (!ready) return <div className="center-screen muted">Loading…</div>
+  if (!ready) return <Splash />
   if (needsLogin || recovery) return <Login />
   if (!onboarded && !hasData) return <Onboarding onDone={finishOnboarding} />
 
@@ -104,7 +111,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onAllEntries={search => setScreen(search ? 'search' : 'entries')} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onAllEntries={() => setScreen('search')} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -152,12 +159,16 @@ function Shell() {
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
       {screen === 'guard' && <Screen title="Focus guard" onClose={() => setScreen(null)}><Guard /></Screen>}
       {screen === 'journal' && <Screen title="Journal" onClose={() => setScreen(null)}><JournalList onOpen={e => setJournalOpen({ entry: e })} onWrite={() => setJournalOpen({})} /></Screen>}
-      {(screen === 'entries' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
+      {(screen === 'thoughts' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
+      {screen === 'sleep' && <Screen title="Sleep" onClose={() => setScreen(null)}><Sleep /></Screen>}
+      {screen === 'progress' && <Screen title="Progress" onClose={() => setScreen(null)}><Progress /></Screen>}
+      {screen === 'summary' && <Screen title="Summary" onClose={() => setScreen(null)}><Summary /></Screen>}
+      {screen === 'coins' && <Screen title="Coins" onClose={() => setScreen(null)}><Wallet /></Screen>}
       {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
-      {coinToast > 0 && <div className="coin-toast" role="status"><Emoji name="star" size={20} /> +{coinToast} {coinToast === 1 ? 'coin' : 'coins'}</div>}
+      {coinToast && <div className="coin-toast" role="status"><Emoji name="star" size={20} /> +{coinToast.n} {coinToast.n === 1 ? 'coin' : 'coins'}</div>}
       {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
   )

@@ -138,7 +138,7 @@ test('create, persist, expand and delete an entry', async () => {
   await reload(s.page)
   await s.page.click('.entry'); await s.page.waitForSelector('text=Thinking traps'); assert.ok(await s.page.locator('.entry .chip >> text=catastrophizing').count())
   s.page.once('dialog', d => d.accept()); await s.page.click('text=Delete entry')
-  await s.page.click('.all-entries'); await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.click('.all-entries'); await s.page.waitForSelector('text=No entries this month')
+  await s.page.click('.tool >> text=Thoughts'); await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.click('.tool >> text=Thoughts'); await s.page.waitForSelector('text=No entries this month')
   await done(s)
 })
 
@@ -940,18 +940,24 @@ test('every interactive control has an accessible name', async () => {
   await done(s)
 })
 
-test('home: tools row (Focus guard, Worry time, Journal) sits above the anchors and opens each screen; All entries; the + menu groups what you can add', async () => {
+test('home: a sideways-scrolling tools strip (Thoughts first, then Journal, Worry time, Focus guard, Sleep, Progress, Summary, Coins) sits above the anchors and opens each screen; the + menu groups what you can add', async () => {
   const s = await open({ 'bp.thoughts': [rec('t1', 0, { thought: 'today thought' }), rec('t2', 3, { thought: 'older thought' })] }); const p = s.page
   await p.waitForSelector('.tools-row')
   assert.equal(await p.locator('.tab[aria-current=true]').innerText(), 'Home', 'the first tab is called Home')
   assert.equal(await p.locator('[aria-label="Home sections"]').count(), 0, 'no section switch any more')
-  assert.deepEqual(await p.$$eval('.tool b', els => els.map(e => e.textContent)), ['Focus guard', 'Worry time', 'Journal'])
+  assert.deepEqual(await p.$$eval('.tool b', els => els.map(e => e.textContent)), ['Thoughts', 'Journal', 'Worry time', 'Focus guard', 'Sleep', 'Progress', 'Summary', 'Coins'])
+  assert.ok(await p.$eval('.tools-row', el => el.scrollWidth > el.clientWidth + 20 && getComputedStyle(el).overflowX === 'auto'), 'the strip scrolls sideways')
+  assert.equal(await p.locator('.all-entries').count(), 0, 'no "All entries" row at the bottom any more: it is the Thoughts tile now')
+  assert.ok(await p.$eval('.tool.lead', el => el.textContent.startsWith('Thoughts') && el === el.parentElement.firstElementChild), 'Thoughts leads')
   assert.ok(await p.evaluate(() => document.querySelector('.tools-row').nextElementSibling.matches('.anchors, .anchor-empty, .goal, .card')), 'the anchors come straight after the tools')
   assert.equal(await p.locator('.entry').count(), 1, 'Home only shows today’s entries')
   await p.click('.tool >> text=Journal'); await p.waitForSelector('.overlay >> text=Write something'); await p.click('[aria-label=Back]')
   await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.overlay .title >> text=Focus guard'); await p.click('[aria-label=Back]')
   await p.click('.tool >> text=Worry time'); await p.waitForSelector('.overlay >> text=Parked'); await p.click('[aria-label=Back]')
-  await p.click('.all-entries'); await p.waitForFunction(() => document.querySelectorAll('.overlay .entry').length === 2)
+  for (const [t, probe] of [['Sleep', 'Sleep'], ['Progress', 'Your skills'], ['Summary', 'Summary range'], ['Coins', 'Coins']]) {
+    await p.click(`.tools-row .tool >> text=${t}`); await p.waitForSelector(`.overlay .title >> text=${t}`); await p.waitForSelector(probe === 'Summary range' ? '[aria-label="Summary range"]' : `.overlay >> text=${probe}`); await p.click('[aria-label=Back]')
+  }
+  await p.click('.tool >> text=Thoughts'); await p.waitForFunction(() => document.querySelectorAll('.overlay .entry').length === 2)
   assert.equal(await p.locator('[aria-label="Log mood: good"]').count(), 0, 'the mood picker belongs to Home, not the list')
   await p.click('[aria-label=Back]')
   await p.click('.fab')
@@ -1021,7 +1027,7 @@ test('notch / status bar: the first thing on every tab clears the safe area, eve
 test('Pal the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
   const s = await open(); const p = s.page
   assert.ok(await p.locator('.today .pal svg').count(), 'Pal waves on the Today card')
-  await p.click('.all-entries'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/); await p.click('[aria-label=Back]')
+  await p.click('.tool >> text=Thoughts'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/); await p.click('[aria-label=Back]')
   await p.click('.tool >> text=Journal'); assert.ok(await p.locator('.pal-empty .pal').count()); await p.click('[aria-label=Back]')
   await tab(p, 'More'); await p.click('.li >> text=About & legal'); assert.ok(await p.locator('.pal svg').count(), 'About shows Pal')
   const anim = async page => page.$eval('.pal', el => parseFloat(getComputedStyle(el).animationDuration) * 1000)
@@ -1086,6 +1092,40 @@ test('Focus guard: not available without the entitlement / iOS 16; journal-line 
   await q.waitForSelector('text=Earned it!'); assert.deepEqual(await nativeCalls(q, 'screenTimeUnlock'), [{ minutes: 5 }]); await q.click('button:has-text("Done")')
   await tab(q, 'Home'); await q.click('.tool >> text=Journal'); await q.waitForSelector('.jentry >> text=Feeling a bit scattered today')
   await done(t)
+})
+
+test('coin toast: "+N coins" always goes away by itself, even when your coins change again while it shows', async () => {
+  const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.click('[aria-label="Log mood: good"]'); await p.waitForSelector('.coin-toast >> text=+5 coins')
+  await p.click('.toast-row >> text=Undo')                       // the entry is deleted, so coins drop while the toast is still showing (this used to cancel its timer)
+  await p.waitForFunction(() => !document.querySelector('.toast-row'))
+  await p.clock.runFor(4000)
+  assert.equal(await p.locator('.coin-toast').count(), 0, 'the toast must be gone after a few seconds')
+  await p.click('[aria-label="Log mood: bad"]'); await p.waitForSelector('.coin-toast'); await p.clock.runFor(4000)
+  assert.equal(await p.locator('.coin-toast').count(), 0, 'and the next one too')
+  await done(s)
+})
+
+test('Pal tips: every section has one short tip, dismissing sticks, and More brings them back', async () => {
+  const s = await open({ 'bp.thoughts': [rec('t1', 0)], 'bp.journal': [] }); const p = s.page
+  const tip = () => p.locator('.pal-tip .bubble').first().innerText()
+  await p.waitForSelector('.pal-tip'); assert.match(await tip(), /Swipe this row sideways/)
+  for (const [t, re] of [['Calendar', /Tap a day/], ['Stats', /Patterns show up/], ['Breathe', /follow the circle/], ['More', /live here/]]) { await tab(p, t); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, t) }
+  await tab(p, 'Stats')
+  for (const [v, re] of [['Progress', /Skills grow/], ['Summary', /plain words/], ['Sleep', /sleep and mood|Apple Health/]]) { await p.click(`[role=tab]:has-text("${v}")`); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, v) }
+  await tab(p, 'Home')
+  for (const [t, re] of [['Thoughts', /month by month/], ['Journal', /Only you can read/], ['Coins', /Coins come from/], ['Sleep', /sleep/]]) { await p.click(`.tools-row .tool >> text=${t}`); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
+  // dismiss: stays gone after a reload; More brings it back
+  await tab(p, 'Calendar'); await p.click('.pal-tip [aria-label="Hide this tip"]'); assert.equal(await p.locator('.pal-tip').count(), 0)
+  await reload(p); await tab(p, 'Calendar'); await p.waitForSelector('.cal'); assert.equal(await p.locator('.pal-tip').count(), 0, 'a dismissed tip stays dismissed')
+  await tab(p, 'More'); await p.click('button:has-text("Show Pal’s tips again")'); await tab(p, 'Calendar'); await p.waitForSelector('.pal-tip >> text=Tap a day')
+  await done(s)
+})
+
+test('splash: the page paints Pal’s app icon + name from index.html before any script runs, and the app shows its own splash (no bare "Loading…")', async () => {
+  const html = await (await fetch(URL_)).text()
+  assert.match(html, /<div id="root"><div class="boot"[^>]*>\s*<img src="\/icon-192\.png"/); assert.match(html, /<b>Brain Pal<\/b>/); assert.doesNotMatch(html, /Loading…/)
+  assert.doesNotMatch(readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8'), /Loading…/); assert.match(readFileSync(new URL('../src/components/Splash.tsx', import.meta.url), 'utf8'), /Brain Pal/)
 })
 
 test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {

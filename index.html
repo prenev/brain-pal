@@ -11,9 +11,16 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Brain Pal</title>
+    <style>
+      html, body { margin: 0; background: #0e1726; }
+      .boot { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 14px; color: #e8edf8; font: 800 26px/1 system-ui, sans-serif; }
+      .boot img { border-radius: 28px; animation: bootBob 2.6s ease-in-out infinite; }
+      @keyframes bootBob { 50% { transform: translateY(-6px); } }
+      @media (prefers-reduced-motion: reduce) { .boot img { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot" aria-label="Brain Pal is loading"><img src="/icon-192.png" alt="" width="120" height="120" /><b>Brain Pal</b></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

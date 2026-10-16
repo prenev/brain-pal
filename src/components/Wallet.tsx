@@ -1,3 +1,4 @@
+import { PalTip } from './Pal'
 import { useMemo, useState } from 'react'
 import { useStore } from '../lib/store'
 import { dayKey, shift } from '../lib/dates.ts'
@@ -28,6 +29,7 @@ export default function Wallet() {
 
   return (
     <>
+      <PalTip id="coins" pose="love">Coins come from showing up. Spend them on colour themes, a rest day for your streak, or a treat you name.</PalTip>
       <div className="card" aria-label="Coins">
         <div className="muted small">Your coins</div>
         <div style={{ fontSize: 44, fontWeight: 900 }} aria-label={`${coins} coins`}>{coins}</div>

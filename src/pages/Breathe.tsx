@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../lib/store'
-import Pal from '../components/Pal'
+import { PalTip } from '../components/Pal'
 import BreathRunner, { type BreathResult } from '../components/BreathRunner'
 import { Toggle } from '../components/ui'
 import { Emoji } from '../lib/emoji'
@@ -53,8 +53,8 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
         ? <div className="card"><BreathRunner pattern={pattern} cycles={cycles} vibrate={vibrate} sound={sound} onFinish={finish} /></div>
         : <>
           {done && <div className="card" style={{ textAlign: 'center' }}><Emoji name="lotus" size={64} /><div style={{ fontWeight: 900, fontSize: 20, marginTop: 6 }}>Nice work!</div><div className="muted">{done.cycles} rounds · {Math.floor(done.sec / 60)}m {done.sec % 60}s logged</div></div>}
+          <PalTip id="breathe" pose="breatheIn">Pick a pattern and follow the circle. A long, slow breath out is the secret.</PalTip>
           <div className="card">
-            <div style={{ display: 'grid', placeItems: 'center', marginBottom: 6 }}><Pal pose="breatheIn" motion="breathe" size={96} /></div>
             <div className="seg" role="tablist" aria-label="Pattern">
               {Object.keys(PRESETS).map(p => <button key={p} className={p === preset ? 'on' : ''} onClick={() => setPreset(p)}>{p}</button>)}
             </div>

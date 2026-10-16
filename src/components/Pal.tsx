@@ -1,4 +1,5 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { X } from 'lucide-react'
 import { palSvg, POSE_LABEL, type PoseName } from '../lib/pal.ts'
 
 export type PalMotion = 'bob' | 'wave' | 'breathe' | 'jump' | 'none'
@@ -17,4 +18,22 @@ export function PalSays({ pose = 'idle', size = 84, motion = 'bob', children }: 
 /** Empty state: Pal and one kind sentence instead of a grey box. */
 export function PalEmpty({ pose = 'think', children }: { pose?: PoseName; children: ReactNode }) {
   return <div className="card pal-empty"><Pal pose={pose} size={88} /><p>{children}</p></div>
+}
+
+const TIPS_KEY = 'bp.tips.off'
+const tipsOff = (): string[] => { try { const v = JSON.parse(localStorage.getItem(TIPS_KEY) ?? '[]'); return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [] } catch { return [] } }
+export const resetTips = () => { try { localStorage.removeItem(TIPS_KEY) } catch { /* ignore */ } }
+
+/** Pal says what to do in this section, once: dismiss it and it stays away (More → "Show Pal's tips again" brings them back). */
+export function PalTip({ id, pose = 'think', children }: { id: string; pose?: PoseName; children: ReactNode }) {
+  const [off, setOff] = useState(() => tipsOff().includes(id))
+  if (off) return null
+  const hide = () => { try { localStorage.setItem(TIPS_KEY, JSON.stringify([...new Set([...tipsOff(), id])])) } catch { /* ignore */ } setOff(true) }
+  return (
+    <div className="pal-tip" role="note" aria-label="Tip from Pal">
+      <Pal pose={pose} size={54} />
+      <span className="bubble">{children}</span>
+      <button className="x" aria-label="Hide this tip" onClick={hide}><X size={16} /></button>
+    </div>
+  )
 }

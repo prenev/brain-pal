@@ -108,6 +108,9 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 2. Capacitor iOS shell: native haptics, HealthKit mindful minutes
 3. Insights: emotion trends, before/after intensity
 
+## Home & Pal's tips
+Home's tools strip scrolls sideways: **Thoughts** (all thought entries, month by month, with search) leads, then Journal, Worry time, Focus guard, Sleep, Progress, Summary and Coins. Each section opens with a one-line tip from Pal (dismiss it once and it stays away; More → "Show Pal's tips again"). The app starts on a splash with Pal instead of a bare loading text.
+
 ## Pal & Focus guard
 **Pal** is the mascot (poses and animation strips in `assets/`, `npm run sprites`). On first run Pal walks you through the app. **Focus guard** (iPhone, More → Focus guard): choose apps that stay paused until you do push-ups, squats, a plank, a walk, a minute of breathing or write a line; reps are honour-system. Needs iOS Screen Time + Apple's Family Controls entitlement: see [`docs/SCREENTIME.md`](docs/SCREENTIME.md).
 

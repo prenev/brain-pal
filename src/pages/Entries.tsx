@@ -13,23 +13,29 @@ import { worryStats } from '../lib/worries'
 import { loadGuard } from '../lib/extras'
 import { monthLabel } from '../components/ui'
 import EntryCard from '../components/EntryCard'
-import { PalEmpty } from '../components/Pal'
+import { PalEmpty, PalTip } from '../components/Pal'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
-export type HomeTool = 'guard' | 'worry' | 'journal'
+export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'guard' | 'sleep' | 'progress' | 'summary' | 'coins'
 
 /** Home: today's check-in, the secondary tools, anchors and today's entries. */
 export default function Entries({ onTool, onAllEntries, onSos, onSupport, onAllAnchors, onCompose, onWorry, onBreathe, onStep }: { onTool: (t: HomeTool) => void; onAllEntries: (search?: boolean) => void; onSos: () => void; onSupport: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onBreathe: () => void; onStep: () => void }) {
-  const { thoughts, deleteThought, streak, anchors, worries, journal } = useStore()
+  const { thoughts, deleteThought, streak, anchors, worries, journal, coins } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
   const parked = worryStats(worries).open
+  // A strip you can scroll sideways: thoughts lead, then the things that used to be buried in Stats and More.
   const tools: { id: HomeTool; emoji: string; label: string; sub: string }[] = [
-    { id: 'guard', emoji: 'shield', label: 'Focus guard', sub: loadGuard().enabled ? 'On' : 'Off' },
-    { id: 'worry', emoji: 'worry', label: 'Worry time', sub: parked ? `${parked} parked` : 'Nothing parked' },
+    { id: 'thoughts', emoji: 'nib', label: 'Thoughts', sub: thoughts.length ? `${thoughts.length} ${thoughts.length === 1 ? 'entry' : 'entries'}` : 'All entries' },
     { id: 'journal', emoji: 'notebook', label: 'Journal', sub: journal.length ? `${journal.length} ${journal.length === 1 ? 'entry' : 'entries'}` : 'Write' },
+    { id: 'worry', emoji: 'worry', label: 'Worry time', sub: parked ? `${parked} parked` : 'Nothing parked' },
+    { id: 'guard', emoji: 'shield', label: 'Focus guard', sub: loadGuard().enabled ? 'On' : 'Off' },
+    { id: 'sleep', emoji: 'sleep', label: 'Sleep', sub: 'Last night' },
+    { id: 'progress', emoji: 'chart', label: 'Progress', sub: 'Your levels' },
+    { id: 'summary', emoji: 'memo', label: 'Summary', sub: 'Week in words' },
+    { id: 'coins', emoji: 'star', label: 'Coins', sub: String(coins) },
   ]
 
   return (
@@ -48,9 +54,10 @@ export default function Entries({ onTool, onAllEntries, onSos, onSupport, onAllA
         </div>
       )}
       <TodayCard onDetails={onCompose} onWorry={onWorry} onBreathe={onBreathe} onStep={onStep} />
+      <PalTip id="home-tools" pose="wave">Swipe this row sideways: thoughts, journal, sleep, progress and more live here.</PalTip>
       <div className="tools-row" role="group" aria-label="Tools">
         {tools.map(t => (
-          <button key={t.id} className="card tool" onClick={() => onTool(t.id)}>
+          <button key={t.id} className={`card tool ${t.id === 'thoughts' ? 'lead' : ''}`} onClick={() => onTool(t.id)}>
             <Emoji name={t.emoji} size={34} /><b>{t.label}</b><span className="sub">{t.sub}</span>
           </button>
         ))}
@@ -67,9 +74,6 @@ export default function Entries({ onTool, onAllEntries, onSos, onSupport, onAllA
         </button>
       )}
       {today.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
-      <button className="card row all-entries" onClick={() => onAllEntries()}>
-        <Emoji name="memo" size={28} /><span style={{ flex: 1 }}>All entries</span><span className="muted small">{thoughts.length}</span><ChevronRight size={20} className="muted" />
-      </button>
 
       {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
     </>
@@ -92,6 +96,7 @@ export function AllEntries({ search = false, onClose }: { search?: boolean; onCl
 
   return (
     <Screen title="Entries" onClose={onClose} right={<button className="glass round green" aria-label="Search" onClick={() => { setSearching(!searching); setQ('') }}><Search size={24} /></button>}>
+      <PalTip id="thoughts" pose="think">Every thought record, month by month. Tap one to open it, or search for a word, feeling or tag.</PalTip>
       <div className="navmonth month-row">
         <button className="arrow" aria-label="Previous month" onClick={() => shift(-1)}><ChevronLeft size={20} /></button>
         <span className="title">{monthLabel(month)}</span>

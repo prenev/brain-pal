@@ -56,12 +56,12 @@ async function capture(fn) {
 const tab = (p, n) => p.click(`.tab >> text=${n}`)
 
 const SHOTS = [
-  ['01-check-in', 'Check in with one tap', p => p.waitForSelector('.quickmood, .today')],
+  ['01-check-in', 'Check in with one tap', async p => { await p.waitForSelector('.quickmood, .today'); await p.click('.pal-tip [aria-label="Hide this tip"]').catch(() => {}) }],
   ['02-calm', 'Calm your body in minutes', async p => { await tab(p, 'Breathe'); await p.click('text=Start'); await p.waitForTimeout(5200) }],
   ['03-calendar', 'See your month at a glance', p => tab(p, 'Calendar')],
   ['04-worries', 'Park worries, plan one small step', async p => { await tab(p, 'More'); await p.click('.li >> text=Worry time'); await p.waitForTimeout(300) }],
   ['05-progress', 'Proof you’re growing', async p => { await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")') }],
-  ['06-journal', 'A private place to write', async p => { await p.click('.home-seg >> text=Journal') }],
+  ['06-journal', 'A private place to write', async p => { await p.click('.tool >> text=Journal'); await p.waitForSelector('.overlay .title') }],
 ]
 
 const frame = (png, caption, [W, H]) => `<!doctype html><meta charset=utf-8><style>

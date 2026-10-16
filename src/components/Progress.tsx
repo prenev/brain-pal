@@ -1,3 +1,4 @@
+import { PalTip } from './Pal'
 import { useMemo } from 'react'
 import Pal from './Pal'
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react'
@@ -25,6 +26,7 @@ export default function Progress() {
 
   return (
     <>
+      <PalTip id="progress" pose="flex">Skills grow with what you actually do and never go down. Proof appears once there’s enough of your own data.</PalTip>
       <h2 className="sec">Your skills</h2>
       <div className="skill-grid">
         {skills.map(s => {

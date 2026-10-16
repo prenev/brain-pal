@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, Search, Smile, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
-import { PalEmpty } from './Pal'
+import { PalEmpty, PalTip } from './Pal'
 import Support from './Support'
 import { Emoji } from '../lib/emoji'
 import { MOODS } from '../lib/mood'
@@ -107,6 +107,7 @@ export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => 
 
   return (
     <>
+      <PalTip id="journal" pose="think">Write anything. A line is enough. Only you can read it.</PalTip>
       <button className="btn primary block" onClick={onWrite} style={{ marginBottom: 14 }}>Write something</button>
       {journal.length > 0 && <>
         <div className="searchbar"><Search size={20} /><input aria-label="Search journal" placeholder="Search your journal" value={q} onChange={e => setQ(e.target.value)} /></div>

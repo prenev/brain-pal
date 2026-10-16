@@ -1,3 +1,4 @@
+import { PalTip } from '../components/Pal'
 import { useMemo, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
@@ -88,6 +89,7 @@ function Insights() {
 
   return (
     <>
+      <PalTip id="insights" pose="think">Patterns show up after a few check-ins. Keep logging and I’ll point out what I notice.</PalTip>
       <div className="topbar flat">
         <button className="glass round green" aria-label="Previous" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft /></button>
         <span className="title">{monthLabel(month)}</span>
