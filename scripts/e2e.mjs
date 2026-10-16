@@ -1608,6 +1608,7 @@ const DOC_KINDS = ['journal', 'anchor', 'anchor_check', 'focus', 'manual_night',
 const fakeAccount = () => ({ rows: new Map(), down: false, posts: 0, delay: 0 })
 async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply, signedIn = false, account = null, seed = null, pro = true, gotoLogin = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  await ctx.addInitScript(ids => { try { if (!localStorage.getItem('bp.ach.seen')) localStorage.setItem('bp.ach.seen', JSON.stringify(ids)) } catch { /* ignore */ } }, ALL_ACH)   // achievement cards have their own tests
   const seen = { token: [], authorize: [] }
   await ctx.route('http://127.0.0.1:9/**', async route => {
     const req = route.request(), url = new URL(req.url())
