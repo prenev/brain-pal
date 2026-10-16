@@ -72,9 +72,9 @@ const reload = async p => { await p.reload(); await p.waitForSelector('.topbar')
 
 const nextStep = p => p.click('.wiz-foot .btn.primary')
 const toStep = async (p, n) => { for (let i = 0; i < n; i++) await nextStep(p) }          // feel → happened → thought → (kinder) → finish
+const MOOD_NAME = { 5: 'rad', 4: 'good', 3: 'meh', 2: 'bad', 1: 'awful' }
 async function newEntry(p, { mood = 3, emotion, thought } = {}) {
-  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry')
-  await p.click(`.faces button >> nth=${5 - mood}`); await p.waitForSelector('.wiz-body')
+  await tab(p, 'Home'); await p.click(`[aria-label="Log mood: ${MOOD_NAME[mood]}"]`); await p.waitForSelector('.wiz-body')      // the mood faces on Home open the entry flow with that mood chosen
   if (emotion) await p.click(`.ig >> text=${emotion}`)
   if (thought) { await toStep(p, 2); await p.fill('textarea[placeholder="What went through your mind?"]', thought) }
 }
