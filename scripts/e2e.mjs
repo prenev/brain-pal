@@ -418,8 +418,9 @@ test('journal: write, list, search, filter, edit, delete — and it persists', a
 test('journal editor: topic chips change each time, the formatting bar edits the selection, preview shows it rendered, a voice note can be added and played', async () => {
   const s = await open(); const p = s.page
   await openJournal(p); await p.waitForSelector('.topic-row .chip')
-  const first = await p.locator('.topic-row .chip').allInnerTexts(); await p.click('[aria-label="More topic ideas"]')
-  const second = await p.locator('.topic-row .chip').allInnerTexts(); assert.equal(first.filter(t => second.includes(t)).length, 0, 'the shuffle shows different topics')
+  const topics = async () => (await p.locator('.topic-row .chip').allInnerTexts()).filter(Boolean)       // (the shuffle button has no text)
+  const first = await topics(); await p.click('[aria-label="More topic ideas"]')
+  const second = await topics(); assert.equal(first.filter(t => second.includes(t)).length, 0, 'the shuffle shows different topics')
   await p.click('.topic-row .chip >> nth=0'); assert.equal(await p.locator('.topic-row').count(), 0)
   await p.fill('[aria-label="Journal entry"]', 'plain text'); await p.evaluate(() => { const a = document.querySelector('[aria-label="Journal entry"]'); a.focus(); a.setSelectionRange(0, 5) })
   await p.click('[aria-label=Bold]'); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '**plain** text')
@@ -1231,7 +1232,7 @@ test('widgets (iPhone app): the app keeps the widget snapshot fresh, applies moo
 
 test('breathing is an immersive full-screen scene: Wobbi swells and settles with the breath, the colour follows the phase, the native tab bar steps aside, sound can be muted, leaving works', async () => {
   const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
-  await p.waitForSelector('html.native-tabs'); await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'breathe' })); await p.click('button:has-text("Start")'); await p.waitForSelector('.breath-scene')
+  await p.waitForSelector('html.native-tabs'); await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'breathe' })); await p.click('.tech >> text=Box'); await p.click('button:has-text("Start")'); await p.waitForSelector('.breath-scene')
   const vp = p.viewportSize(), box = await p.locator('.breath-scene').boundingBox()
   assert.deepEqual([box.x, box.y, Math.round(box.width), Math.round(box.height)], [0, 0, vp.width, vp.height], 'covers the whole screen')
   await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === true)
@@ -1240,7 +1241,7 @@ test('breathing is an immersive full-screen scene: Wobbi swells and settles with
   const a = await pal(); await p.waitForTimeout(2500); const b = await pal()
   assert.ok(b > a + 0.05, `Wobbi grows while breathing in (${a} → ${b})`)
   await p.waitForSelector('.breath-bar >> text=Muted'); await p.click('[aria-label="Turn tones on"]'); await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted')
-  assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 12/)
+  assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 8/)
   await p.waitForTimeout(8000); await p.waitForSelector('.breath-scene[data-phase=hold1]')                // box 4: 4 s in, then a hold
   await p.click('button:has-text("End session")'); await p.waitForSelector('.breath-scene', { state: 'detached' })
   await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
