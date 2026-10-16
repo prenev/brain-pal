@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, ChevronRight, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Emoji } from '../lib/emoji'
@@ -16,7 +16,11 @@ import { JournalList } from '../components/Journal'
 import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
-import { PalTip, resetTips } from '../components/Pal'
+import { useOpenPaywall } from '../components/Pro'
+import { usePro } from '../lib/proStore'
+import { resetTips } from '../components/Pal'
+import WhatsNew from '../components/WhatsNew'
+import { RELEASES } from '../lib/whatsnew.ts'
 import { resetCoach } from '../components/Coach'
 import Guard from '../components/Guard'
 import { loadGuard } from '../lib/extras'
@@ -34,13 +38,17 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 }
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
-  const { mode, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
+  const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
   const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
   const [msg, setMsg] = useState('')
   const [tipsBack, setTipsBack] = useState(false)
+  const [showNews, setShowNews] = useState(false)
+  useEffect(() => { if (mode !== 'cloud' && view === 'account') setView(null) }, [mode, view])     // signed out: leave the account page
+  const { pro } = usePro()
+  const openPaywall = useOpenPaywall()
   const photos = thoughts.flatMap(t => t.photos)
   const meta = session?.user.user_metadata?.name as string | undefined
   const name = meta || session?.user.email?.split('@')[0]
@@ -169,15 +177,17 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
 
   return (
     <>
+      {showNews && <WhatsNew releases={RELEASES.slice(0, 1)} onClose={() => setShowNews(false)} />}
       <div className="topbar">
         <span className="glass round"><Emoji name="gear" size={28} /></span>
         <span className="title">More</span>
         <span className="glass pill-btn">{name ? `Hi, ${name}` : 'Hi there'}</span>
       </div>
 
-      <PalTip id="more" pose="idle">Reminders, Apple Health, your account and everything else live here.</PalTip>
       <div className="list">
+        <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Brain Pal Pro" value={pro ? 'Active' : 'Upgrade'} onClick={() => openPaywall()} />
         {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
+        {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value={pro ? 'Off' : 'Pro'} onClick={() => (pro ? openLogin() : openPaywall('sync'))} />}
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />
@@ -192,6 +202,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       <div className="list">
         <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
+        <Row icon={<Emoji name="tada" size={30} />} color="var(--card2)" label="What’s new" onClick={() => setShowNews(true)} />
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="About & legal" onClick={() => setView('legal')} />
         {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={doSignOut} />}
       </div>

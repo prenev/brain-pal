@@ -108,6 +108,9 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 2. Capacitor iOS shell: native haptics, HealthKit mindful minutes
 3. Insights: emotion trends, before/after intensity
 
+## Offline first, optional Pro
+No account is needed: the app opens straight on Home and everything works on the device. **Brain Pal Pro** (optional monthly subscription on iPhone) adds sync across devices, Focus guard, sleep insights, weekly/monthly summaries, proof of progress and more anchors. The SOS siren, breathing, crisis support, check-ins, journal and data export are always free. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
+
 ## Home & Pal's tips
 Home's tools strip scrolls sideways: **Thoughts** (all thought entries, month by month, with search) leads, then Journal, Worry time, Focus guard, Sleep, Progress, Summary and Coins. Each section opens with a one-line tip from Pal (dismiss it once and it stays away; More → "Show Pal's tips again"). The app starts on a splash with Pal instead of a bare loading text.
 

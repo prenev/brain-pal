@@ -31,7 +31,7 @@ const STRUCTURED = { situation: 'Presentation tomorrow', thought: 'I will mess i
 /** Fresh browser context + page with error capture and a mocked Gemini API. */
 const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filter(c => c.plugin === a && (!b || c.method === b)), [plugin, method])
 
-async function open(seed, { native = false, time = null, onboarding = false, reply = null, coach = false } = {}) {
+async function open(seed, { native = false, time = null, onboarding = false, reply = null, coach = false, pro = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
   if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })   // the first-run screens have their own test
   if (!coach) await ctx.addInitScript(() => { try { localStorage.setItem('bp.coach.done', '1') } catch { /* ignore */ } })   // Pal's corner coach has its own test
@@ -53,7 +53,9 @@ async function open(seed, { native = false, time = null, onboarding = false, rep
     return json({ error: { message: 'unexpected request' } }, 400)
   })
   if (native) await ctx.addInitScript(nativeStub)
-  if (native && reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
+  if (pro) await ctx.addInitScript(() => { try { localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: 4102444800000, checkedAt: Date.now() })) } catch { /* ignore */ } })   // Pro is tested on its own; everything else runs unlocked
+  if (native && pro) await ctx.addInitScript(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.proStatus': { active: true, until: 4102444800000 } } })
+  if (native && reply) await ctx.addInitScript(r => { window.__reply = { ...(window.__reply ?? {}), ...r } }, reply)
   if (seed) await ctx.addInitScript(([k, v]) => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, ['seed', seed])
   const page = await ctx.newPage()
   const errors = []
@@ -384,7 +386,7 @@ test('Summary: plain-language day / week / month recap you can share', async () 
   const s = await open({ 'bp.thoughts': [rec('a', 0, { mood: 2 }), rec('b', 1, { mood: 4, emotions: [{ name: 'happy', intensity: 60 }] }), rec('c', 3, { mood: 5, emotions: [{ name: 'happy', intensity: 60 }] })],
     'bp.sessions': [calm('s1', 1, 8, 5)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
   await p.evaluate(() => { navigator.share = async d => { window.__shared = d } })
-  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")')
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")'); await p.click('.seg[aria-label="Summary range"] >> text=This week')
   const card = p.locator('.summary')
   await card.locator('text=You showed up on 3 of 7 days and wrote 3 entries.').waitFor()
   assert.match(await card.innerText(), /Feelings that came up most: happy and anxious\./); assert.match(await card.innerText(), /1 calming session \(2 minutes\), and your anxiety dropped by 3 points/)
@@ -393,7 +395,7 @@ test('Summary: plain-language day / week / month recap you can share', async () 
   await p.click('[role=tab]:has-text("This week")'); await p.click('button:has-text("Share")')
   const shared = await p.evaluate(() => window.__shared); assert.match(shared.text, /^My week\n/); assert.match(shared.text, /• You showed up on 3 of 7 days/); assert.match(shared.text, /not medical advice/)
   await done(s)
-  const quiet = await open(); await tab(quiet.page, 'Stats'); await quiet.page.click('[role=tab]:has-text("Summary")')
+  const quiet = await open(); await tab(quiet.page, 'Stats'); await quiet.page.click('[role=tab]:has-text("Summary")'); await quiet.page.click('.seg[aria-label="Summary range"] >> text=This week')
   await quiet.page.waitForSelector('text=Nothing logged this week — that’s okay'); await done(quiet)
 })
 
@@ -694,7 +696,7 @@ test('cloud sync: data that predates sync is pushed on first sign-in; sign-out c
   assert.ok(await a.evaluate(() => (JSON.parse(localStorage.getItem('bp.journal') ?? '[]')).length) >= 2, 'declining keeps your data on the device')
 
   account.down = false; await a.click('[aria-label="Sync status"] >> button:has-text("Sync now")'); await a.waitForSelector('[aria-label="Sync status"] >> text=Everything is saved')
-  await a.click('button:has-text("Sign out")'); await a.waitForSelector('form.card')
+  await a.click('button:has-text("Sign out")'); await a.waitForSelector('.li >> text=Sync across devices')   // back to offline mode, nothing on this device
   for (const k of ['bp.journal', 'bp.purchases', 'bp.sync.meta', 'bp.anchors', 'bp.rituals']) assert.equal(await a.evaluate(key => localStorage.getItem(key), k), null, `${k} is cleared on sign-out`)
   assert.equal(await a.evaluate(() => document.documentElement.style.getPropertyValue('--accent')), '', 'theme reset')
   await done(A)
@@ -1111,7 +1113,7 @@ test('Pal tips: every section has one short tip, dismissing sticks, and More bri
   const s = await open({ 'bp.thoughts': [rec('t1', 0)], 'bp.journal': [] }); const p = s.page
   const tip = () => p.locator('.pal-tip .bubble').first().innerText()
     assert.equal(await p.locator('.pal-tip').count(), 0, 'Home itself has no tip: Pal’s corner coach covers it')
-  for (const [t, re] of [['Calendar', /Tap a day/], ['Stats', /Patterns show up/], ['Breathe', /follow the circle/], ['More', /live here/]]) { await tab(p, t); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, t) }
+  for (const [t, re] of [['Calendar', /Tap a day/], ['Breathe', /follow the circle/]]) { await tab(p, t); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, t) }
   await tab(p, 'Stats')
   for (const [v, re] of [['Progress', /Skills grow/], ['Summary', /plain words/], ['Sleep', /sleep and mood|Apple Health/]]) { await p.click(`[role=tab]:has-text("${v}")`); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, v) }
   await tab(p, 'Home')
@@ -1146,10 +1148,11 @@ test('SOS is a siren in the action bar (Home, Breathe) and nowhere else in the f
 
 test('Pal’s corner coach: first visit only, three bubbles in the bottom-right, skippable, never again; More can bring it back', async () => {
   const s = await open(null, { coach: true }); const p = s.page
-  await p.waitForSelector('.coach'); assert.match(await p.locator('.coach').innerText(), /tap a face/)
+  await p.waitForSelector('.coach'); assert.match(await p.locator('.coach').innerText(), /red SOS siren/)
   const box = await p.$eval('.coach', el => { const r = el.getBoundingClientRect(); return { right: r.right, top: r.top, w: innerWidth, h: innerHeight } })
   assert.ok(box.right > box.w - 20 && box.top > box.h * 0.4, `bubble + Pal sit in the bottom-right corner ${JSON.stringify(box)}`)
   assert.ok(await p.locator('.coach .pal svg').count(), 'Pal is there')
+  await p.click('.coach button:has-text("Next")'); await p.waitForSelector('.coach >> text=tap a face')
   await p.click('.coach button:has-text("Next")'); await p.waitForSelector('.coach >> text=Swipe the row of tools')
   await p.click('.coach button:has-text("Next")'); await p.waitForSelector('.coach >> text=red siren'); await p.click('.coach button:has-text("Got it")')
   assert.equal(await p.locator('.coach').count(), 0)
@@ -1158,6 +1161,82 @@ test('Pal’s corner coach: first visit only, three bubbles in the bottom-right,
   await tab(p, 'More'); await p.click('button:has-text("Show Pal’s tips again")'); await tab(p, 'Home'); await p.waitForSelector('.coach')
   await p.click('.coach button:has-text("Skip")'); assert.equal(await p.locator('.coach').count(), 0)
   await done(s)
+})
+
+const lockOf = p => p.locator('.pro-lock')
+test('Pro (web): features show a friendly lock, the paywall says Pro lives in the iPhone app, and safety is never locked', async () => {
+  const s = await open(null, { pro: false }); const p = s.page
+  assert.equal(await p.locator('[aria-label^="Anxious right now"]').count(), 1, 'SOS is always there')
+  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Focus guard/)
+  await p.click('.pro-lock button:has-text("Unlock with Pro")'); await p.waitForSelector('[aria-label="Brain Pal Pro"]')
+  assert.match(await p.locator('[aria-label="Brain Pal Pro"]').innerText(), /Pro is part of the iPhone app/); assert.equal(await p.locator('button:has-text("Subscribe"), button:has-text("Start free trial")').count(), 0, 'no purchase button on the web')
+  await p.click('[aria-label="Brain Pal Pro"] [aria-label=Close]'); await p.click('[aria-label=Back]')
+  // always free: breathing, SOS flow, export, support
+  await tab(p, 'Breathe'); await p.waitForSelector('button:has-text("Start")'); await p.click('[aria-label^="Anxious right now"]'); await p.waitForSelector('input[aria-label="Anxiety right now, 0 to 10"]'); await p.click('[aria-label=Close]')
+  await tab(p, 'More'); for (const r of ['Export data', 'Get support']) assert.equal(await p.locator(`.li:has-text("${r}")`).count(), 1, `${r} stays free`)
+  await done(s)
+})
+
+test('Pro (iPhone): gates sit exactly where promised, the paywall shows price, trial, disclosure and links; buying unlocks; cancelling and restoring behave', async () => {
+  const s = await open({ 'bp.anchors': ['a', 'b', 'c'].map((l, i) => ({ id: l, label: 'Anchor ' + l, order: i })), 'bp.thoughts': [rec('t', 0)] }, { native: true, pro: false, time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  // free: levels + Today summary + 3 anchors; locked: proof, week/month, sleep, guard, a 4th anchor, sync
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('h2:has-text("Your skills")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Proof you’re improving/)
+  await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('.summary'); await p.click('.seg[aria-label="Summary range"] >> text=This week'); await p.waitForSelector('.pro-lock'); assert.equal(await p.locator('.summary').count(), 0)
+  await p.click('.seg[aria-label="Summary range"] >> text=Today'); await p.waitForSelector('.summary')
+  await p.click('[role=tab]:has-text("Sleep")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Sleep insights/)
+  await tab(p, 'Home'); await p.click('text=Edit'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /More than 3 daily anchors/); await p.click('button:has-text("Done")')
+  await tab(p, 'More')
+  // paywall
+  await p.click('.li >> text=Brain Pal Pro'); await p.waitForSelector('[aria-label="Brain Pal Pro"]')
+  const wall = p.locator('[aria-label="Brain Pal Pro"]'); const txt = await wall.innerText()
+  assert.match(txt, /7-day free trial, then \$4\.99 per month/); assert.match(txt, /auto-renewing subscription/); assert.match(txt, /cancel at least 24 hours/); assert.match(txt, /Always free, for everyone/); assert.match(txt, /SOS siren/)
+  assert.ok(await wall.locator('a:has-text("Terms of Service")').count() && await wall.locator('a:has-text("Privacy Policy")').count() && await wall.locator('a:has-text("standard EULA")').count(), 'terms, privacy and EULA links are on the paywall')
+  assert.equal(await wall.locator('button:has-text("Restore purchases")').count(), 1); assert.equal(await wall.locator('button:has-text("Start free trial")').count(), 1)
+  await wall.locator('button:has-text("Restore purchases")').click(); await wall.locator('text=No active Pro subscription').waitFor()
+  await wall.locator('button:has-text("Start free trial")').click(); await p.waitForFunction(() => window.__native.some(c => c.method === 'proPurchase'))      // stub says cancelled: nothing changes
+  assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.pro') ?? 'null')?.active ?? false), false, 'cancelling does not unlock')
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.proPurchase': { status: 'purchased', active: true, until: Date.now() + 30 * 864e5 } } })
+  await wall.locator('button:has-text("Start free trial")').click(); await p.waitForSelector('text=You’re Pro. Thank you!'); await p.click('button:has-text("Continue")')
+  assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.pro')).active), true)
+  await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForFunction(() => !document.querySelector('.pro-lock'))
+  await done(s)
+})
+
+test('Pro (iPhone): an ended subscription locks again (the store is the authority), and being offline never locks you out early', async () => {
+  const s = await open(null, { native: true, pro: false, reply: { 'Mindful.proStatus': { active: false } } }); const p = s.page
+  await p.evaluate(() => localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: Date.now() + 864e5, checkedAt: Date.now() })))
+  await reload(p); await p.waitForFunction(() => JSON.parse(localStorage.getItem('bp.pro')).active === false)                 // the App Store says it ended
+  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.pro-lock'); await done(s)
+  const t = await open(null, { native: true, pro: false, reply: { 'Mindful.proStatus': { __reject: 'OFFLINE', message: 'no network' } } }); const q = t.page
+  await q.evaluate(() => localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: Date.now() + 864e5, checkedAt: Date.now() })))
+  await reload(q); await q.click('.tool >> text=Focus guard'); await q.waitForSelector('text=Not available in this build'); assert.equal(await q.locator('.pro-lock').count(), 0, 'cached Pro survives an unreachable store')
+  await done(t)
+})
+
+test('offline first: the app needs no account; sign-in is an optional Pro step you can walk away from', async () => {
+  const A = await openCloud({ signedIn: false }); const a = A.page
+  await a.click('button:has-text("Not now — keep using it offline")'); await tab(a, 'Home'); await a.waitForSelector('[aria-label="Log mood: good"]')
+  await a.click('[aria-label="Log mood: good"]'); await a.waitForSelector('.entry'); await tab(a, 'More')
+  assert.equal(await a.locator('.li:has-text("Sync across devices")').count(), 1); assert.equal(await a.locator('.li:has-text("Storage") .val').innerText(), 'This device')
+  assert.equal(await a.locator('button:has-text("Sign out")').count(), 0, 'nothing to sign out of')
+  await done(A)
+  const B = await openCloud({ signedIn: false, pro: false, gotoLogin: false }); const b = B.page            // not Pro: sync is part of Pro and opens the paywall, not the sign-in form
+  await tab(b, 'More'); assert.match(await b.locator('.li:has-text("Sync across devices") .val').innerText(), /Pro/); await b.click('.li >> text=Sync across devices')
+  await b.waitForSelector('[aria-label="Brain Pal Pro"]'); assert.equal(await b.locator('form.card').count(), 0, 'no sign-in form without Pro'); await b.click('[aria-label="Brain Pal Pro"] [aria-label=Close]')
+  await done(B)
+})
+
+test('What’s new: shown once after an update (not on a fresh install), reachable from More; no scroll bars; no streak box', async () => {
+  const fresh = await open(); await fresh.page.waitForSelector('.topbar'); assert.equal(await fresh.page.locator('[aria-label="What’s new"]').count(), 0, 'fresh install: first-run covers it')
+  assert.equal(await fresh.page.evaluate(() => localStorage.getItem('bp.seenVersion')), '1.0.0')
+  assert.equal(await fresh.page.evaluate(() => getComputedStyle(document.documentElement, '::-webkit-scrollbar').display), 'none', 'an app, not a website: no scroll bars')
+  await tab(fresh.page, 'Stats'); assert.equal(await fresh.page.locator('.chain .total').count(), 0, 'the streak box is gone from Days in a Row')
+  await tab(fresh.page, 'More'); await fresh.page.click('.li >> text=What’s new'); await fresh.page.waitForSelector('[aria-label="What’s new"] >> text=Meet Pal'); await fresh.page.click('button:has-text("Got it")'); await done(fresh)
+  const upd = await open(); await upd.page.evaluate(() => localStorage.setItem('bp.seenVersion', '0.9.0')); await reload(upd.page)
+  await upd.page.waitForSelector('[aria-label="What’s new"]'); assert.match(await upd.page.locator('[aria-label="What’s new"]').innerText(), /Focus guard/)
+  await upd.page.click('button:has-text("Got it")'); assert.equal(await upd.page.evaluate(() => localStorage.getItem('bp.seenVersion')), '1.0.0')
+  await reload(upd.page); await upd.page.waitForSelector('.topbar'); assert.equal(await upd.page.locator('[aria-label="What’s new"]').count(), 0, 'once only')
+  await done(upd)
 })
 
 test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {
@@ -1183,7 +1262,7 @@ const SESSION = { access_token: JWT, refresh_token: 'rt', token_type: 'bearer', 
 const DOC_KINDS = ['journal', 'anchor', 'anchor_check', 'focus', 'manual_night', 'purchase', 'rituals', 'theme']
 /** A fake `user_docs` table shared by every "device" that is given the same object. It enforces the same rules as the real table. */
 const fakeAccount = () => ({ rows: new Map(), down: false, posts: 0 })
-async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply, signedIn = false, account = null, seed = null } = {}) {
+async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply, signedIn = false, account = null, seed = null, pro = true, gotoLogin = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const seen = { token: [], authorize: [] }
   await ctx.route('http://127.0.0.1:9/**', route => {
@@ -1214,15 +1293,18 @@ async function openCloud({ providers = { email: true, google: true, apple: true 
   })
   if (native) {
     await ctx.addInitScript(nativeStub)
-    if (reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
+    if (pro) await ctx.addInitScript(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.proStatus': { active: true, until: 4102444800000 } } })
+    if (reply) await ctx.addInitScript(r => { window.__reply = { ...(window.__reply ?? {}), ...r } }, reply)
   }
-  await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })
+  await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1') } catch { /* ignore */ } })
+  if (pro) await ctx.addInitScript(() => { try { localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: 4102444800000, checkedAt: Date.now() })) } catch { /* ignore */ } })
   if (signedIn) await ctx.addInitScript(sess => { if (!localStorage.getItem('sb-127-auth-token')) localStorage.setItem('sb-127-auth-token', JSON.stringify(sess)) }, SESSION)
   if (seed) await ctx.addInitScript(v => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, seed)
   const page = await ctx.newPage(); const errors = []
   page.on('pageerror', e => errors.push('pageerror: ' + e.message))
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push('console: ' + m.text()) })
-  await page.goto('http://localhost:4177'); await page.waitForSelector(signedIn ? '.topbar' : 'form.card')
+  await page.goto('http://localhost:4177'); await page.waitForSelector('.topbar')
+  if (!signedIn && gotoLogin) { await page.click('.tab >> text=More'); await page.click('.li >> text=Sync across devices'); await page.waitForSelector('form.card') }   // offline first: the account is optional and opened on purpose
   opened.push(page)
   return { ctx, page, errors, seen }
 }

@@ -7,6 +7,7 @@ export const coachDone = () => { try { return !!localStorage.getItem(KEY) } catc
 export const resetCoach = () => { try { localStorage.removeItem(KEY) } catch { /* ignore */ } window.dispatchEvent(new Event('bp:coach-reset')) }
 
 const STEPS: { pose: PoseName; text: string }[] = [
+  { pose: 'stop', text: 'In an emergency, or when anxiety spikes, tap the red SOS siren at the top. It guides you through, and it’s always free.' },
   { pose: 'wave', text: 'Hi! To check in, just tap a face on the home card. That’s the whole thing.' },
   { pose: 'idle', text: 'Swipe the row of tools sideways for your thoughts, journal, sleep, progress and more.' },
   { pose: 'think', text: 'Tap + whenever you want to write, park a worry or breathe. The red siren up top is for when anxiety spikes.' },

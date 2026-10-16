@@ -12,7 +12,7 @@ type Mode = 'signin' | 'signup' | 'link' | 'forgot' | 'recovery'
 const TITLES: Record<Mode, string> = { signin: 'Welcome back', signup: 'Create your account', link: 'Email me a link', forgot: 'Reset password', recovery: 'Choose a new password' }
 
 export default function Login() {
-  const { recovery, clearRecovery } = useStore()
+  const { recovery, clearRecovery, closeLogin } = useStore()
   const [mode, setMode] = useState<Mode>(recovery ? 'recovery' : 'signin')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -99,6 +99,10 @@ export default function Login() {
           </>}
           {mode !== 'signin' && mode !== 'recovery' && <a href="#" onClick={e => { e.preventDefault(); go('signin') }} style={{ color: 'var(--accent)' }}>Back to sign in</a>}
         </div>
+        {mode !== 'recovery' && <>
+          <p className="muted small" style={{ textAlign: 'center', margin: '16px 0 6px' }}>You don’t need an account. Brain Pal works fully on this device; an account only syncs it between your devices.</p>
+          <button type="button" className="btn block" onClick={closeLogin}>Not now — keep using it offline</button>
+        </>}
       </form>
     </div>
   )

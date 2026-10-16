@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Lock, LockOpen, X } from 'lucide-react'
 import Pal, { PalSays } from './Pal'
+import { ProGate } from './Pro'
 import BreathRunner from './BreathRunner'
 import { Toggle } from './ui'
 import { burst } from '../lib/confetti'
@@ -33,7 +34,9 @@ export function useGuardRelock() {
 }
 
 /** More → Focus guard: setup, status, and the way to earn time. */
-export default function Guard() {
+export default function Guard() { return <ProGate feature="guard"><GuardSetup /></ProGate> }
+
+function GuardSetup() {
   const { config, update, events, record } = useGuardState()
   const [status, setStatus] = useState<GuardStatus | null>(null)
   const [msg, setMsg] = useState('')

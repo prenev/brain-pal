@@ -20,7 +20,7 @@ export const loadAnchors = (): Anchor[] => {
   const raw = read<unknown>(K_ANCHORS, [])
   if (!Array.isArray(raw)) return []
   return raw.filter((a): a is Anchor => !!a && typeof a.id === 'string' && typeof a.label === 'string')
-    .map(a => ({ ...a, emoji: a.emoji ?? 'sparkles', link: a.link ?? null, order: a.order ?? 0, archivedAt: a.archivedAt ?? null }))
+    .map(a => ({ ...a, createdAt: a.createdAt ?? new Date().toISOString(), emoji: a.emoji ?? 'sparkles', link: a.link ?? null, order: a.order ?? 0, archivedAt: a.archivedAt ?? null }))
 }
 export const saveAnchors = (a: Anchor[]) => write(K_ANCHORS, a)
 

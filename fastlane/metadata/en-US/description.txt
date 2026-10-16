@@ -34,8 +34,14 @@ REMINDERS THAT RESPECT YOU
 SLEEP (OPTIONAL)
 • Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Brain Pal only reads sleep, only if you allow it, and it never leaves your device.
 
+BRAIN PAL PRO (OPTIONAL MONTHLY SUBSCRIPTION)
+• Unlock sync across devices, Focus guard, sleep insights, weekly and monthly summaries, proof of progress and more daily anchors.
+• The SOS siren, breathing, crisis support, check-ins, journal, worry time, reminders and exporting your data are always free.
+• Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically each month unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings → your name → Subscriptions.
+• Terms of Service: https://prenev.github.io/brain-pal/terms.html · Privacy Policy: https://prenev.github.io/brain-pal/privacy.html
+
 PRIVATE BY DESIGN
-• Everything stays on your device by default. An account is optional and only adds sync.
+• Works fully offline with no account. Everything stays on your device by default; an account is optional and only adds sync.
 • No ads. No analytics. No tracking. We never sell your data.
 • AI helpers are off by default and use your own key. Anything that looks like self-harm is never sent to an AI; support options are shown instead.
 

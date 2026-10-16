@@ -24,6 +24,12 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Stats → Sleep → *Connect Apple Health sleep*: last night's hours and (with a Watch) Deep/REM/Core match what the Health app shows *(Phase 10)*
 - [ ] Delete-account function end-to-end on a throwaway account
 
+## Brain Pal Pro (docs/MONETIZATION.md)
+- [ ] App Store Connect: **Paid Apps Agreement + bank + tax**; create subscription group *Brain Pal Pro* with **com.brainpal.app.pro.monthly** ($4.99/month, 1-week free trial), attach it to the version you submit
+- [ ] Create a **sandbox tester**, buy / cancel / restore on your iPhone (or use `ios-native/BrainPal.storekit` in Xcode), tell me anything odd
+- [ ] Apply for the **App Store Small Business Program** (15% fee)
+- [ ] Decide the price (suggested $4.99/month; annual plan next)
+
 ## Focus guard (docs/SCREENTIME.md)
 - [ ] Dev test on your iPhone: `npm run ios:sync && npm run ios:screentime`, then More → Focus guard: allow → choose apps → on → open a chosen app (shield) → earn time → opens
 - [ ] **Request Apple's Family Controls (Distribution) entitlement** (link in docs/SCREENTIME.md) before any TestFlight/App Store build that includes the guard; until then upload builds WITHOUT `ios:screentime`

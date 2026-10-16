@@ -22,6 +22,10 @@ import FocusFlow from './components/FocusFlow'
 import Onboarding from './components/Onboarding'
 import Splash from './components/Splash'
 import Coach, { coachDone } from './components/Coach'
+import WhatsNew, { markSeen, seenVersion } from './components/WhatsNew'
+import { unseenReleases } from './lib/whatsnew.ts'
+import { APP_VERSION } from './lib/appInfo.ts'
+import { PaywallProvider, usePaywallOpen } from './components/Pro'
 import Sleep from './components/Sleep'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
@@ -40,13 +44,15 @@ const TABS: { id: Tab; label: string; icon: LucideIcon; symbol: string }[] = [  
 const NATIVE_ITEMS = TABS.map(({ id, label, symbol }) => ({ id, label, symbol }))
 
 function Shell() {
-  const { ready, needsLogin, recovery, levels, coins, thoughts, sessions, worries, journal, anchors } = useStore()
+  const { ready, loginOpen, recovery, levels, coins, thoughts, sessions, worries, journal, anchors } = useStore()
   const hasData = thoughts.length + sessions.length + worries.length + journal.length + anchors.length > 0
   const [onboarded, setOnboarded] = useState(() => { try { return !!localStorage.getItem('bp.onboarded') } catch { return true } })
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
   useGuardRelock()
   const [coached, setCoached] = useState(coachDone)
+  const [news, setNews] = useState(() => unseenReleases(seenVersion(), APP_VERSION))
+  useEffect(() => { if (seenVersion() === null) markSeen(APP_VERSION) }, [])      // fresh install: first run already explains everything
   useEffect(() => { const back = () => setCoached(false); window.addEventListener('bp:coach-reset', back); return () => window.removeEventListener('bp:coach-reset', back) }, [])
   const [coinToast, setCoinToast] = useState<{ n: number; id: number } | null>(null)
   const lastCoins = useRef<number | null>(null)
@@ -85,7 +91,7 @@ function Shell() {
 
   // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
   useEffect(() => {
-    if (!ready || needsLogin || recovery || cel) return
+    if (!ready || loginOpen || recovery || cel) return
     let seen: Partial<Record<SkillId, number>> | null = null
     try { seen = JSON.parse(localStorage.getItem('bp.levels.seen') ?? 'null') } catch { /* ignore */ }
     const save = (v: Partial<Record<SkillId, number>>) => { try { localStorage.setItem('bp.levels.seen', JSON.stringify(v)) } catch { /* ignore */ } }
@@ -98,14 +104,15 @@ function Shell() {
     if (!up) return
     const def = SKILLS.find(s => s.id === up.skill)!
     setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count) })
-  }, [ready, needsLogin, recovery, cel, levels])
+  }, [ready, loginOpen, recovery, cel, levels])
 
   // iPhone app: the real UIKit tab bar. Hidden whenever a sheet / full-screen flow is open or before the app proper shows.
-  const overlayOpen = !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
-  const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || needsLogin || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
+  const paywallOpen = usePaywallOpen()
+  const overlayOpen = paywallOpen || !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || loginOpen || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
   if (!ready) return <Splash />
-  if (needsLogin || recovery) return <Login />
+  if (loginOpen || recovery) return <Login />
   if (!onboarded && !hasData) return <Onboarding onDone={finishOnboarding} />
 
   const start = (d: Date) => { setMenu(false); setOtherDay(false); setComposeAt(d) }
@@ -170,7 +177,8 @@ function Shell() {
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
-      {tab === 'entries' && !overlayOpen && !coached && <Coach onDone={() => setCoached(true)} />}
+      {news.length > 0 && onboarded && <WhatsNew releases={news} onClose={() => { markSeen(APP_VERSION); setNews([]) }} />}
+      {tab === 'entries' && !overlayOpen && !coached && news.length === 0 && <Coach onDone={() => setCoached(true)} />}
       {coinToast && <div className="coin-toast" role="status"><Emoji name="star" size={20} /> +{coinToast.n} {coinToast.n === 1 ? 'coin' : 'coins'}</div>}
       {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
@@ -178,5 +186,5 @@ function Shell() {
 }
 
 export default function App() {
-  return <StoreProvider><Shell /></StoreProvider>
+  return <StoreProvider><PaywallProvider><Shell /></PaywallProvider></StoreProvider>
 }

@@ -1,4 +1,3 @@
-import { PalTip } from '../components/Pal'
 import { useMemo, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
@@ -89,7 +88,6 @@ function Insights() {
 
   return (
     <>
-      <PalTip id="insights" pose="think">Patterns show up after a few check-ins. Keep logging and I’ll point out what I notice.</PalTip>
       <div className="topbar flat">
         <button className="glass round green" aria-label="Previous" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft /></button>
         <span className="title">{monthLabel(month)}</span>
@@ -107,7 +105,6 @@ function Insights() {
               {i === week.length - 1 ? 'Today' : new Date(d + 'T12:00').toLocaleDateString(undefined, { weekday: 'short' })}
             </div>
           ))}
-          <div className="d"><div className="total">{streak.current}</div></div>
         </div>
         <div className="hr" />
         <div className="row"><Emoji name="trophy" size={26} />Longest chain: {streak.longest}</div>

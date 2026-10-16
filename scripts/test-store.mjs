@@ -7,6 +7,7 @@ import { privacy, terms, support, licenses, NOTICES, DOCS, OWNER } from '../src/
 import { APP_VERSION } from '../src/lib/appInfo.ts'
 import { renderDoc, renderSite } from './site-core.mjs'
 import { iconSvg, POSE_NAMES } from '../src/lib/pal.ts'
+import { PRODUCT_ID } from '../src/lib/pro.ts'
 
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url))
 const text = p => read(p).toString('utf8')
@@ -30,6 +31,8 @@ assert.doesNotMatch(LISTING.keywords, /brain|pal/i, 'the app name is already ind
 assert.match(LISTING.description, /not medical care/i); assert.match(LISTING.description, /emergency number/i)
 for (const u of [LISTING.support_url, LISTING.privacy_url, LISTING.marketing_url]) assert.match(u, /^https:\/\//)
 assert.match(LISTING.privacy_url, /\/privacy\.html$/); assert.match(LISTING.support_url, /\/support\.html$/)
+assert.match(LISTING.description, /renews automatically/i); assert.match(LISTING.description, /terms\.html/); assert.match(LISTING.description, /privacy\.html/); assert.match(LISTING.description, /always free/i)
+assert.match(REVIEW.notes, /Restore purchases/); assert.match(REVIEW.notes, /com\.brainpal\.app\.pro\.monthly/)
 assert.match(REVIEW.notes, /no account is needed/i); assert.match(REVIEW.notes, /Delete account/)
 
 /* 3. generated fastlane files equal their source (run `npm run store:meta` after editing scripts/store-metadata.mjs) */
@@ -69,6 +72,10 @@ assert.equal(text('public/icon.svg'), iconSvg(), 'public/icon.svg is stale')
 const sprites = JSON.parse(text('assets/pal-sprites.json')); assert.deepEqual(Object.keys(sprites.poses.frames), POSE_NAMES, 'assets/pal-sprites.json is stale')
 const sheet = png('assets/pal-poses.png'); assert.deepEqual([sheet.w, sheet.h, sheet.color], [1024, Math.ceil(POSE_NAMES.length / 4) * 256, 6], 'pose sheet is 4 columns of 256px with transparency')
 assert.equal(png('assets/pal-animations.png').w, 1024); assert.match(text('public/pal-sprites.svg'), /id="pal-celebrate"/)
+
+/* 6c. Pro: the local StoreKit test file matches the product the app and Swift use */
+const sk = JSON.parse(text('ios-native/BrainPal.storekit')); assert.equal(sk.subscriptionGroups[0].subscriptions[0].productID, PRODUCT_ID); assert.equal(sk.subscriptionGroups[0].subscriptions[0].recurringSubscriptionPeriod, 'P1M')
+assert.match(flat(terms()), /auto-renewing monthly subscription/); assert.match(flat(privacy()), /never see your payment details/)
 
 /* 7. one version everywhere */
 const pbx = text('ios/App/App.xcodeproj/project.pbxproj')

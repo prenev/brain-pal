@@ -28,7 +28,11 @@ import type { BreathSession, NewSession, NewThought, Thought, Worry } from './ty
 interface Ctx {
   ready: boolean
   mode: Repo['mode']
-  needsLogin: boolean
+  /** Offline first: the app never needs an account. These only drive the optional "sync across devices" sign-in. */
+  cloudAvailable: boolean
+  loginOpen: boolean
+  openLogin(): void
+  closeLogin(): void
   session: Session | null
   recovery: boolean
   clearRecovery(): void
@@ -93,6 +97,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [worries, setWorries] = useState<Worry[]>([])
   const [loaded, setLoaded] = useState(false)
   const [recovery, setRecovery] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
   const [anchors, setAnchors] = useState<Anchor[]>(loadAnchors)
   const [checks, setChecks] = useState<Set<string>>(loadChecks)
   const [journal, setJournal] = useState<JournalEntry[]>(loadJournal)
@@ -130,8 +135,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  const repo: Repo = supabase ? cloudRepo : localRepo
-  const needsLogin = !!supabase && !authSession
+  // Offline first: everything lives on the device until the person chooses to sign in; then the account is the source of truth.
+  const repo: Repo = supabase && authSession ? cloudRepo : localRepo
 
   const refresh = useCallback(async () => {
     const [t, s, w] = await Promise.all([repo.listThoughts(), repo.listSessions(), repo.listWorries()])
@@ -139,9 +144,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [repo])
 
   useEffect(() => {
-    if (!authChecked || needsLogin) return
+    if (!authChecked) return
     refresh().catch(e => { console.error(e); setLoaded(true) })
-  }, [authChecked, needsLogin, refresh])
+  }, [authChecked, refresh])
+  useEffect(() => { if (authSession) setLoginOpen(false) }, [authSession])      // signed in: close the sign-in screen
 
   const streak = useMemo(() => {
     const days = new Set<string>()
@@ -239,8 +245,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [thoughts])
 
   const value: Ctx = {
-    ready: authChecked && (needsLogin || loaded),
-    mode: repo.mode, needsLogin, session: authSession, recovery, clearRecovery: () => setRecovery(false),
+    ready: authChecked && loaded,
+    mode: repo.mode, cloudAvailable: !!supabase, loginOpen, openLogin: () => setLoginOpen(true), closeLogin: () => setLoginOpen(false), session: authSession, recovery, clearRecovery: () => setRecovery(false),
     async importLocal() {
       const lt = await localRepo.listThoughts(), ls = await localRepo.listSessions(), lw = await localRepo.listWorries()
       const stored: { id: string; photoRefs?: string[]; audio?: { ref: string } | null }[] = JSON.parse(localStorage.getItem('bp.thoughts') ?? '[]')
@@ -332,5 +338,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return 0
     },
   }
+  // Signing in for the first time: move what is already on this device into the account (once, automatically).
+  const importing = useRef(false)
+  useEffect(() => {
+    if (!supabase || !authSession || !loaded || importing.current) return
+    const has = ['bp.thoughts', 'bp.sessions', 'bp.worries'].some(k => { try { return JSON.parse(localStorage.getItem(k) ?? '[]').length > 0 } catch { return false } })
+    if (!has) return
+    importing.current = true
+    value.importLocal().catch(console.error).finally(() => { importing.current = false })
+  }, [authSession, loaded])      // eslint-disable-line react-hooks/exhaustive-deps
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>
 }

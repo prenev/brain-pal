@@ -1,4 +1,6 @@
 import { PalTip } from './Pal'
+import { ProGate } from './Pro'
+import { usePro } from '../lib/proStore'
 import { useMemo } from 'react'
 import Pal from './Pal'
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react'
@@ -18,6 +20,7 @@ function Trend({ t }: { t: NonNullable<ProofCard['trend']> }) {
 /** Skill levels + honest before/after proof + first-time milestones, all computed from your own data. */
 export default function Progress() {
   const { thoughts, sessions, worries, journal, focusSessions } = useStore()
+  const { pro } = usePro()
   const counts = useMemo(() => skillCounts({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
   const cards = useMemo(() => proofCards({ thoughts, sessions, worries }), [thoughts, sessions, worries])
   const marks = useMemo(() => milestones({ thoughts, sessions, worries }), [thoughts, sessions, worries])
@@ -45,17 +48,18 @@ export default function Progress() {
       </div>
 
       <h2 className="sec">Proof you’re improving</h2>
-      {cards.length === 0 && <div className="card empty"><div style={{ display: 'grid', placeItems: 'center', marginBottom: 6 }}><Pal pose="think" size={84} /></div>
+      {!pro && <ProGate feature="proof" compact>{null}</ProGate>}
+      {pro && cards.length === 0 && <div className="card empty"><div style={{ display: 'grid', placeItems: 'center', marginBottom: 6 }}><Pal pose="think" size={84} /></div>
         Your proof appears here as you use the tools. We only draw a comparison once there’s enough of <i>your</i> data — {MIN_OVERALL}+ rated sessions or entries for a first figure, {MIN_POINTS}+ in each of two 30-day windows for a trend.
       </div>}
-      {cards.map(c => (
+      {pro && cards.map(c => (
         <div key={c.id} className="card proof">
           <div className="row spread"><b>{c.title}</b>{c.trend && <Trend t={c.trend} />}</div>
           <div className="big">{c.value}</div>
           <p style={{ margin: 0 }}>{c.sentence}</p>
         </div>
       ))}
-      {cards.length > 0 && <p className="muted small">These are your own trends, not a medical measure — and a bad month says nothing bad about you.</p>}
+      {pro && cards.length > 0 && <p className="muted small">These are your own trends, not a medical measure — and a bad month says nothing bad about you.</p>}
 
       {marks.length > 0 && <>
         <h2 className="sec">Milestones</h2>
