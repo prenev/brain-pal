@@ -13,7 +13,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **P7b** 📄 verify (full e2e + screens), commit, push — first run, reduced motion, tap-target audit; fixed a batch-add anchors bug
+- **UX pass** 🧱 Home tab (Today / Entries / Journal switch), grouped + menu, uniform tab icons, calendar grid fix — verified locally; pending CI + screens review
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -21,6 +21,8 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- Fix: CI flake — anchors e2e crossed midnight UTC (clock pinned)
+- Fix: calendar today cell was squashed (`.today` CSS collided with the Today card)
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time
 - P7b first-run + reduced motion + tap-target audit (found/fixed: adding several anchors in one tick kept only the last)
 - P12 Cloud sync (user_docs, newest-wins + tombstones, offline-safe, sign-out clears device) — migration live, engine mutation-checked, 3 two-device e2e
