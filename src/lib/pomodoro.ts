@@ -3,8 +3,9 @@ import { elapsedMs, remainingMs, startTimer, type Timer } from './focus.ts'
 
 /** Pomodoro rhythm, run state, stats and a tiny to-do list. Pure: the timer itself reuses the timestamp-based Timer in focus.ts. Tested in scripts/test-pomodoro.mjs. */
 export type PomoPhase = 'work' | 'short' | 'long'
-export interface PomoSettings { work: number; short: number; long: number; every: number; autoBreak: boolean; autoFocus: boolean; bell: boolean; goal: number }
-const EXTRA = { autoBreak: true, autoFocus: false, bell: true, goal: 4 }
+/** `block`: the apps you chose stay blocked (iOS Screen Time) while a focus block is on the clock; breaks open them again. */
+export interface PomoSettings { work: number; short: number; long: number; every: number; autoBreak: boolean; autoFocus: boolean; bell: boolean; goal: number; block: boolean }
+const EXTRA = { autoBreak: true, autoFocus: false, bell: true, goal: 4, block: false }
 
 export const POMO_PRESETS: { id: string; name: string; blurb: string; s: PomoSettings }[] = [
   { id: 'classic', name: 'Classic', blurb: '25 · 5', s: { work: 25, short: 5, long: 15, every: 4, ...EXTRA } },
@@ -26,7 +27,7 @@ export function normalizePomo(raw: unknown): PomoSettings {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<PomoSettings>
   const n = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : d)
   const b = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d)
-  return { work: n(r.work, 1, 120, 25), short: n(r.short, 1, 60, 5), long: n(r.long, 1, 90, 15), every: n(r.every, 2, 8, 4), autoBreak: b(r.autoBreak, EXTRA.autoBreak), autoFocus: b(r.autoFocus, EXTRA.autoFocus), bell: b(r.bell, EXTRA.bell), goal: n(r.goal, 1, 12, EXTRA.goal) }
+  return { work: n(r.work, 1, 120, 25), short: n(r.short, 1, 60, 5), long: n(r.long, 1, 90, 15), every: n(r.every, 2, 8, 4), autoBreak: b(r.autoBreak, EXTRA.autoBreak), autoFocus: b(r.autoFocus, EXTRA.autoFocus), bell: b(r.bell, EXTRA.bell), goal: n(r.goal, 1, 12, EXTRA.goal), block: b(r.block, EXTRA.block) }
 }
 
 /* ---- the run (what is on the clock right now); small enough to keep in localStorage so leaving the screen never loses it ---- */
@@ -39,6 +40,9 @@ export function normalizeRun(raw: unknown): PomoRun {
   const ok = !!t && typeof t === 'object' && (t.status === 'running' || t.status === 'paused') && typeof t.totalMs === 'number' && t.totalMs > 0 && typeof t.accumulatedMs === 'number' && t.accumulatedMs >= 0 && (t.status === 'paused' || typeof t.startedAt === 'number')
   return { phase, taskId: typeof r.taskId === 'string' ? r.taskId : null, timer: ok ? { status: t!.status as Timer['status'], totalMs: t!.totalMs!, accumulatedMs: t!.accumulatedMs!, startedAt: t!.status === 'running' ? t!.startedAt! : null } : null }
 }
+
+/** Apps are blocked for a focus block that is on the clock (running or paused: a pause is still part of the block), never in a break or when idle. */
+export const shouldBlock = (run: PomoRun, s: PomoSettings) => s.block && run.phase === 'work' && !!run.timer
 
 /* ---- the clock keeps going while the app is closed ---- */
 export interface Segment { phase: PomoPhase; start: number; end: number }

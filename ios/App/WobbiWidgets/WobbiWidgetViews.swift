@@ -143,7 +143,8 @@ struct WorryJarView: View {
     }
 }
 
-// MARK: 5 · Focus guard (small) + 14 · Focus guard board (large)
+// MARK: 5 · Focus (small) + 14 · Focus board (large). The snapshot keeps the old Focus-guard field names:
+// challenges = blocks today, reps = daily goal, minutes = focused today, enabled/apps = blocking apps during focus.
 
 struct GuardView: View {
     let entry: WobbiEntry
@@ -153,43 +154,43 @@ struct GuardView: View {
             let g = s.focus
             if family == .systemLarge { board(g) } else {
                 ZStack(alignment: .topLeading) {
-                    Pal(g.enabled ? "flex" : "think", size: 66).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).offset(x: 6, y: -18)
+                    Pal(g.challenges > 0 ? "focus" : "holdPlay", size: 70).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).offset(x: 8, y: 6)
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack { Kicker(text: "Brain rot"); Spacer(); Emo("shield", size: 20) }
-                        Text(g.enabled ? "\(g.apps) \(g.apps == 1 ? "app" : "apps") paused" : "Guard is off").font(.w(17, .black)).foregroundStyle(Color.wText).lineLimit(1).minimumScaleFactor(0.7)
-                        Text(g.challenges == 0 ? "No challenges yet today" : "\(g.challenges) beaten today").font(.w(12, .bold)).foregroundStyle(Color.wMuted).lineLimit(2)
-                        Spacer()
-                        HStack(spacing: 3) {
-                            Text(g.reps > 0 ? "\(g.reps)" : "\(g.minutes)").font(.w(28, .black)).foregroundStyle(Color.wGreen)
-                            Text(g.reps > 0 ? "reps" : "min earned").font(.w(11, .bold)).foregroundStyle(Color.wMuted)
+                        Kicker(text: "Focus")
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text("\(g.challenges)").font(.w(34, .black)).foregroundStyle(Color.wGreen)
+                            Text("/\(max(g.reps, 1))").font(.w(15, .black)).foregroundStyle(Color.wMuted)
                         }
+                        Text(g.challenges == 0 ? "No blocks yet today" : "\(g.minutes) min focused").font(.w(12, .bold)).foregroundStyle(Color.wText).lineLimit(1)
+                        Spacer()
+                        if g.enabled { Label("\(g.apps) blocked", systemImage: "lock.fill").font(.w(10, .heavy)).foregroundStyle(Color.wMuted).lineLimit(1) }
                     }
                 }
-                .containerBackground(for: .widget) { WobbiBg.plum }
-                .widgetURL(link("guard"))
+                .containerBackground(for: .widget) { WobbiBg.mint }
+                .widgetURL(link("focus"))
             }
         } else { NeedsApp() }
     }
 
     func board(_ g: WidgetSnapshot.Guard) -> some View {
-        let most = max(g.week.max() ?? 0, 1)
+        let most = max(g.week.max() ?? 0, g.reps, 1)
         let letters = entry.snap?.week.map(\.letter) ?? []
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) { Kicker(text: "Focus guard"); Text("Brain rot, beaten").font(.w(21, .black)).foregroundStyle(Color.wText) }
-                Spacer(); Emo("shield", size: 30)
+                VStack(alignment: .leading, spacing: 2) { Kicker(text: "Focus"); Text(g.challenges >= max(g.reps, 1) ? "Goal met today" : "One block at a time").font(.w(21, .black)).foregroundStyle(Color.wText) }
+                Spacer(); Image(systemName: "timer").font(.system(size: 24, weight: .bold)).foregroundStyle(Color.wGreen)
             }
             HStack(spacing: 12) {
-                Pal(g.challenges > 0 ? "flex" : "think", size: 96)
+                Pal(g.challenges > 0 ? "focus" : "holdPlay", size: 96)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(g.enabled ? "Guarding \(g.apps) \(g.apps == 1 ? "app" : "apps")" : "Guard is off").font(.w(16, .black)).foregroundStyle(g.enabled ? Color.wGreen : Color.wOrange)
-                    Text(g.enabled ? "They stay paused until you earn a few minutes." : "Turn it on in Wobbi to pause the apps that pull you in.").font(.w(13, .semibold)).foregroundStyle(Color.wMuted).fixedSize(horizontal: false, vertical: true)
+                    Text("\(g.challenges) of \(max(g.reps, 1)) blocks").font(.w(16, .black)).foregroundStyle(Color.wGreen)
+                    Text(g.enabled ? "\(g.apps) \(g.apps == 1 ? "app stays" : "apps stay") blocked while a block runs." : "Tap to start a focus block with Wobbi.").font(.w(13, .semibold)).foregroundStyle(Color.wMuted).fixedSize(horizontal: false, vertical: true)
                 }
             }
             HStack(spacing: 8) {
-                Tile { stat("Today", "\(g.challenges)", "challenges") }
-                Tile { stat("Reps", "\(g.reps)", "done") }
-                Tile { stat("Earned", "\(g.minutes)", "minutes") }
+                Tile { stat("Today", "\(g.challenges)", "blocks") }
+                Tile { stat("Focused", "\(g.minutes)", "minutes") }
+                Tile { stat("Week", "\(g.week.reduce(0, +))", "blocks") }
             }
             .frame(height: 78)
             VStack(alignment: .leading, spacing: 4) {
@@ -207,8 +208,8 @@ struct GuardView: View {
                 .frame(height: 64, alignment: .bottom)
             }
         }
-        .containerBackground(for: .widget) { WobbiBg.plum }
-        .widgetURL(link("guard"))
+        .containerBackground(for: .widget) { WobbiBg.mint }
+        .widgetURL(link("focus"))
     }
 
     func stat(_ k: String, _ v: String, _ u: String) -> some View {

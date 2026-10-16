@@ -24,8 +24,7 @@ import { resetTips } from '../components/Pal'
 import WhatsNew from '../components/WhatsNew'
 import { RELEASES } from '../lib/whatsnew.ts'
 import { resetCoach } from '../components/Coach'
-import Guard from '../components/Guard'
-import { loadFx, loadGuard } from '../lib/extras'
+import { loadFx } from '../lib/extras'
 import { APP_VERSION } from '../lib/appInfo.ts'
 import type { JournalEntry } from '../lib/journal.ts'
 import { activeAnchors } from '../lib/anchors.ts'
@@ -41,7 +40,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
   const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard' | 'stickers' | 'feedback'>(initial)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'stickers' | 'feedback'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -129,7 +128,6 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'journal' && <JournalList onOpen={onJournal} onWrite={() => onJournal()} />}
       {view === 'support' && <Support />}
       {view === 'legal' && <Legal />}
-      {view === 'guard' && <Guard />}
       {view === 'stickers' && <Stickers />}
       {view === 'feedback' && <FeedbackSettings />}
       {view === 'ai' && <AiSettings />}
@@ -196,7 +194,6 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />
-        <Row icon={<Emoji name="shield" size={30} />} color="var(--card2)" label="Focus guard" value={loadGuard().enabled ? 'On' : 'Off'} onClick={() => setView('guard')} />
         <Row icon={<Emoji name="worry" size={30} />} color="var(--card2)" label="Worry time" value={worryStats(worries).open ? `${worryStats(worries).open} parked` : ''} onClick={onWorry} />
         <Row icon={<Emoji name="robot" size={30} />} color="var(--card2)" label="AI helper" value={aiEnabled() ? 'On' : 'Off'} onClick={() => setView('ai')} />
         <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />

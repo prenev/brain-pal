@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Search, Siren } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import MoodCard from '../components/MoodCard'
-import { GuardTile, StepNudge, WorryTool } from '../components/HomeTiles'
+import { FocusCard, GroundTool, JournalCard, StepNudge, WorryTool } from '../components/HomeTiles'
 import { fmtDuration } from '../lib/sleep.ts'
 import { AnchorCard, AnchorsManager } from '../components/Anchors'
 import { Screen, Sheet } from '../components/ui'
@@ -14,9 +14,9 @@ import { PalEmpty, PalTip } from '../components/Pal'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
-export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'guard' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus'
+export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'ground' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus'
 
-/** Home, top to bottom: how you feel, today's anchors, Focus guard + Journal, then Worries / Sleep / Focus, then everything logged today. */
+/** Home, top to bottom: how you feel, today's anchors, the big Focus + Journal cards, then Worries / Sleep / Ground, then everything logged today. */
 export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorry, onPark, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onPark: () => void; onStep: () => void }) {
   const { thoughts, deleteThought, streak, coins, sleepNights } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
@@ -25,7 +25,6 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
   const night = sleepNights[0]?.date === todayKey ? sleepNights[0] : null
   const tools: { id: HomeTool; emoji: string; label: string; sub?: string }[] = [
     { id: 'sleep', emoji: 'sleep', label: 'Sleep', sub: night ? fmtDuration(night.asleepMin) : undefined },
-    { id: 'focus', emoji: 'rocket', label: 'Focus' },
   ]
 
   return (
@@ -42,11 +41,8 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       <MoodCard onPick={onCompose} />
       <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
       <div className="home-top">
-        <GuardTile onOpen={() => onTool('guard')} />
-        <button className="card tool home-tile journal-tile" onClick={() => onTool('journal')}>
-          <span className="tile-art" aria-hidden="true"><Emoji name="notebook" size={44} /></span>
-          <span className="tile-body"><b>Journal</b><span className="tile-sub">Write or talk it out.</span></span>
-        </button>
+        <FocusCard onOpen={() => onTool('focus')} />
+        <JournalCard onOpen={() => onTool('journal')} />
       </div>
       <div className="tools-row" role="group" aria-label="Tools">
         <WorryTool onWorry={onWorry} onPark={onPark} />
@@ -55,6 +51,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
             <Emoji name={t.emoji} size={30} /><b>{t.label}</b>{t.sub && <small>{t.sub}</small>}
           </button>
         ))}
+        <GroundTool onOpen={() => onTool('ground')} />
       </div>
       <StepNudge onStep={onStep} />
       {today.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}

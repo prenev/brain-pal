@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { App } from '@capacitor/app'
 import { isNative, Mindful } from './native'
 import { useStore } from './store'
-import { loadGuard, loadGuardEvents } from './extras'
+import { loadGuard, loadPomo } from './extras'
 import { worryStats } from './worries'
 import { buildSnapshot, normalizeActions, planActions } from './widgetData.ts'
 import { parseRouteLink } from './nativeCore'
@@ -15,15 +15,15 @@ const blank = { situation: '', thought: '', emotions: [], internalBehaviour: '',
  * home screen, an anchor ticked, a control that asked to open SOS). Best-effort: widgets must never break the app.
  */
 export function useWidgetSync() {
-  const { ready, thoughts, streak, anchorsToday, worries, sleepNights, coins, sessions, journal, addThought, toggleAnchor } = useStore()
-  const latest = useRef({ thoughts, streak, anchorsToday, worries, sleepNights, coins, sessions, journal, addThought, toggleAnchor })
-  latest.current = { thoughts, streak, anchorsToday, worries, sleepNights, coins, sessions, journal, addThought, toggleAnchor }
+  const { ready, thoughts, streak, anchorsToday, worries, sleepNights, coins, sessions, journal, focusSessions, addThought, toggleAnchor } = useStore()
+  const latest = useRef({ thoughts, streak, anchorsToday, worries, sleepNights, coins, sessions, journal, focusSessions, addThought, toggleAnchor })
+  latest.current = { thoughts, streak, anchorsToday, worries, sleepNights, coins, sessions, journal, focusSessions, addThought, toggleAnchor }
 
   const push = () => {
     const s = latest.current
     const snap = buildSnapshot({
       now: new Date(), thoughts: s.thoughts, streak: s.streak, anchors: s.anchorsToday.items, worriesOpen: worryStats(s.worries).open,
-      nights: s.sleepNights, coins: s.coins, guard: loadGuard(), guardEvents: loadGuardEvents(), sessions: s.sessions, journal: s.journal,
+      nights: s.sleepNights, coins: s.coins, focus: (() => { const p = loadPomo(); return { block: p.block, apps: loadGuard().appCount, goal: p.goal, blocks: s.focusSessions } })(), sessions: s.sessions, journal: s.journal,
     })
     return Mindful.widgetUpdate({ snapshot: JSON.stringify(snap) }).catch(() => {})
   }

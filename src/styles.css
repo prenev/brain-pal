@@ -592,18 +592,29 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .stepper button:disabled { color: #4b5d80; } .stepper b { text-align: center; font-variant-numeric: tabular-nums; }
 .anchors-streak { margin: 8px 0 0; text-align: center; }
 
-/* ---- Home tiles (Focus guard, worries) ---- */
+/* ---- Home: the two big cards (Focus, Journal), drawn like the widgets: gradient, kicker, one big thing, Wobbi in the corner ---- */
+.big-card { position: relative; overflow: hidden; min-height: 200px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; padding: 14px 14px 14px; border-radius: 26px; text-align: left; color: #fff;
+  --c1: #14513e; --c2: #0c2a24; --lip: #082019; --glow: rgba(53,208,127,.38); --cta: var(--accent); --cta-ink: var(--accent-ink); --cta-lip: var(--accent-dark);
+  background: radial-gradient(90% 70% at 100% 100%, var(--glow), transparent 60%), linear-gradient(150deg, var(--c1), var(--c2));
+  border: 2px solid rgba(255,255,255,.09); border-bottom: 5px solid var(--lip); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); transition: transform .08s; }
+button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform: translateY(2px); border-bottom-width: 3px; margin-top: 2px; }
+.big-card.brk { --c1: #2c7fd9; --c2: #163f88; --lip: #0e2c63; --glow: rgba(124,196,255,.4); --cta: #fff; --cta-ink: #163f88; --cta-lip: #b9d6ff; }
+.journal-card { --c1: #3a2f74; --c2: #1b1840; --lip: #120f2e; --glow: rgba(167,139,250,.42); --cta: #a78bfa; --cta-ink: #1e1240; --cta-lip: #7c5fe0; }
+.big-kicker { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.72); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cta); box-shadow: 0 0 0 0 var(--glow); animation: livePulse 1.6s ease-out infinite; }
+@keyframes livePulse { 0% { box-shadow: 0 0 0 0 var(--glow); } 100% { box-shadow: 0 0 0 9px transparent; } }
+.big-title { font-size: 21px; font-weight: 900; line-height: 1.08; letter-spacing: -.01em; }
+.big-num { font-size: 36px; font-weight: 900; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.big-prompt { font-size: 15px; font-weight: 800; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; position: relative; z-index: 1; }
+.big-sub { max-width: 64%; font-size: 12.5px; font-weight: 800; line-height: 1.25; color: rgba(255,255,255,.75); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; position: relative; z-index: 1; }
+.big-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.28); font-size: 11px; font-weight: 900; color: #fff; position: relative; z-index: 1; }
+.big-card { cursor: pointer; } button.big-cta:active { transform: translateY(2px); border-bottom-width: 1px; }
+.big-cta { margin-top: auto; display: inline-flex; align-items: center; gap: 5px; padding: 8px 13px; border-radius: 999px; background: var(--cta); color: var(--cta-ink); font-weight: 900; font-size: 14px; border-bottom: 3px solid var(--cta-lip); position: relative; z-index: 1; }
+.big-art { position: absolute; right: -14px; bottom: -10px; pointer-events: none; filter: drop-shadow(0 8px 12px rgba(0,0,0,.35)); }
+.journal-card .big-art { right: -12px; bottom: -14px; }
+.big-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255,255,255,.12); } .big-bar i { display: block; height: 100%; background: var(--cta); transition: width .5s; }
+@media (max-width: 360px) { .big-card .big-art .pal { width: 92px !important; height: 92px !important; } .big-num { font-size: 30px; } }
 .home-top { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.home-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; text-align: left; padding: 14px; border-radius: 22px; margin: 0; }
-.card.tool.home-tile { flex: none; align-items: flex-start; text-align: left; }
-.tile-main { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; }
-.tile-art { width: 52px; height: 52px; border-radius: 18px; flex: none; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.1); }
-.tile-body { flex: 1; min-width: 0; display: grid; gap: 3px; }
-.tile-body b { font-size: 17px; letter-spacing: -.01em; }
-.tile-sub { color: #b8c4e0; font-size: 13px; font-weight: 700; line-height: 1.3; }
-.tile-sub .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; background: var(--accent); box-shadow: 0 0 8px currentColor; } .dot.lock { color: var(--accent); } .dot.open { background: var(--orange, #ffa63d); color: var(--orange, #ffa63d); }
-.tile-cta { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 9px 13px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #04130a); font-weight: 900; font-size: 14px; border-bottom: 3px solid var(--accent-dark); }
-.tile-go { flex: none; color: var(--muted); }
 .tile-lines { display: grid; gap: 2px; } .tile-lines span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d3dcf2; font-weight: 700; font-size: 14px; } .tile-lines em { font-style: normal; color: var(--muted); font-size: 13px; font-weight: 800; }
 .tile-step { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); text-align: left; font-weight: 700; font-size: 14px; }
 .card.tool small { color: var(--muted); font-size: 11.5px; font-weight: 800; margin-top: -2px; }
@@ -663,4 +674,3 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .tech-go { flex: none; margin-left: auto; color: var(--muted); }
 .tech-hero { display: grid; justify-items: start; } .tech-hero .wave { width: 100%; height: 72px; }
 .tile-step { width: 100%; margin: 0 0 14px; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; }
-.tile-cta { align-self: flex-start; }

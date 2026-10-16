@@ -7,7 +7,7 @@ assert.equal(nextPhase('short', 4, DEFAULT_POMO), 'work'); assert.equal(nextPhas
 assert.equal(nextPhase('work', 3, { ...DEFAULT_POMO, every: 3 }), 'long')
 assert.equal(phaseMinutes('work', DEFAULT_POMO), 25); assert.equal(phaseMinutes('short', DEFAULT_POMO), 5); assert.equal(phaseMinutes('long', DEFAULT_POMO), 15)
 assert.equal(new Set(POMO_PRESETS.map(p => p.id)).size, POMO_PRESETS.length); for (const p of POMO_PRESETS) assert.ok(p.s.work > p.s.short && p.s.long > p.s.short, p.id)
-assert.deepEqual(normalizePomo(null), DEFAULT_POMO); assert.deepEqual(normalizePomo({ work: 9999, short: -5, long: 'x', every: 1, autoFocus: 'yes', goal: 99 }), { work: 120, short: 1, long: 15, every: 2, autoBreak: true, autoFocus: false, bell: true, goal: 12 })
+assert.deepEqual(normalizePomo(null), DEFAULT_POMO); assert.deepEqual(normalizePomo({ work: 9999, short: -5, long: 'x', every: 1, autoFocus: 'yes', goal: 99 }), { work: 120, short: 1, long: 15, every: 2, autoBreak: true, autoFocus: false, bell: true, goal: 12, block: false })
 assert.deepEqual(normalizePomo({ ...DEFAULT_POMO, autoFocus: true, bell: false }), { ...DEFAULT_POMO, autoFocus: true, bell: false })
 assert.equal(pomoStep(null), 'Pomodoro'); assert.equal(pomoStep('Write report'), 'Pomodoro · Write report'); assert.ok(isPomoStep('Pomodoro') && isPomoStep('Pomodoro · x') && !isPomoStep('Open the tax form') && !isPomoStep('Pomodoros are great'))
 
@@ -71,3 +71,18 @@ console.log('pomodoro ok')
   assert.deepEqual(plan(work, { ...S, autoBreak: false }, 0, t0).length, 1)
 }
 console.log('pomodoro background ok')
+
+// blocking apps during focus
+{
+  const { shouldBlock, normalizePomo: np } = await import('../src/lib/pomodoro.ts')
+  const { startTimer, pauseTimer } = await import('../src/lib/focus.ts')
+  const on = { ...DEFAULT_POMO, block: true }, t = startTimer(25, 0)
+  assert.equal(DEFAULT_POMO.block, false, 'off until you choose apps'); assert.equal(np({ block: 'yes' }).block, false); assert.equal(np({ block: true }).block, true)
+  assert.equal(shouldBlock({ phase: 'work', taskId: null, timer: t }, on), true, 'a running focus block blocks')
+  assert.equal(shouldBlock({ phase: 'work', taskId: null, timer: pauseTimer(t, 5) }, on), true, 'a paused block is still a block')
+  assert.equal(shouldBlock({ phase: 'short', taskId: null, timer: t }, on), false, 'breaks open the apps')
+  assert.equal(shouldBlock({ phase: 'long', taskId: null, timer: t }, on), false)
+  assert.equal(shouldBlock({ phase: 'work', taskId: null, timer: null }, on), false, 'idle: nothing blocked')
+  assert.equal(shouldBlock({ phase: 'work', taskId: null, timer: t }, DEFAULT_POMO), false, 'switched off: nothing blocked')
+}
+console.log('pomodoro blocking ok')

@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict'
 import { buildSnapshot, wobbiLine, normalizeActions, planActions, MAX_WIDGET_ANCHORS, MAX_MOODS_PER_DRAIN, WIDGET_VERSION } from '../src/lib/widgetData.ts'
-import { DEFAULT_GUARD } from '../src/lib/guard.ts'
 import { pickPrompt } from '../src/lib/journal.ts'
 
 const now = new Date(2026, 9, 16, 15, 0)          // Fri 16 Oct 2026, 15:00 local
 const at = (d, h = 10) => new Date(2026, 9, d, h, 0).toISOString()
-const empty = { now, thoughts: [], streak: { current: 0, activeToday: false }, anchors: [], worriesOpen: 0, nights: [], coins: 0, guard: DEFAULT_GUARD, guardEvents: [], sessions: [], journal: [] }
+const empty = { now, thoughts: [], streak: { current: 0, activeToday: false }, anchors: [], worriesOpen: 0, nights: [], coins: 0, focus: { block: false, apps: 0, goal: 4, blocks: [] }, sessions: [], journal: [] }
 
 /* empty: a valid snapshot that still says something friendly */
 let s = buildSnapshot(empty)
@@ -35,10 +34,11 @@ assert.equal(s.sleep.lastMin, 440); assert.equal(s.sleep.avgMin, 390, 'old night
 assert.equal(s.week[6].sleepMin, 440); assert.equal(s.week[5].sleepMin, 400)
 assert.equal(buildSnapshot({ ...empty, nights: [{ date: '2026-10-10', asleepMin: 400 }] }).sleep.lastMin, null, 'a week-old night is not "last night"')
 
-/* focus guard: today's challenges/reps/minutes and a 7-day count; config passed through */
-const ev = (d, reps, minutes) => ({ id: 'e' + d + reps, at: at(d), challenge: 'pushups', reps, minutes })
-s = buildSnapshot({ ...empty, guard: { ...DEFAULT_GUARD, enabled: true, appCount: 3 }, guardEvents: [ev(16, 10, 10), ev(16, 15, 5), ev(14, 10, 10), ev(2, 10, 10)] })
-assert.deepEqual(s.guard, { enabled: true, apps: 3, challenges: 2, reps: 25, minutes: 15, week: [0, 0, 0, 0, 1, 0, 2] })
+/* focus (in the old guard slot): finished pomodoro blocks today + minutes, the goal, a 7-day count; other focus sessions don't count */
+const blk = (d, sec, step = 'Pomodoro', completed = true) => ({ createdAt: at(d), actualSec: sec, completed, step })
+s = buildSnapshot({ ...empty, focus: { block: true, apps: 3, goal: 4, blocks: [blk(16, 1500), blk(16, 1500, 'Pomodoro · Report'), blk(16, 600, 'Pomodoro', false), blk(16, 300, 'Open the tax form'), blk(14, 1500), blk(2, 1500)] } })
+assert.deepEqual(s.guard, { enabled: true, apps: 3, challenges: 2, reps: 4, minutes: 50, week: [0, 0, 0, 0, 1, 0, 2] })
+assert.equal(buildSnapshot({ ...empty, focus: { block: true, apps: 0, goal: 4, blocks: [] } }).guard.enabled, false, 'blocking with no apps chosen is off')
 
 /* Wobbi's line follows the data, in priority order */
 const line = over => buildSnapshot({ ...empty, ...over }).wobbi

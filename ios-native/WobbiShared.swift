@@ -154,7 +154,7 @@ enum WobbiRoute: String, AppEnum {
     case sos, breathe, park, focus = "guard"
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Screen"
     static var caseDisplayRepresentations: [WobbiRoute: DisplayRepresentation] = [
-        .sos: "SOS", .breathe: "Breathe", .park: "Park a worry", .focus: "Focus guard",
+        .sos: "SOS", .breathe: "Breathe", .park: "Park a worry", .focus: "Focus",
     ]
 }
 
@@ -162,7 +162,7 @@ enum WobbiRoute: String, AppEnum {
 @available(iOS 16.0, *)
 struct OpenWobbiIntent: AppIntent {
     static var title: LocalizedStringResource = "Open in Wobbi"
-    static var description = IntentDescription("Opens Wobbi on SOS, breathing, park a worry or the focus guard.")
+    static var description = IntentDescription("Opens Wobbi on SOS, breathing, park a worry or Focus.")
     static var openAppWhenRun: Bool = true
     static var isDiscoverable: Bool = false
     @Parameter(title: "Screen") var route: WobbiRoute

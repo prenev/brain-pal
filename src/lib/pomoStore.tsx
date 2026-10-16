@@ -5,7 +5,8 @@ import { isNative } from './native'
 import { requestNotificationPermission } from './nativeReminders'
 import { loadPomo, loadRun, loadTodos, savePomo, saveRun, saveTodos } from './extras'
 import { elapsedMs, pauseTimer, remainingMs, resumeTimer, startTimer } from './focus.ts'
-import { addPomoTo, addTodo, catchUp, nextPhase, normalizePomo, PHASE_LABEL, phaseMinutes, plan, pomoStats, pomoStep, removeTodo, tidyTodos, toggleTodo, type PomoPhase, type PomoRun, type PomoSettings, type PomoStats, type Segment, type Todo } from './pomodoro.ts'
+import { guardClear, guardLock, guardSupported } from './guardNative'
+import { addPomoTo, addTodo, catchUp, shouldBlock, nextPhase, normalizePomo, PHASE_LABEL, phaseMinutes, plan, pomoStats, pomoStep, removeTodo, tidyTodos, toggleTodo, type PomoPhase, type PomoRun, type PomoSettings, type PomoStats, type Segment, type Todo } from './pomodoro.ts'
 import { liveEnd, liveStart, liveUpdate } from './liveActivity'
 import { chime, hapticSuccess } from './haptics'
 import { sfx } from './sound'
@@ -101,6 +102,16 @@ export function PomoProvider({ children }: { children: ReactNode }) {
     again(); document.addEventListener('visibilitychange', again)
     return () => document.removeEventListener('visibilitychange', again)
   }, [ready, sync])
+  // --- the apps you chose stay blocked while a focus block is on the clock; breaks, reset and skip open them. The first
+  // pass also clears shields left by the old stand-alone Focus guard. ---
+  const blocked = useRef<boolean | null>(null)
+  useEffect(() => {
+    if (!ready || !guardSupported()) return
+    const want = shouldBlock(run, settings)
+    if (blocked.current === want) return
+    blocked.current = want
+    void (want ? guardLock() : guardClear())
+  }, [ready, run, settings])
   useEffect(() => { if (justFinished === null) return; const id = setTimeout(() => setJustFinished(null), 5000); return () => clearTimeout(id) }, [justFinished])
   useEffect(() => () => { if (live.current) liveEnd() }, [])
 

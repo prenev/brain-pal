@@ -77,8 +77,7 @@ async function session(base, seed, fn, { native = false, onboarding = false, pro
 await session('http://localhost:4173', true, async (p, snap) => {
   await snap('home-today')
   await p.evaluate(() => document.querySelector('.tools-row').scrollIntoView({ block: 'center' })); await snap('home-tools')
-  await p.click('.tool >> text=Journal'); await snap('home-journal'); await p.click('[aria-label=Back]')
-  await p.click('.guard-tile'); await snap('home-focus-guard'); await p.click('[aria-label=Back]')
+  await p.click('.journal-card'); await snap('home-journal'); await p.click('[aria-label=Back]')
   await p.click('.more-today'); await snap('entries')
   await p.click('.overlay [aria-label=Search]'); await p.fill('.searchbar input', 'work'); await snap('entries-search'); await p.click('.overlay [aria-label=Search]')
   await p.click('.overlay .entry >> nth=0'); await snap('entry-expanded'); await p.click('[aria-label=Back]')
@@ -205,21 +204,6 @@ await session('http://localhost:4173', false, async (p, snap) => {   // first ru
   await p.click('button:has-text("Next")'); await p.click('.chip:has-text("Slow breathing")'); await p.click('.chip:has-text("Walk 10 minutes")'); await snap('welcome-6-anchors')
 }, { onboarding: true })
 
-await session('http://localhost:4173', true, async (p, snap) => {   // Focus guard on the web (practice mode) and on iPhone (simulated Screen Time)
-  await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await snap('guard-web')
-  await p.click('button:has-text("Try an activity")'); await snap('guard-choose'); await p.click('.challenge-opt >> text=Push-ups'); await p.click('.rep-btn'); await snap('guard-pushups')
-})
-await session('http://localhost:4173', true, async (p, snap) => {   // share cards + stickers
-  await p.evaluate(() => localStorage.setItem('bp.guard.events', JSON.stringify([{ id: 'a', at: new Date().toISOString(), challenge: 'pushups', minutes: 10, reps: 20 }, { id: 'b', at: new Date().toISOString(), challenge: 'squats', minutes: 10, reps: 35 }])))
-  await p.reload(); await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('[aria-label="Brain rot beaten"]'); await snap('guard-counter')
-  await p.click('[aria-label="Brain rot beaten"] button'); await p.waitForSelector('.share-preview svg'); await snap('share-card'); await p.click('.sheet button:has-text("Close")')
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await snap('stickers'); await p.click('[aria-label=Back]'); await p.click('.li >> text=Sounds & haptics'); await snap('sounds-haptics')
-})
-await session('http://localhost:4173', true, async (p, snap) => {
-  await p.evaluate(() => { window.__reply = { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4 }, 'Mindful.screenTimePickApps': { count: 4 } } })
-  await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('text=4 chosen'); await snap('guard-setup')
-  await p.click('[role=switch][aria-label="Guard on"]'); await p.waitForSelector('.guard-status'); await snap('guard-locked')
-}, { native: true })
 
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.click('.tab >> text=More'); await p.click('.li >> text=Sync across devices'); await p.waitForSelector('button:has-text("Continue with Apple")')
@@ -234,14 +218,14 @@ await session('http://localhost:4173', true, async (p, snap) => {   // not Pro: 
 
 await session('http://localhost:4173', true, async (p, snap) => {   // Home tiles on the iPhone app (Focus guard locked, worries parked) + the Focus hub
   await p.evaluate(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4, unlockedUntil: null } }; localStorage.setItem('bp.guard', JSON.stringify({ enabled: true, challenges: ['pushups', 'breathe'], unlockMinutes: 10, appCount: 4 })) })
-  await p.reload(); await p.waitForSelector('.guard-tile.locked'); await snap('home-guard-locked')
-  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-screen'); await snap('focus-timer')
+  await p.reload(); await p.waitForSelector('.focus-card'); await snap('home-cards')
+  await p.click('.focus-card'); await p.waitForSelector('.pomo-screen'); await snap('focus-timer')
   await p.click('.pomo-wobbi'); await p.clock.fastForward?.('01:00').catch(() => {}); await p.waitForTimeout(600); await snap('focus-timer-running')
   await p.click('[aria-label="Timer settings"]'); await snap('focus-settings'); await p.click('.pomo-sheet button:has-text("Done")')
   await p.click('.pomo-task'); await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Reply to Sam'); await p.click('[aria-label="Add to-do"]')
   await p.click('.todo-text >> text=Write the report'); await snap('focus-todo'); await p.click('.pomo-sheet button:has-text("Done")'); await snap('focus-timer-task')
   await p.evaluate(() => { const n = Date.now(), b = (d, t) => ({ id: 'b' + d + t, createdAt: new Date(n - d * 864e5).toISOString(), minutes: 25, actualSec: 1500, completed: true, worryId: null, step: t ? 'Pomodoro · ' + t : 'Pomodoro' }); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 })); localStorage.setItem('bp.focus', JSON.stringify([b(0, 'Write the report'), b(0, 'Write the report'), b(1, 'Email'), b(2), b(3, 'Write the report'), b(5)])) })
-  await p.reload(); await p.click('.tool >> text=Focus'); await p.click('.pomo-nav [aria-label="Stats"]'); await p.waitForSelector('.pomo-stats'); await snap('focus-stats')
+  await p.reload(); await p.click('.focus-card'); await p.click('.pomo-nav [aria-label="Stats"]'); await p.waitForSelector('.pomo-stats'); await snap('focus-stats')
 }, { native: true })
 await session('http://localhost:4173', false, async (p, snap) => {   // empty states: Focus guard on the web, nothing parked
   await snap('home-empty-tiles')
