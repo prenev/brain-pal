@@ -9,6 +9,8 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: { backgroundColor: '#0e1726', launchAutoHide: true, launchShowDuration: 0 },
     LocalNotifications: { iconColor: '#35d07f' },
+    // the web view shrinks to the space above the keyboard, so sticky/fixed bars sit right on top of it
+    Keyboard: { resize: 'native', resizeOnFullScreen: true },
   },
 }
 export default config

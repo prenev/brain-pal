@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Search, Siren } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import MoodCard from '../components/MoodCard'
 import { FocusCard, GroundTool, JournalCard, StepNudge, WorryTool } from '../components/HomeTiles'
-import CuteIcon from '../components/CuteIcon'
+import { MoonStars } from '@phosphor-icons/react'
 import { fmtDuration } from '../lib/sleep.ts'
 import { AnchorCard, AnchorsManager } from '../components/Anchors'
 import { Screen, Sheet } from '../components/ui'
@@ -49,7 +49,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       <div className="tools-row" role="group" aria-label="Tools">
         <WorryTool onWorry={onWorry} onPark={onPark} />
         <button className="card tool" onClick={() => onTool('sleep')}>
-          <CuteIcon name="sleep" /><b>Sleep</b>{night && <small>{fmtDuration(night.asleepMin)}</small>}
+          <MoonStars className="tool-icon" size={34} weight="duotone" color="#ffc83d" aria-hidden="true" /><b>Sleep</b>{night && <small>{fmtDuration(night.asleepMin)}</small>}
         </button>
         <GroundTool onOpen={() => onTool('ground')} />
       </div>
