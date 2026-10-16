@@ -216,8 +216,8 @@ test('Gemini (mocked): connect, transcribe, fill thought record, reframes, trans
   assert.equal(await p.locator('.ig.on').count(), 1, 'only allow-listed emotions are applied (bogus dropped)')
   await toStep(p, 1)                                                                                // write step
   assert.equal(await p.inputValue('textarea[aria-label="What’s on your mind?"]'), STRUCTURED.thought)
-  assert.equal(await p.locator('.chip.on >> text=catastrophizing').count(), 1)
   await untangle(p)                                                                                 // kinder step (there is a thought now)
+  assert.equal(await p.locator('.chip.on >> text=catastrophizing').count(), 1, 'the memo’s thinking trap is picked on the untangle step')
   await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card')
   assert.equal(await p.locator('.reframe-card').count(), 3)
   await p.click('.reframe-card >> nth=0')
