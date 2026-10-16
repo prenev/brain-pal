@@ -384,6 +384,9 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .pal-jump { animation: palJump 1.1s cubic-bezier(.3,.7,.4,1) infinite; }
 .pal-wave .armR { transform-origin: 146px 94px; animation: palWave 1.1s ease-in-out infinite; }
 .pal-none .eyes { animation: none; }
+.cute-icon { display: block; flex: none; overflow: visible; filter: drop-shadow(0 2px 0 rgba(0,0,0,.25)); }
+.cute-icon .eyes { transform-box: fill-box; transform-origin: center; animation: palBlink 5s infinite; }
+.home-label { color: var(--muted); font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; margin: 6px 4px 8px; }
 @keyframes palBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
 @keyframes palBreathe { 0%, 100% { transform: scale(.94); } 40%, 60% { transform: scale(1.08); } }
 @keyframes palJump { 0%, 100% { transform: translateY(0) scale(1.03, .97); } 40% { transform: translateY(-14%) scale(.98, 1.03); } }

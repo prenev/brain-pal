@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Search, Siren } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import MoodCard from '../components/MoodCard'
 import { FocusCard, GroundTool, JournalCard, StepNudge, WorryTool } from '../components/HomeTiles'
+import CuteIcon from '../components/CuteIcon'
 import { fmtDuration } from '../lib/sleep.ts'
 import { AnchorCard, AnchorsManager } from '../components/Anchors'
 import { Screen, Sheet } from '../components/ui'
@@ -14,6 +15,8 @@ import { PalEmpty, PalTip } from '../components/Pal'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
+const HOME_ENTRIES = 3
+
 export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'ground' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus'
 
 /** Home, top to bottom: how you feel, today's anchors, the big Focus + Journal cards, then Worries / Sleep / Ground, then everything logged today. */
@@ -23,9 +26,8 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
   const night = sleepNights[0]?.date === todayKey ? sleepNights[0] : null
-  const tools: { id: HomeTool; emoji: string; label: string; sub?: string }[] = [
-    { id: 'sleep', emoji: 'sleep', label: 'Sleep', sub: night ? fmtDuration(night.asleepMin) : undefined },
-  ]
+  // today's entries, or (nothing today) the latest ones from any day; a few at most, then "All entries"
+  const latest = useMemo(() => (today.length ? today : [...thoughts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))).slice(0, HOME_ENTRIES), [today, thoughts])
 
   return (
     <>
@@ -46,16 +48,15 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       </div>
       <div className="tools-row" role="group" aria-label="Tools">
         <WorryTool onWorry={onWorry} onPark={onPark} />
-        {tools.map(t => (
-          <button key={t.id} className="card tool" onClick={() => onTool(t.id)}>
-            <Emoji name={t.emoji} size={30} /><b>{t.label}</b>{t.sub && <small>{t.sub}</small>}
-          </button>
-        ))}
+        <button className="card tool" onClick={() => onTool('sleep')}>
+          <CuteIcon name="sleep" /><b>Sleep</b>{night && <small>{fmtDuration(night.asleepMin)}</small>}
+        </button>
         <GroundTool onOpen={() => onTool('ground')} />
       </div>
       <StepNudge onStep={onStep} />
-      {today.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
-      <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries</button>
+      {!today.length && latest.length > 0 && <div className="home-label">Latest entries</div>}
+      {latest.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
+      {thoughts.length > 0 && <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries{thoughts.length > latest.length ? ` (${thoughts.length})` : ''}</button>}
 
       {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
     </>
