@@ -196,9 +196,19 @@ await session('http://localhost:4173', true, async (p, snap) => {   // coins
 
 await session('http://localhost:4173', false, async (p, snap) => {   // first run
   await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await snap('welcome-1')
-  await p.click('button:has-text("Next")'); await snap('welcome-2')
-  await p.click('button:has-text("Next")'); await p.click('.chip:has-text("Slow breathing")'); await p.click('.chip:has-text("Walk 10 minutes")'); await snap('welcome-3')
+  for (let i = 2; i <= 5; i++) { await p.click('button:has-text("Next")'); await snap(`welcome-${i}`) }
+  await p.click('button:has-text("Next")'); await p.click('.chip:has-text("Slow breathing")'); await p.click('.chip:has-text("Walk 10 minutes")'); await snap('welcome-6-anchors')
 }, { onboarding: true })
+
+await session('http://localhost:4173', true, async (p, snap) => {   // Focus guard on the web (practice mode) and on iPhone (simulated Screen Time)
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await snap('guard-web')
+  await p.click('button:has-text("Try an activity")'); await snap('guard-choose'); await p.click('.challenge-opt >> text=Push-ups'); await p.click('.rep-btn'); await snap('guard-pushups')
+})
+await session('http://localhost:4173', true, async (p, snap) => {
+  await p.evaluate(() => { window.__reply = { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4 }, 'Mindful.screenTimePickApps': { count: 4 } } })
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('text=4 chosen'); await snap('guard-setup')
+  await p.click('[role=switch][aria-label="Guard on"]'); await p.waitForSelector('.guard-status'); await snap('guard-locked')
+}, { native: true })
 
 await session('http://localhost:4174', false, async (p, snap) => {
   await p.waitForSelector('button:has-text("Continue with Apple")')

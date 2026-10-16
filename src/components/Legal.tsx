@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
+import Pal from './Pal'
 import { DOCS, SITE_URL, APP_NAME, type LegalDoc } from '../lib/legal.ts'
 import { APP_VERSION } from '../lib/appInfo.ts'
 
@@ -27,7 +28,7 @@ export default function Legal() {
   return (
     <>
       <div className="card" style={{ textAlign: 'center' }}>
-        <img src="icon-192.png" alt="" width={72} height={72} style={{ borderRadius: 18 }} />
+        <Pal pose="idle" size={96} />
         <h3 style={{ margin: '8px 0 0' }}>{APP_NAME}</h3>
         <p className="muted" style={{ margin: 0 }}>Version {APP_VERSION}</p>
         <p className="muted small" style={{ marginBottom: 0 }}>A self-help tool, not medical care. No ads, no tracking.</p>

@@ -700,10 +700,12 @@ test('cloud sync: data that predates sync is pushed on first sign-in; sign-out c
 })
 
 
-test('first run: three skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
+test('first run: Pal explains the app in skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
   const s = await open(null, { onboarding: true }); const p = s.page
-  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await p.waitForSelector('text=A calm place to check in'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
-  await p.click('button:has-text("Next")'); await p.waitForSelector('text=Your data stays yours'); assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
+  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await p.waitForSelector('text=Hi, I’m Pal!'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
+  assert.ok(await p.locator('.onboarding .pal svg').count() >= 1, 'Pal explains it')
+  for (const t of ['Check in with one tap', 'Calm down, together', 'Grow a little each day', 'Your data stays yours']) { await p.click('button:has-text("Next")'); await p.waitForSelector(`.onboarding h1:has-text("${t}")`) }
+  assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
   await p.click('button:has-text("Next")'); await p.waitForSelector('text=Pick up to three daily anchors')
   for (const l of ['Slow breathing', 'Walk 10 minutes', 'Get some sunlight', 'Write one line']) await p.click(`.onboarding .chip:has-text("${l}")`)
   assert.equal(await p.locator('.onboarding .chip.on').count(), 3, 'at most three')
@@ -995,6 +997,91 @@ test('About & legal: version, privacy policy, terms, support and open-source not
   await p.click('[aria-label=Back]'); await p.waitForSelector('.li >> text=About & legal')
   assert.ok(await p.evaluate(() => document.body.innerText.includes('Brain Pal 1.0.0')), 'More shows the real version')
   await done(s)
+})
+
+test('notch / status bar: the first thing on every tab clears the safe area, even after scrolling', async () => {
+  const s = await open({ 'bp.thoughts': Array.from({ length: 12 }, (_, i) => rec('n' + i, i)) }); const p = s.page
+  await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'))      // what an iPhone with a notch reports
+  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) {
+    await tab(p, t); await p.waitForTimeout(150)
+    for (const y of [0, 600]) {
+      await p.evaluate(y => window.scrollTo(0, y), y)
+      const tops = await p.$$eval('.topbar:not(.flat), .stats-head', els => els.map(e => e.firstElementChild?.getBoundingClientRect().top ?? 99))
+      assert.ok(tops.length >= 1, `${t}: has a sticky header`)
+      assert.ok(tops.every(top => top >= 46.5), `${t} (scrolled ${y}): header content starts at ${tops} but must be below the 47px notch area`)
+    }
+  }
+  await done(s)
+})
+
+test('Pal the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
+  const s = await open(); const p = s.page
+  assert.ok(await p.locator('.today .pal svg').count(), 'Pal waves on the Today card')
+  await p.click('.home-seg >> text=Entries'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/)
+  await p.click('.home-seg >> text=Journal'); assert.ok(await p.locator('.pal-empty .pal').count())
+  await tab(p, 'More'); await p.click('.li >> text=About & legal'); assert.ok(await p.locator('.pal svg').count(), 'About shows Pal')
+  const anim = async page => page.$eval('.pal', el => parseFloat(getComputedStyle(el).animationDuration) * 1000)
+  assert.ok(await anim(p) > 1000, 'Pal bobs normally')
+  const pm = await open(); await pm.page.emulateMedia({ reducedMotion: 'reduce' })
+  assert.ok(await anim(pm.page) < 1, 'reduced motion stops Pal’s bobbing')
+  await done(pm); await done(s)
+})
+
+const guardStatus = (p, v) => p.evaluate(v => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.screenTimeStatus': v } }, v)
+const nativeCalls = (p, m) => p.evaluate(m => window.__native.filter(c => c.plugin === 'Mindful' && c.method === m).map(c => c.options ?? {}), m)
+const openGuard = async p => { await tab(p, 'More'); await p.click('.li >> text=Focus guard') }
+
+test('Focus guard (web): explains it needs the iPhone app, and you can still practise an activity with the honour-system rep counter', async () => {
+  const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await openGuard(p); await p.waitForSelector('text=Blocking apps is part of the iPhone app')
+  assert.equal(await p.locator('[role=switch]').count(), 0, 'no switch to turn on without iOS Screen Time')
+  await p.click('button:has-text("Try an activity")'); await p.click('.challenge-opt >> text=Push-ups')
+  await p.click('.rep-btn'); await p.click('.rep-btn'); await p.click('.rep-btn')          // mashing = 1 rep
+  assert.match(await p.locator('.rep-count').innerText(), /^1\s*\/\s*10/); await p.waitForSelector('text=One rep at a time')
+  for (let i = 0; i < 9; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
+  await p.waitForSelector('text=Nice one!'); await p.waitForSelector('text=That was practice, so nothing was unlocked.')
+  await p.click('button:has-text("Done")')
+  await p.waitForSelector('text=This week: 1 activity · 10 reps')
+  await done(s)
+})
+
+test('Focus guard (iPhone): allow, choose apps, switch on (locks), earn time with push-ups (unlocks), lock again, switch off — and it persists', async () => {
+  const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: false, appCount: 0 }, 'Mindful.screenTimePickApps': { count: 3 } } }); const p = s.page
+  await openGuard(p); await p.waitForSelector('button:has-text("Allow Screen Time")')
+  assert.equal(await p.locator('button:has-text("Choose apps")').isDisabled(), true, 'apps can only be chosen after access is allowed')
+  assert.equal(await p.locator('[role=switch][aria-label="Guard on"]').getAttribute('aria-checked'), 'false')
+  await guardStatus(p, { available: true, authorized: true, appCount: 0 }); await p.click('button:has-text("Allow Screen Time")'); await p.waitForSelector('text=Allowed')
+  await guardStatus(p, { available: true, authorized: true, appCount: 3 }); await p.click('button:has-text("Choose apps")'); await p.waitForSelector('text=3 chosen')
+  assert.equal((await nativeCalls(p, 'screenTimeLock')).length, 0, 'nothing is locked until you switch the guard on')
+  await p.click('[role=switch][aria-label="Guard on"]'); await p.waitForSelector('.guard-status >> text=Locked')
+  assert.equal((await nativeCalls(p, 'screenTimeLock')).length, 1)
+  await reload(p); await openGuard(p); await p.waitForSelector('.guard-status >> text=Locked')            // config survives a restart
+  await p.click('button:has-text("Unlock with an activity")')
+  assert.deepEqual(await p.$$eval('.challenge-opt b', els => els.map(e => e.textContent)), ['Push-ups', 'Slow breathing'], 'only the activities you picked')
+  await p.click('.challenge-opt >> text=Push-ups')
+  for (let i = 0; i < 10; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
+  await p.waitForSelector('text=Earned it!'); await p.waitForSelector('text=open for 10 minutes')
+  assert.deepEqual(await nativeCalls(p, 'screenTimeUnlock'), [{ minutes: 10 }], 'finishing unlocks for exactly the chosen time')
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 3, unlockedUntil: Date.now() + 600000 } } })   // what iOS would now report
+  await p.click('button:has-text("Done")'); await p.waitForSelector('.guard-status >> text=/Unlocked · \\d+ min left/')
+  await p.click('button:has-text("Lock again now")'); await p.waitForSelector('.guard-status >> text=Locked')
+  p.once('dialog', d => d.accept()); await p.click('[role=switch][aria-label="Guard on"]')
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'screenTimeClear')); assert.equal(await p.locator('.guard-status').count(), 0, 'switching off removes the status card')
+  await done(s)
+})
+
+test('Focus guard: not available without the entitlement / iOS 16; journal-line activity unlocks and lands in the journal', async () => {
+  const s = await open(null, { native: true, reply: { 'Mindful.screenTimeStatus': { available: false, authorized: false, appCount: 0 } } }); const p = s.page
+  await openGuard(p); await p.waitForSelector('text=Not available in this build'); assert.equal(await p.locator('[role=switch]').count(), 0)
+  await done(s)
+  const t = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 2 } } }); const q = t.page
+  await q.evaluate(() => localStorage.setItem('bp.guard', JSON.stringify({ enabled: true, challenges: ['journal', 'plank'], unlockMinutes: 5, appCount: 2 })))
+  await reload(q); await openGuard(q); await q.click('button:has-text("Unlock with an activity")')
+  await q.click('.challenge-opt >> text=Write a line'); assert.equal(await q.locator('button:has-text("Save to journal")').isDisabled(), true, 'a line needs a few words')
+  await q.fill('textarea[aria-label="One honest line"]', 'Feeling a bit scattered today'); await q.click('button:has-text("Save to journal")')
+  await q.waitForSelector('text=Earned it!'); assert.deepEqual(await nativeCalls(q, 'screenTimeUnlock'), [{ minutes: 5 }]); await q.click('button:has-text("Done")')
+  await tab(q, 'Home'); await q.click('.home-seg >> text=Journal'); await q.waitForSelector('.jentry >> text=Feeling a bit scattered today')
+  await done(t)
 })
 
 test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {

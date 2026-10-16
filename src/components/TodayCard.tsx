@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Face from './Face'
+import Pal from './Pal'
 import { Emoji } from '../lib/emoji'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
@@ -51,7 +52,7 @@ export default function TodayCard({ onDetails, onWorry, onBreathe, onStep }: { o
         </span>
       </div>}
       {action.kind === 'mood' && <>
-        <b style={{ fontSize: 19 }}>How are you feeling?</b>
+        <div className="row" style={{ gap: 10 }}><Pal pose="wave" motion="wave" size={52} /><b style={{ fontSize: 19 }}>How are you feeling?</b></div>
         <div className="quickmood" role="group" aria-label="Log how you feel">
           {MOODS.map(m => (
             <button key={m.v} disabled={busy} aria-label={`Log mood: ${m.name}`} onClick={() => quick(m.v)} style={{ color: m.color }}>
@@ -66,7 +67,7 @@ export default function TodayCard({ onDetails, onWorry, onBreathe, onStep }: { o
       {action.kind === 'worries' && <button className="today-line linklike" onClick={onWorry}>
         <Emoji name="worry" size={26} /><span style={{ flex: 1, textAlign: 'left' }}><b>{action.count} parked {action.count === 1 ? 'worry' : 'worries'}.</b> Take a few minutes to go through them?</span></button>}
       {action.kind === 'done' && <button className="today-line linklike" onClick={onBreathe}>
-        <Emoji name="sparkles" size={26} /><span style={{ flex: 1, textAlign: 'left' }}><b>You’re all set today.</b> A slow breath is always on offer.</span></button>}
+        <Pal pose="cheer" size={48} /><span style={{ flex: 1, textAlign: 'left' }}><b>You’re all set today.</b> A slow breath is always on offer.</span></button>}
       {err && <p role="alert" style={{ color: 'var(--danger)', margin: '10px 0 0' }}>{err}</p>}
     </div>
   )

@@ -88,7 +88,7 @@ function Insights() {
 
   return (
     <>
-      <div className="topbar">
+      <div className="topbar flat">
         <button className="glass round green" aria-label="Previous" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft /></button>
         <span className="title">{monthLabel(month)}</span>
         <button className="glass round green" aria-label="Next" disabled={isNow} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight /></button>
@@ -185,8 +185,10 @@ export default function Stats() {
   const [view, setView] = useState<(typeof VIEWS)[number]['id']>('insights')
   return (
     <>
-      <div className="seg four" role="tablist" aria-label="Stats view" style={{ marginBottom: 14 }}>
-        {VIEWS.map(v => <button key={v.id} role="tab" aria-selected={view === v.id} className={view === v.id ? 'on' : ''} onClick={() => setView(v.id)}>{v.label}</button>)}
+      <div className="stats-head">
+        <div className="seg four" role="tablist" aria-label="Stats view">
+          {VIEWS.map(v => <button key={v.id} role="tab" aria-selected={view === v.id} className={view === v.id ? 'on' : ''} onClick={() => setView(v.id)}>{v.label}</button>)}
+        </div>
       </div>
       {view === 'insights' && <Insights />}
       {view === 'progress' && <Progress />}

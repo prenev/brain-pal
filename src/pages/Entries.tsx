@@ -13,6 +13,7 @@ import { dayKey } from '../lib/dates'
 import { roughPatch } from '../lib/insights'
 import { monthLabel } from '../components/ui'
 import EntryCard from '../components/EntryCard'
+import { PalEmpty } from '../components/Pal'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
@@ -79,7 +80,7 @@ export default function Entries({ view, setView, onJournal, onSos, onSupport, on
           <button className="arrow" aria-label="Next month" disabled={isNow} onClick={() => shift(1)}><ChevronRight size={20} /></button>
         </div>
         {searching && <div className="searchbar"><Search size={20} /><input autoFocus placeholder="Search entries, emotions, tags" value={q} onChange={e => setQ(e.target.value)} /></div>}
-        {list.length === 0 && <div className="card empty">{q ? 'No entries match.' : 'No entries this month. Tap + to log how you feel.'}</div>}
+        {list.length === 0 && <PalEmpty pose={q ? 'think' : 'sleepy'}>{q ? 'No entries match.' : 'No entries this month. Tap + to log how you feel.'}</PalEmpty>}
         {list.map((t, i) => {
           const gap = i > 0 ? dayNum(list[i - 1].createdAt) - dayNum(t.createdAt) - 1 : 0
           return (

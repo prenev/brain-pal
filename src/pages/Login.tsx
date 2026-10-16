@@ -3,7 +3,7 @@ import { supabase, supabaseUrl, supabaseKey } from '../lib/supabase'
 import { fetchEnabledProviders, PROVIDER_LABEL, type OAuthProvider } from '../lib/authCore'
 import { signInWithProvider, NATIVE_REDIRECT } from '../lib/oauth'
 import { useStore } from '../lib/store'
-import Face from '../components/Face'
+import Pal from '../components/Pal'
 import { isNative } from '../lib/native'
 
 const redirect = () => (isNative() ? NATIVE_REDIRECT : location.origin)
@@ -66,7 +66,7 @@ export default function Login() {
   return (
     <div className="center-screen">
       <form className="card" style={{ width: 'min(420px, 100%)', padding: 26 }} onSubmit={submit}>
-        <div style={{ display: 'grid', placeItems: 'center', marginBottom: 10 }}><Face mood={5} size={64} /></div>
+        <div style={{ display: 'grid', placeItems: 'center', marginBottom: 10 }}><Pal pose="wave" motion="wave" size={110} /></div>
         <h1 style={{ margin: '0 0 4px', textAlign: 'center', fontSize: 28 }}>Brain Pal</h1>
         <p className="muted" style={{ margin: '0 0 20px', textAlign: 'center' }}>{TITLES[mode]}</p>
 

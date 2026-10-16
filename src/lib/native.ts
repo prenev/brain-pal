@@ -27,6 +27,15 @@ export interface MindfulPlugin {
   selectTab(opts: { id: string }): Promise<void>
   /** Hide / show the native tab bar (hidden while sheets and full-screen flows are open). */
   setTabsHidden(opts: { hidden: boolean }): Promise<void>
+  /** Focus guard (iOS Screen Time). `available` is false before iOS 16; calls fail softly without the Family Controls entitlement. */
+  screenTimeStatus(): Promise<{ available: boolean; authorized: boolean; appCount: number; unlockedUntil?: number }>
+  screenTimeRequestAuth(): Promise<{ authorized: boolean; error?: string }>
+  /** Opens the system app picker; resolves with how many apps/categories/sites were chosen. */
+  screenTimePickApps(): Promise<{ count: number }>
+  screenTimeLock(): Promise<{ locked: boolean }>
+  /** Removes the shields for `minutes`; `until` is ms since 1970. */
+  screenTimeUnlock(opts: { minutes: number }): Promise<{ until: number }>
+  screenTimeClear(): Promise<void>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
 }

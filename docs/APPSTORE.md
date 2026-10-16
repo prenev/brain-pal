@@ -23,6 +23,8 @@ Everything here was prepared and checked as far as a Linux sandbox allows. **Wha
 
 ---
 
+> **Focus guard & the App Store:** the Screen Time guard needs Apple's **Family Controls (Distribution)** approval. Until you have it, build **without** `npm run ios:screentime`; the guard then shows "not available" and nothing else is affected. Details: `docs/SCREENTIME.md`.
+
 ## 2. What it costs and what you need
 - **Apple Developer Program: US$99 / year** (you said you have the account). Individuals sign up with an Apple ID; companies need a D-U-N-S number.
 - A **Mac with Xcode** *or* the GitHub Actions workflow in §5 (still needs a Mac once if you prefer Xcode to the API key route).

@@ -150,6 +150,9 @@ Migrations (new files, plain SQL, **no `DO` blocks**; apply via the connector, t
 ## Phase 13 — Reflection
 Weekly review screen (and optional Sunday-evening ritual): mood trend, best/worst day, what helped (tools used, anchors hit), sleep average, 1 prompt. Optional Gemini "reflect with me" (opt-in, same privacy rules, crisis-safe). Theme picker (uses Phase 11 unlocks). Goals ("breathe 5×/week") as a *view over anchors*, not a new system.
 
+## Phase 18 — Pal & Focus guard
+Pal the mascot (soft lavender cloud-brain: 16 poses, 6 animation strips, CSS motion, `npm run sprites` art kit, new app icon), used in onboarding (Pal explains the app in 6 skippable screens), Today, empty states, celebrations, breathing, login. Notch fix on Stats. **Focus guard** (iOS Screen Time): pick apps, they stay paused until you earn time with push-ups/squats/plank/walk/breathing/a journal line — see `docs/SCREENTIME.md`. Not verified on a device; needs Apple's Family Controls entitlement for distribution.
+
 ## Phase 17 — App Store launch pack
 Done: mascot icon + launch image + PWA icons (`npm run icons`), App Store screenshots at 6.9″/6.5″ (`npm run store:screens`), listing text/review notes/age-rating/privacy-label as tested data (`scripts/store-metadata.mjs` → fastlane), Privacy Policy / Terms / Support / open-source notices (in-app + static site via GitHub Pages), privacy manifest, export-compliance flag, iPhone-only 1.0.0, fastlane + TestFlight workflow, `npm run store:check`. Guide: `docs/APPSTORE.md`.
 Not verified: the fastlane lanes and the TestFlight workflow have never run (need your Apple API key); the native tab bar and everything on-device (checklist §8); legal text is not lawyer-reviewed.

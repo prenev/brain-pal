@@ -1,3 +1,4 @@
+import { PalEmpty } from './Pal'
 import { useMemo, useState } from 'react'
 import { ArrowLeft, X } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
@@ -83,7 +84,7 @@ export default function WorryTime({ onClose }: { onClose: () => void }) {
       {err && <p role="alert" style={{ color: 'var(--danger)' }}>{err}</p>}
 
       <h2 className="section" style={{ margin: '8px 4px' }}>Parked ({parked.length})</h2>
-      {parked.length === 0 && <div className="card empty">Nothing parked. Nice and clear. ✨</div>}
+      {parked.length === 0 && <PalEmpty pose="cheer">Nothing parked. Nice and clear. ✨</PalEmpty>}
       {parked.map(w => (
         <div className="card row" key={w.id} style={{ padding: 14 }}>
           <Emoji name="worry" size={28} /><span style={{ flex: 1 }}>{w.text}</span>

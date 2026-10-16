@@ -1,29 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <radialGradient id="bg" cx=".5" cy=".42" r=".75"><stop offset="0" stop-color="#244a6b"/><stop offset=".55" stop-color="#14233c"/><stop offset="1" stop-color="#0b1424"/></radialGradient>
-    <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#35d07f" stop-opacity=".45"/><stop offset="1" stop-color="#35d07f" stop-opacity="0"/></radialGradient>
-    <radialGradient id="pink" cx=".4" cy=".28" r=".95"><stop offset="0" stop-color="#ffc9d7"/><stop offset=".6" stop-color="#ff9db7"/><stop offset="1" stop-color="#f77fa0"/></radialGradient>
-  </defs>
+  <defs><radialGradient id="bg" cx=".5" cy=".46" r=".72"><stop offset="0" stop-color="#2a3347"/><stop offset=".6" stop-color="#171d2b"/><stop offset="1" stop-color="#0d111a"/></radialGradient></defs>
   <rect width="512" height="512" fill="url(#bg)"/>
-  <circle cx="256" cy="262" r="235" fill="url(#glow)"/>
-  <g fill="#ffd95a"><path d="M424 92l7 19 19 7-19 7-7 19-7-19-19-7 19-7z"/><path d="M92 128l5 13 13 5-13 5-5 13-5-13-13-5 13-5z" opacity=".85"/></g>
-  <circle cx="96" cy="410" r="7" fill="#4aa8ff" opacity=".8"/><circle cx="420" cy="412" r="9" fill="#35d07f" opacity=".8"/>
-  <!-- stem -->
-  <rect x="226" y="372" width="60" height="58" rx="26" fill="#e2557f"/><rect x="234" y="372" width="44" height="50" rx="20" fill="#f77fa0"/>
-  <!-- hemispheres: dark outline, then body -->
-  <g fill="#e2557f"><circle cx="146" cy="262" r="90"/><circle cx="178" cy="188" r="78"/><circle cx="236" cy="160" r="66"/><circle cx="168" cy="336" r="76"/><circle cx="232" cy="352" r="68"/><circle cx="212" cy="250" r="84"/><circle cx="366" cy="262" r="90"/><circle cx="334" cy="188" r="78"/><circle cx="276" cy="160" r="66"/><circle cx="344" cy="336" r="76"/><circle cx="280" cy="352" r="68"/><circle cx="300" cy="250" r="84"/></g>
-  <g fill="url(#pink)"><circle cx="146" cy="262" r="82"/><circle cx="178" cy="188" r="70"/><circle cx="236" cy="160" r="58"/><circle cx="168" cy="336" r="68"/><circle cx="232" cy="352" r="60"/><circle cx="212" cy="250" r="76"/><circle cx="366" cy="262" r="82"/><circle cx="334" cy="188" r="70"/><circle cx="276" cy="160" r="58"/><circle cx="344" cy="336" r="68"/><circle cx="280" cy="352" r="60"/><circle cx="300" cy="250" r="76"/></g>
-  <!-- centre fissure + gyri folds -->
-  <g fill="none" stroke="#ee6a91" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M256 104v52"/><path d="M256 388v-20"/>
-    <path d="M104 238q26-26 48-2t40-16"/><path d="M408 238q-26-26-48-2t-40-16"/>
-    <path d="M150 150q18 22 44 8"/><path d="M362 150q-18 22-44 8"/>
-    <path d="M118 332q24-14 40 4t34-6"/><path d="M394 332q-24-14-40 4t-34-6"/>
-  </g>
-  <!-- face -->
-  <ellipse cx="214" cy="262" rx="17" ry="23" fill="#1b2340"/><ellipse cx="298" cy="262" rx="17" ry="23" fill="#1b2340"/>
-  <circle cx="221" cy="252" r="6.5" fill="#fff"/><circle cx="305" cy="252" r="6.5" fill="#fff"/><circle cx="209" cy="271" r="3" fill="#fff" opacity=".8"/><circle cx="293" cy="271" r="3" fill="#fff" opacity=".8"/>
-  <ellipse cx="178" cy="304" rx="21" ry="13" fill="#ff5f86" opacity=".55"/><ellipse cx="334" cy="304" rx="21" ry="13" fill="#ff5f86" opacity=".55"/>
-  <path d="M232 298q24 34 48 0" fill="#1b2340" stroke="#1b2340" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M244 313q12 9 24 0" fill="none" stroke="#ff8aa6" stroke-width="7" stroke-linecap="round"/>
+  <g transform="translate(16 34) scale(2.4)"><g class="pal-fig" transform="translate(0 0) translate(100 120) rotate(0) scale(1) translate(-100 -120)"><g class="leg"><line x1="84" y1="120" x2="82.2" y2="145.9" stroke="#9f8be6" stroke-width="13.5" stroke-linecap="round"/><line x1="84" y1="120" x2="82.2" y2="145.9" stroke="#bba8fb" stroke-width="9.5" stroke-linecap="round"/></g><ellipse cx="79.2" cy="146.9" rx="9.5" ry="5.6" fill="#bba8fb" stroke="#9f8be6" stroke-width="2.4"/><g class="leg"><line x1="116" y1="120" x2="117.8" y2="145.9" stroke="#9f8be6" stroke-width="13.5" stroke-linecap="round"/><line x1="116" y1="120" x2="117.8" y2="145.9" stroke="#bba8fb" stroke-width="9.5" stroke-linecap="round"/></g><ellipse cx="120.8" cy="146.9" rx="9.5" ry="5.6" fill="#bba8fb" stroke="#9f8be6" stroke-width="2.4"/><g class="arm armL"><line x1="54" y1="94" x2="45.5" y2="128" stroke="#9f8be6" stroke-width="13.5" stroke-linecap="round"/><line x1="54" y1="94" x2="45.5" y2="128" stroke="#bba8fb" stroke-width="9.5" stroke-linecap="round"/></g><g class="arm armR"><line x1="146" y1="94" x2="154.5" y2="128" stroke="#9f8be6" stroke-width="13.5" stroke-linecap="round"/><line x1="146" y1="94" x2="154.5" y2="128" stroke="#bba8fb" stroke-width="9.5" stroke-linecap="round"/></g><g fill="#9f8be6"><circle cx="100" cy="74" r="49.4"/><circle cx="68" cy="56" r="29.4"/><circle cx="132" cy="56" r="29.4"/><circle cx="66" cy="92" r="30.4"/><circle cx="134" cy="92" r="30.4"/><circle cx="100" cy="100" r="38.4"/></g><g fill="#c8b8ff"><circle cx="100" cy="74" r="47"/><circle cx="68" cy="56" r="27"/><circle cx="132" cy="56" r="27"/><circle cx="66" cy="92" r="28"/><circle cx="134" cy="92" r="28"/><circle cx="100" cy="100" r="36"/></g>
+    <g fill="#eee8ff" opacity=".7"><ellipse cx="78" cy="38" rx="15" ry="7.5" transform="rotate(-28 78 38)"/></g>
+    <g fill="none" stroke="#ad9bf0" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><path d="M100 27v9"/><path d="M58 50q6-7 12 0t12-2"/><path d="M142 50q-6-7-12 0t-12-2"/></g><ellipse cx="68" cy="90" rx="8" ry="5" fill="#ff9ec0" opacity=".7"/><ellipse cx="132" cy="90" rx="8" ry="5" fill="#ff9ec0" opacity=".7"/><g class="eyes"><ellipse cx="80" cy="76" rx="6" ry="8.2" fill="#2a2745"/><circle cx="81.8" cy="73.2" r="2.5" fill="#fff"/><circle cx="78.4" cy="78.5" r="1.2" fill="#fff" opacity=".85"/><ellipse cx="120" cy="76" rx="6" ry="8.2" fill="#2a2745"/><circle cx="121.8" cy="73.2" r="2.5" fill="#fff"/><circle cx="118.4" cy="78.5" r="1.2" fill="#fff" opacity=".85"/></g><path d="M93 89 q7 7 14 0" fill="none" stroke="#2a2745" stroke-width="3.2" stroke-linecap="round"/></g></g>
 </svg>

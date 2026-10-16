@@ -34,8 +34,14 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key><array><string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string></array>
 		</dict>
 	</array>
-	<!-- Our own code calls no "required reason" APIs (checked by scripts/test-store.mjs); Capacitor ships its own manifests for the ones it uses. -->
+	<!-- Required-reason APIs our own code uses (scripts/test-store.mjs fails if another appears without a declaration):
+	     UserDefaults, only to remember the Focus guard's app selection and unlock time on this device (reason CA92.1: the app's own data). Capacitor ships its own manifests for what it uses. -->
 	<key>NSPrivacyAccessedAPITypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key><string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key><array><string>CA92.1</string></array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -13,12 +13,14 @@
     "test": "node scripts/run-tests.mjs",
     "ios:sync": "npm run build && npx cap sync ios && python3 scripts/ios-patch.py",
     "ios:apple": "python3 scripts/ios-patch.py --apple-signin",
+    "ios:screentime": "python3 scripts/ios-patch.py --screentime",
     "ios:open": "npx cap open ios",
     "check:supabase": "node scripts/check-supabase.mjs",
     "test:db": "node scripts/test-db.mjs",
     "site": "node scripts/make-site.mjs",
     "store:screens": "node scripts/make-appstore-screenshots.mjs",
-    "store:check": "node scripts/check-store.mjs"
+    "store:check": "node scripts/check-store.mjs",
+    "sprites": "node scripts/make-pal-sprites.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

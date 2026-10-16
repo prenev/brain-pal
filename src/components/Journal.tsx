@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, Check, Search, Trash2 } from 'lucide-react'
 import Face from './Face'
+import { PalEmpty } from './Pal'
 import Support from './Support'
 import { Emoji } from '../lib/emoji'
 import { MOODS } from '../lib/mood'
@@ -106,7 +107,7 @@ export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => 
           {tags.map(t => <button key={t} className={`chip ${tag === t ? 'on' : ''}`} aria-pressed={tag === t} onClick={() => setTag(tag === t ? null : t)}>{t}</button>)}
         </div>}
       </>}
-      {journal.length === 0 && <div className="card empty">Nothing here yet. Write a few lines — it doesn’t have to be good, and nobody else will read it.</div>}
+      {journal.length === 0 && <PalEmpty pose="think">Nothing here yet. Write a few lines — it doesn’t have to be good, and nobody else will read it.</PalEmpty>}
       {journal.length > 0 && shown.length === 0 && <div className="card empty">No entries match.</div>}
       {groups.map(g => (
         <section key={g.key}>

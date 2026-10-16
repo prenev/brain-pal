@@ -16,6 +16,8 @@ import { JournalList } from '../components/Journal'
 import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
+import Guard from '../components/Guard'
+import { loadGuard } from '../lib/extras'
 import { APP_VERSION } from '../lib/appInfo.ts'
 import type { JournalEntry } from '../lib/journal.ts'
 import { activeAnchors } from '../lib/anchors.ts'
@@ -31,7 +33,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
   const { mode, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal'>(initial)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -93,7 +95,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -113,6 +115,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'journal' && <JournalList onOpen={onJournal} onWrite={() => onJournal()} />}
       {view === 'support' && <Support />}
       {view === 'legal' && <Legal />}
+      {view === 'guard' && <Guard />}
       {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
         <div className="card" aria-label="Sync status">
@@ -174,6 +177,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />
+        <Row icon={<Emoji name="shield" size={30} />} color="var(--card2)" label="Focus guard" value={loadGuard().enabled ? 'On' : 'Off'} onClick={() => setView('guard')} />
         <Row icon={<Emoji name="worry" size={30} />} color="var(--card2)" label="Worry time" value={worryStats(worries).open ? `${worryStats(worries).open} parked` : ''} onClick={onWorry} />
         <Row icon={<Emoji name="robot" size={30} />} color="var(--card2)" label="AI helper" value={aiEnabled() ? 'On' : 'Off'} onClick={() => setView('ai')} />
         <Row icon={<Emoji name="photo" size={30} />} color="var(--card2)" label="Photo Gallery" onClick={() => setView('gallery')} />

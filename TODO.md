@@ -24,6 +24,11 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Stats → Sleep → *Connect Apple Health sleep*: last night's hours and (with a Watch) Deep/REM/Core match what the Health app shows *(Phase 10)*
 - [ ] Delete-account function end-to-end on a throwaway account
 
+## Focus guard (docs/SCREENTIME.md)
+- [ ] Dev test on your iPhone: `npm run ios:sync && npm run ios:screentime`, then More → Focus guard: allow → choose apps → on → open a chosen app (shield) → earn time → opens
+- [ ] **Request Apple's Family Controls (Distribution) entitlement** (link in docs/SCREENTIME.md) before any TestFlight/App Store build that includes the guard; until then upload builds WITHOUT `ios:screentime`
+- [ ] Tell me if you want the automatic re-lock extension (needs a Mac session)
+
 ## App Store (everything else is prepared — follow docs/APPSTORE.md §3; `npm run store:check` shows what's blank)
 - [ ] Fill in **your name, public contact e-mail, governing law, copyright, App Review contact** (`src/lib/legal.ts` → `OWNER`; `scripts/store-metadata.mjs` → `APP.copyright`, `REVIEW`), then `npm run site && npm run store:meta`, commit
 - [ ] **Trademark / name search for "Brain Pal"** (App Store, USPTO, EUIPO, WIPO) — change the name now if it collides

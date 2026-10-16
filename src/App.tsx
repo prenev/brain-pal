@@ -4,6 +4,7 @@ import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
 import { useNativeTabs } from './lib/nativeTabs'
+import { useGuardRelock } from './components/Guard'
 import { StoreProvider, useStore } from './lib/store'
 import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
 import Entries, { type HomeView } from './pages/Entries'
@@ -38,6 +39,7 @@ function Shell() {
   const [onboarded, setOnboarded] = useState(() => { try { return !!localStorage.getItem('bp.onboarded') } catch { return true } })
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
+  useGuardRelock()
   const [coinToast, setCoinToast] = useState(0)
   const lastCoins = useRef<number | null>(null)
   // A quiet "+N coins" when you earn some (never on load, never when coins drop from spending).

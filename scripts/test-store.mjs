@@ -6,6 +6,7 @@ import { LISTING, APP, REVIEW, AGE_RATING, PRIVACY_LABEL } from './store-metadat
 import { privacy, terms, support, licenses, NOTICES, DOCS, OWNER } from '../src/lib/legal.ts'
 import { APP_VERSION } from '../src/lib/appInfo.ts'
 import { renderDoc, renderSite } from './site-core.mjs'
+import { iconSvg, POSE_NAMES } from '../src/lib/pal.ts'
 
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url))
 const text = p => read(p).toString('utf8')
@@ -63,6 +64,12 @@ for (const f of ['icon-192', 'icon-512', 'apple-touch-icon']) assert.equal(png(`
 assert.equal(png('ios/App/App/Assets.xcassets/Splash.imageset/Default@2x~universal~anyany.png').w, 2732)
 assert.match(text('public/icon.svg'), /<svg/)
 
+/* 6b. the mascot's art kit is in sync with its drawing (run `npm run icons && npm run sprites` after changing src/lib/pal.ts) */
+assert.equal(text('public/icon.svg'), iconSvg(), 'public/icon.svg is stale')
+const sprites = JSON.parse(text('assets/pal-sprites.json')); assert.deepEqual(Object.keys(sprites.poses.frames), POSE_NAMES, 'assets/pal-sprites.json is stale')
+const sheet = png('assets/pal-poses.png'); assert.deepEqual([sheet.w, sheet.h, sheet.color], [1024, Math.ceil(POSE_NAMES.length / 4) * 256, 6], 'pose sheet is 4 columns of 256px with transparency')
+assert.equal(png('assets/pal-animations.png').w, 1024); assert.match(text('public/pal-sprites.svg'), /id="pal-celebrate"/)
+
 /* 7. one version everywhere */
 const pbx = text('ios/App/App.xcodeproj/project.pbxproj')
 assert.equal(pkg.version, APP_VERSION); assert.equal(APP.version, APP_VERSION)
@@ -79,7 +86,9 @@ const declared = [...man.matchAll(/NSPrivacyCollectedDataType(?!Purpose)(\w+)<\/
 for (const d of declared) assert.ok(PRIVACY_LABEL.some(l => l.category === MAP[d]), `manifest declares ${d} but the label (store-metadata.mjs) does not`)
 for (const l of PRIVACY_LABEL.filter(l => l.category !== 'NAME')) assert.ok(Object.values(MAP).includes(l.category) && declared.some(d => MAP[d] === l.category), `label has ${l.category} but the manifest does not`)
 assert.ok(PRIVACY_LABEL.every(l => l.data_protections.join() === 'DATA_LINKED_TO_YOU' && l.purposes.join() === 'APP_FUNCTIONALITY'), 'nothing is used for tracking or advertising')
-assert.doesNotMatch(read('ios-native/MindfulPlugin.swift').toString(), /UserDefaults|systemUptime|mach_absolute_time|creationDate|modificationDate|volumeAvailableCapacity|activeInputModes|\bstat\(/, 'a required-reason API was added: declare it in PrivacyInfo.xcprivacy with a valid reason code')
+const swiftSrc = read('ios-native/MindfulPlugin.swift').toString()
+assert.doesNotMatch(swiftSrc, /systemUptime|mach_absolute_time|creationDate|modificationDate|volumeAvailableCapacity|activeInputModes|\bstat\(/, 'a required-reason API was added: declare it in PrivacyInfo.xcprivacy with a valid reason code')
+if (/UserDefaults/.test(swiftSrc)) assert.match(man, /NSPrivacyAccessedAPICategoryUserDefaults[\s\S]*CA92\.1/, 'UserDefaults is used: the manifest must declare it (reason CA92.1)')
 
 /* 9. App Store screenshots, if generated (npm run store:screens): exact sizes */
 const SIZES = { '6.9-inch': [1320, 2868], '6.5-inch': [1284, 2778] }

@@ -108,5 +108,8 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 2. Capacitor iOS shell: native haptics, HealthKit mindful minutes
 3. Insights: emotion trends, before/after intensity
 
+## Pal & Focus guard
+**Pal** is the mascot (poses and animation strips in `assets/`, `npm run sprites`). On first run Pal walks you through the app. **Focus guard** (iPhone, More → Focus guard): choose apps that stay paused until you do push-ups, squats, a plank, a walk, a minute of breathing or write a line; reps are honour-system. Needs iOS Screen Time + Apple's Family Controls entitlement: see [`docs/SCREENTIME.md`](docs/SCREENTIME.md).
+
 ## Publishing to the App Store
 Everything needed is prepared: icon, screenshots, listing text, privacy policy/terms/support pages, privacy manifest and release automation. Start with [`docs/APPSTORE.md`](docs/APPSTORE.md) and run `npm run store:check` to see what only you can fill in.

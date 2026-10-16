@@ -1,4 +1,4 @@
-// Renders the mascot (public/icon.svg) into every icon / splash the app and the App Store need.
+// Renders the mascot (src/lib/pal.ts → public/icon.svg) into every icon / splash the app and the App Store need.
 //   public/            PWA icons (192, 512, apple-touch 180)
 //   ios/.../AppIcon    the single 1024 App Store icon (iOS draws the rounded corners; it must have NO alpha channel)
 //   ios/.../Splash     launch image (mascot on the dark background)
@@ -8,9 +8,12 @@ import { chromium } from 'playwright-core'
 import { chromiumPath } from './chromium.mjs'
 import { readFileSync, copyFileSync, readdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
+import { iconSvg } from '../src/lib/pal.ts'
 
 const root = new URL('../', import.meta.url).pathname
-const svg = readFileSync(`${root}public/icon.svg`, 'utf8')
+const svg = iconSvg()                                  // the mascot drawing lives in src/lib/pal.ts
+writeFileSync(`${root}public/icon.svg`, svg)
 const BG = '#0e1726'
 const browser = await chromium.launch({ executablePath: chromiumPath() })
 const written = []

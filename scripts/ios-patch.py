@@ -84,4 +84,12 @@ if '--apple-signin' in sys.argv:
         t = t.replace('</dict>', '\t<key>com.apple.developer.applesignin</key>\n\t<array><string>Default</string></array>\n</dict>')
         ent.write_text(t)
     print('Sign in with Apple entitlement added')
+# ---- optional: Focus guard capability (Screen Time / Family Controls). Development builds can use it; the App Store needs Apple's approval first.
+if '--screentime' in sys.argv:
+    ent = src / 'App.entitlements'
+    t = ent.read_text()
+    if 'family-controls' not in t:
+        t = t.replace('</dict>', '\t<key>com.apple.developer.family-controls</key>\n\t<true/>\n</dict>')
+        ent.write_text(t)
+    print('Family Controls (Screen Time) entitlement added')
 print('ios project patched')

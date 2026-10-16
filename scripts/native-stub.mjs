@@ -6,11 +6,12 @@ function nativeStub() {
   window.__fire = (plugin, event, data) => window.__listeners.filter(l => l.plugin === plugin && l.event === event).forEach(l => l.callback(data))   // tests simulate native events (e.g. a tapped notification)
   const reply = {
     'Mindful.isAvailable': { available: true }, 'Mindful.requestAuthorization': { granted: true }, 'Mindful.authorizationStatus': { status: 'authorized' }, 'Mindful.requestSleepAuthorization': { granted: true }, 'Mindful.readSleep': { segments: [] },
+    'Mindful.screenTimeStatus': { available: false, authorized: false, appCount: 0 }, 'Mindful.screenTimeRequestAuth': { authorized: true }, 'Mindful.screenTimePickApps': { count: 3 }, 'Mindful.screenTimeLock': { locked: true }, 'Mindful.screenTimeUnlock': { until: 0 },
     'LocalNotifications.checkPermissions': { display: 'prompt' }, 'LocalNotifications.requestPermissions': { display: 'granted' }, 'LocalNotifications.schedule': { notifications: [] },
   }
   const methods = {
     Haptics: ['impact', 'notification', 'vibrate', 'selectionStart', 'selectionChanged', 'selectionEnd'],
-    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep', 'setTabs', 'selectTab', 'setTabsHidden', 'addListener', 'removeListener'],
+    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep', 'setTabs', 'selectTab', 'setTabsHidden', 'addListener', 'removeListener', 'screenTimeStatus', 'screenTimeRequestAuth', 'screenTimePickApps', 'screenTimeLock', 'screenTimeUnlock', 'screenTimeClear'],
     LocalNotifications: ['checkPermissions', 'requestPermissions', 'schedule', 'cancel', 'getPending', 'addListener', 'removeListener'],
     StatusBar: ['setStyle', 'setBackgroundColor', 'show', 'hide', 'setOverlaysWebView'],
     SplashScreen: ['hide', 'show'],

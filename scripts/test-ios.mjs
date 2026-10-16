@@ -6,7 +6,7 @@ const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
 /* 1. the copies inside ios/ are exactly what ios-native/ says (CI caught this drifting once) */
 // (the optional `ios-patch.py --apple-signin` entitlement is the only allowed difference)
-const stripApple = t => t.replace(/\s*<key>com\.apple\.developer\.applesignin<\/key>\s*<array>.*?<\/array>/s, '')
+const stripApple = t => t.replace(/\s*<key>com\.apple\.developer\.applesignin<\/key>\s*<array>.*?<\/array>/s, '').replace(/\s*<key>com\.apple\.developer\.family-controls<\/key>\s*<true\/>/s, '')
 for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy'])
   assert.equal(stripApple(read(`ios/App/App/${f}`)), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
 
@@ -46,6 +46,11 @@ assert.match(swift, /request\.nonce = Self\.sha256\(nonce\)/, 'Apple must receiv
 /* 4c. native tab bar: a real UITabBar, never restyled (so iOS 26 draws it as Liquid Glass) */
 assert.match(swift, /UITabBar\(\)/); assert.match(swift, /UITabBarDelegate/); assert.match(swift, /notifyListeners\("tabSelected"/)
 assert.doesNotMatch(swift, /tabBar\??\.(backgroundColor|barTintColor|backgroundImage|standardAppearance|scrollEdgeAppearance|isTranslucent)|bar\.(backgroundColor|barTintColor|backgroundImage|standardAppearance|scrollEdgeAppearance|isTranslucent)/, 'do not restyle the tab bar background: that is what removes the system glass')
+
+/* 4d. Focus guard: Screen Time code is gated on iOS 16, never reads app usage, and the entitlement is opt-in (like Sign in with Apple) */
+assert.match(swift, /FamilyActivityPicker/); assert.match(swift, /ManagedSettingsStore/); assert.match(swift, /@available\(iOS 16\.0, \*\)/)
+assert.doesNotMatch(swift, /DeviceActivityReport|DeviceActivityCenter|AppUsage/, 'we never read what you use: only shield the apps you chose')
+assert.doesNotMatch(read('ios-native/App.entitlements'), /family-controls/, 'the Family Controls entitlement is added by `npm run ios:screentime`, not committed (distribution needs Apple approval)')
 
 /* 5. the only health data we ever READ is sleep analysis (privacy promise in the UI and docs) */
 assert.equal((swift.match(/HKSampleQuery\(/g) ?? []).length, 1, 'exactly one read query')

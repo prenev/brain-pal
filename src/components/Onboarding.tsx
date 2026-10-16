@@ -1,39 +1,45 @@
 import { useState } from 'react'
-import { Emoji } from '../lib/emoji'
+import Pal, { type PalMotion } from './Pal'
 import { useStore } from '../lib/store'
 import { STARTERS } from '../lib/anchors.ts'
+import type { PoseName } from '../lib/pal.ts'
 
 const PICKS = STARTERS.filter(s => ['Slow breathing', 'Log a mood', 'Walk 10 minutes', 'Get some sunlight', 'Write one line'].includes(s.label))
 
-/** Three short, skippable screens the very first time: what this is, what happens to your data, and (optionally) your first anchors. */
+interface Page { pose: PoseName; motion: PalMotion; title: string; body: string; note?: string }
+/** The story: one idea per screen, Pal doing the talking. */
+export const STORY: Page[] = [
+  { pose: 'wave', motion: 'wave', title: 'Hi, I’m Pal!', body: 'I’m your pocket buddy for a calmer head. I’ll help you check in, settle down when things spike, and build tiny habits that stick. No pressure, no guilt.', note: 'Brain Pal is a self-help tool, not medical care. If you’re in crisis, support options are always one tap away in the SOS flow and under More.' },
+  { pose: 'idle', motion: 'bob', title: 'Check in with one tap', body: 'Tap a face to log how you feel. Add a thought, a photo or a voice memo only when you want to. Your calendar and stats turn it into patterns you can actually see.' },
+  { pose: 'breatheIn', motion: 'breathe', title: 'Calm down, together', body: 'Slow breathing, grounding and “Anxious right now?” walk you through it. Park worries for later, then decide: one small step, or let it go.' },
+  { pose: 'flex', motion: 'bob', title: 'Grow a little each day', body: 'Pick up to five tiny daily anchors. Your skill levels grow with what you really do, with proof, and never go down. On iPhone, the Focus guard can keep time-sink apps paused until you move.' },
+  { pose: 'love', motion: 'bob', title: 'Your data stays yours', body: 'Everything lives on this device unless you choose to sign in to sync. No ads, no tracking, and nothing you write is sent anywhere by default.', note: 'The optional AI helper is off until you turn it on with your own key. Apple Health is only read if you connect sleep, and only for sleep.' },
+]
+const LAST = STORY.length          // the final screen picks anchors
+
+/** First run: Pal explains everything in a few skippable screens, then you can pick your first anchors. */
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { addAnchor } = useStore()
   const [step, setStep] = useState(0)
   const [picked, setPicked] = useState<string[]>([])
   const finish = () => { for (const s of PICKS.filter(p => picked.includes(p.label))) addAnchor(s.label, s.emoji, s.link); onDone() }
   const toggle = (l: string) => setPicked(p => (p.includes(l) ? p.filter(x => x !== l) : p.length < 3 ? [...p, l] : p))
+  const page = STORY[step]
 
   return (
     <div className="overlay onboarding" role="dialog" aria-modal aria-label="Welcome to Brain Pal"><div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div className="row spread" style={{ padding: '18px 4px' }}>
-        <span className="muted small" aria-live="polite">{step + 1} of 3</span>
+      <div className="row spread" style={{ padding: 'calc(var(--safe-t) + 14px) 4px 10px' }}>
+        <span className="dots" role="img" aria-label={`Step ${step + 1} of ${LAST + 1}`}>{Array.from({ length: LAST + 1 }, (_, i) => <i key={i} className={i === step ? 'on' : i < step ? 'past' : ''} />)}</span>
         <button className="linkbtn" onClick={onDone}>Skip</button>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', gap: 14 }}>
-        {step === 0 && <>
-          <div><Emoji name="lotus" size={110} /></div>
-          <h1 style={{ fontSize: 32, margin: 0 }}>A calm place to check in</h1>
-          <p className="muted" style={{ fontSize: 18, margin: 0 }}>Log how you feel in one tap, ease anxiety when it spikes, write things down, and see real proof that you’re getting better at coping.</p>
-          <p className="muted small" style={{ margin: 0 }}>Brain Pal is a self-help tool, not medical care. If you’re in crisis, the support options are always one tap away in the SOS flow and under More.</p>
-        </>}
-        {step === 1 && <>
-          <div><Emoji name="key" size={110} /></div>
-          <h1 style={{ fontSize: 32, margin: 0 }}>Your data stays yours</h1>
-          <p className="muted" style={{ fontSize: 18, margin: 0 }}>Everything lives on this device unless you choose to sign in to sync. No ads, no tracking, and nothing you write is sent anywhere by default.</p>
-          <p className="muted small" style={{ margin: 0 }}>The optional AI helper is off until you turn it on with your own key. Apple Health is only read if you connect sleep, and only for sleep.</p>
-        </>}
-        {step === 2 && <>
-          <div><Emoji name="target" size={110} /></div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 14 }}>
+        {page ? <>
+          <Pal key={step} pose={page.pose} motion={page.motion} size={190} />
+          <h1 style={{ fontSize: 31, margin: 0 }}>{page.title}</h1>
+          <p className="muted" style={{ fontSize: 18, margin: 0 }}>{page.body}</p>
+          {page.note && <p className="muted small" style={{ margin: 0 }}>{page.note}</p>}
+        </> : <>
+          <Pal pose="cheer" motion="bob" size={150} />
           <h1 style={{ fontSize: 30, margin: 0 }}>Pick up to three daily anchors</h1>
           <p className="muted" style={{ fontSize: 17, margin: 0 }}>Small things that make a day count. You can change these any time.</p>
           <div className="chips" style={{ justifyContent: 'center' }} role="group" aria-label="Daily anchors">
@@ -42,7 +48,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
         </>}
       </div>
       <div style={{ padding: '18px 0 calc(var(--safe-b) + 24px)' }}>
-        {step < 2 ? <button className="btn primary block" onClick={() => setStep(step + 1)}>Next</button>
+        {step < LAST ? <button className="btn primary block" onClick={() => setStep(step + 1)}>Next</button>
           : <button className="btn primary block" onClick={finish}>{picked.length ? 'Start' : 'Start without anchors'}</button>}
       </div>
     </div></div>
