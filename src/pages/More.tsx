@@ -17,6 +17,7 @@ import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
 import { Stickers, inviteFriend } from '../components/ShareSheet'
+import FeedbackSettings from '../components/FeedbackSettings'
 import { useOpenPaywall } from '../components/Pro'
 import { usePro } from '../lib/proStore'
 import { resetTips } from '../components/Pal'
@@ -24,7 +25,7 @@ import WhatsNew from '../components/WhatsNew'
 import { RELEASES } from '../lib/whatsnew.ts'
 import { resetCoach } from '../components/Coach'
 import Guard from '../components/Guard'
-import { loadGuard } from '../lib/extras'
+import { loadFx, loadGuard } from '../lib/extras'
 import { APP_VERSION } from '../lib/appInfo.ts'
 import type { JournalEntry } from '../lib/journal.ts'
 import { activeAnchors } from '../lib/anchors.ts'
@@ -40,7 +41,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
   const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard' | 'stickers'>(initial)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard' | 'stickers' | 'feedback'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -108,7 +109,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers', feedback: 'Sounds & haptics' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -130,6 +131,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'legal' && <Legal />}
       {view === 'guard' && <Guard />}
       {view === 'stickers' && <Stickers />}
+      {view === 'feedback' && <FeedbackSettings />}
       {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
         <div className="card" aria-label="Sync status">
@@ -206,6 +208,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
         <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Invite a friend" onClick={async () => setInviteMsg((await inviteFriend()) === 'saved' ? 'Invite text copied.' : '')} />
+        <Row icon={<Emoji name="bell" size={30} />} color="var(--card2)" label="Sounds & haptics" value={loadFx().sound || loadFx().haptics ? 'On' : 'Off'} onClick={() => setView('feedback')} />
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Wobbi stickers" onClick={() => setView('stickers')} />
         <Row icon={<Emoji name="tada" size={30} />} color="var(--card2)" label="What’s new" onClick={() => setShowNews(true)} />
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="About & legal" onClick={() => setView('legal')} />

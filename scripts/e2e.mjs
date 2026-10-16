@@ -820,11 +820,46 @@ test('iPhone app mode: boots without a service worker, styles the status bar, ne
   await done(s)
 })
 
+test('feedback: buttons and chips tick on the Taptic Engine, sliders tick as you drag, celebrations play a sound — and both switch off in More → Sounds & haptics', async () => {
+  const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
+  await reload(p)
+  const impacts = () => calls(p, 'Haptics', 'impact')
+  const n0 = (await impacts()).length
+  await p.click('.fab'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n0)
+  assert.equal((await impacts()).at(-1).options.style, 'MEDIUM', 'the + button is a firm tap'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=2'); await p.waitForSelector('.wiz-body')
+  const n1 = (await impacts()).length; await p.click('.ig >> text=anxious'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n1)
+  assert.equal((await impacts()).at(-1).options.style, 'LIGHT', 'choosing a feeling is a light tick')
+  const n2 = (await impacts()).length; await p.locator('input[type=range]').first().fill('20'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n2)   // a slider tick
+  assert.ok(await p.evaluate(() => window.__osc) > 0, 'selections make a tiny tick sound')
+  await p.click('[aria-label=Close]')
+  await tab(p, 'More'); await p.click('.li >> text=Sounds & haptics'); await p.waitForSelector('[role=switch][aria-label="Sound effects"]')
+  assert.equal(await p.locator('[role=switch][aria-checked=true]').count(), 2, 'both on by default')
+  await p.click('[role=switch][aria-label="Sound effects"]'); await p.click('[role=switch][aria-label="Haptic feedback"]')
+  assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.fx'))), { sound: false, haptics: false })
+  const o = await p.evaluate(() => window.__osc), h = (await impacts()).length
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await p.click('[aria-label=Back]')
+  assert.equal(await p.evaluate(() => window.__osc), o, 'no sound when off'); assert.equal((await impacts()).length, h, 'no taps when off')
+  await done(s)
+})
+
+test('feedback: a celebration plays the fanfare (a bigger one for a level-up)', async () => {
+  const seed = { 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 } }
+  const s = await open(seed, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
+  await p.evaluate(() => localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 0, reframing: 1, worry: 0, consistency: 1 }))); await reload(p)   // the level-up has not been seen yet
+  await p.waitForSelector('.celebrate >> text=Reframing → Level 2')
+  assert.ok(await p.evaluate(() => window.__osc) >= 7, 'the level-up fanfare plays its notes')
+  await done(s)
+})
+
 test('iPhone app mode: breathing uses the Taptic Engine and keeps the screen awake', async () => {
   const s = await open(null, { native: true }); const p = s.page
-  await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6'); await p.click('button:has-text("Start")')
-  await p.waitForFunction(() => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= 4, null, { timeout: 8000 })
-  const raw = await calls(p, 'Haptics', 'impact'), t0 = raw[0].at
+  await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6')
+  const taps = (await calls(p, 'Haptics', 'impact')).length; await p.click('button:has-text("Start")')   // our own button taps are separate from the breathing pattern
+  await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= n + 5, taps, { timeout: 8000 })
+  const raw = (await calls(p, 'Haptics', 'impact')).slice(taps + 1), t0 = raw[0].at
   const impacts = raw.slice(0, 4).map(c => c.options.style)
   assert.deepEqual(impacts, ['LIGHT', 'MEDIUM', 'MEDIUM', 'HEAVY'], 'inhale swells light → heavy; calls: ' + JSON.stringify(raw.map(c => [c.options.style, c.at - t0])))
   assert.equal((await calls(p, 'Mindful', 'keepAwake'))[0].options.enabled, true)
@@ -1119,6 +1154,51 @@ test('Share: a level-up celebration offers a level card; the rating prompt is as
   await q.waitForSelector('.celebrate >> text=Reframing → Level 2'); await q.clock.runFor(5000)
   assert.equal((await nativeCalls(q, 'requestReview')).length, 0, 'never in the first week')
   await done(newbie)
+})
+
+test('widgets (iPhone app): the app keeps the widget snapshot fresh, applies moods and anchor ticks tapped on widgets, opens the screen a control asked for, and drives the Live Activity', async () => {
+  const t = new Date('2026-10-16T12:00:00').getTime()
+  const queued = JSON.stringify([
+    { kind: 'mood', mood: 2, at: t - 60_000 },
+    { kind: 'anchor', id: 'walk', done: true, day: '2026-10-16', at: t - 30_000 },
+    { kind: 'anchor', id: 'water', done: true, day: '2026-10-15', at: t - 86_400_000 },   // yesterday's tick: ignored
+    { kind: 'mood', mood: 9, at: t },                                                    // junk: ignored
+  ])
+  const anchors = ['walk', 'water'].map((id, order) => ({ id, label: id === 'walk' ? 'Walk' : 'Water', emoji: id, link: null, order, createdAt: '2026-10-01T09:00:00.000Z', archivedAt: null }))
+  const s = await open({ 'bp.anchors': anchors }, { native: true, time: new Date(t), reply: { 'Mindful.widgetTake': { actions: queued, route: 'worry' } } }); const p = s.page
+  // the control's screen opens, the queued mood is logged at the time it was tapped, the anchor is ticked
+  await p.waitForSelector('[aria-label="Park a worry"]')
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]' } } })
+  await p.click('[aria-label="Back"]'); await p.waitForSelector('.topbar .title >> text=Home')
+  const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.thoughts') ?? '[]'))
+  assert.equal(stored.length, 1, 'one mood logged (the junk one is dropped)'); assert.equal(stored[0].mood, 2); assert.equal(stored[0].createdAt, new Date(t - 60_000).toISOString())
+  const checks = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.anchorChecks') ?? '[]'))
+  assert.equal(checks.length, 1); assert.match(checks[0], /^walk/)
+  // and the widgets are told: the latest snapshot has today's mood, the streak and the ticked anchor
+  await p.clock.runFor(1000)
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'widgetUpdate').some(c => JSON.parse(c.options.snapshot).todayMood === 2))
+  const snap = await p.evaluate(() => JSON.parse(window.__native.filter(c => c.method === 'widgetUpdate').pop().options.snapshot))
+  assert.equal(snap.day, '2026-10-16'); assert.equal(snap.activeToday, true); assert.equal(snap.streak, 1)
+  assert.deepEqual(snap.anchors.map(a => [a.id, a.done]), [['walk', true], ['water', false]])
+  assert.equal(snap.week.length, 7); assert.ok(snap.prompt.length > 5); assert.ok(snap.wobbi.text.length > 5)
+  // going to the background pushes again; coming back drains the queue again
+  const before = (await nativeCalls(p, 'widgetUpdate')).length, takes = (await nativeCalls(p, 'widgetTake')).length
+  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: false })); await p.waitForFunction(n => window.__native.filter(c => c.method === 'widgetUpdate').length > n, before)
+  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: true })); await p.waitForFunction(n => window.__native.filter(c => c.method === 'widgetTake').length > n, takes)
+  // a control asking for SOS opens SOS
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]', route: 'sos' } } })
+  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: true })); await p.waitForSelector('[aria-label="Anxiety right now, 0 to 10"]')
+  await done(s)
+
+  // Live Activity: a breathing session starts one with the real end time and ends it when you leave
+  const b = await open(null, { native: true }); const q = b.page
+  await tab(q, 'Breathe'); await q.click('button:has-text("Start")'); await q.waitForSelector('.breath-scene')
+  await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityStart'))
+  const [start] = await nativeCalls(q, 'liveActivityStart')
+  assert.equal(start.kind, 'breathe'); assert.match(start.subtitle, /^In \d/); assert.ok(start.endsAt - start.startsAt >= 30_000, 'ends when the session ends')
+  await q.click('button:has-text("End session")'); await q.waitForSelector('.breath-scene', { state: 'detached' })
+  await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityEnd'))
+  await done(b)
 })
 
 test('breathing is an immersive full-screen scene: Wobbi swells and settles with the breath, the colour follows the phase, the native tab bar steps aside, sound can be muted, leaving works', async () => {

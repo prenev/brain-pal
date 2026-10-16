@@ -3,8 +3,10 @@ import { Pause, Play, X } from 'lucide-react'
 import BreathRunner from './BreathRunner'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
-import { chime, hapticSuccess } from '../lib/haptics'
+import { hapticSuccess } from '../lib/haptics'
+import { sfx } from '../lib/sound'
 import { isNative, Mindful } from '../lib/native'
+import { liveEnd, liveStart, liveUpdate } from '../lib/liveActivity'
 import { CALM_START_SEC, elapsedMs, finishTimer, FOCUS_OPTIONS, fmtClock, isDone, pauseTimer, remainingMs, resumeTimer, startTimer, stepChoices, timerProgress, type Timer } from '../lib/focus.ts'
 import type { BreathPattern } from '../lib/types'
 
@@ -37,12 +39,23 @@ export default function FocusFlow({ onClose }: { onClose: () => void }) {
     return () => { off = true; lock?.release().catch(() => {}); if (isNative()) Mindful.keepAwake({ enabled: false }).catch(() => {}) }
   }, [phase])
 
+  // Lock screen / Dynamic Island: the countdown keeps going when you put the phone down (paused shows the frozen time).
+  const live = useRef(false)
+  useEffect(() => {
+    if (phase !== 'focus' || !timer || timer.status === 'finished') return
+    const now = Date.now(), left = remainingMs(timer, now)
+    const o = { title: step || 'One small step', subtitle: `${minutes}-minute focus`, startsAt: now - elapsedMs(timer, now), endsAt: now + left, remainingSec: timer.status === 'paused' ? Math.round(left / 1000) : undefined }
+    if (live.current) liveUpdate(o); else { live.current = true; liveStart('focus', o) }
+  }, [phase, timer?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (phase !== 'focus' && live.current) { live.current = false; liveEnd() } }, [phase])
+  useEffect(() => () => { if (live.current) liveEnd() }, [])
+
   function finish(t: Timer, completed: boolean) {
     const done = finishTimer(t, Date.now())
     const sec = Math.round(elapsedMs(done, Date.now()) / 1000)
     if (!saved.current) { saved.current = true; addFocus({ minutes, actualSec: sec, completed, worryId, step }) }
     setTimer(done); setResult({ completed, sec }); setPhase('done')
-    if (completed) { chime(); hapticSuccess() }
+    if (completed) { sfx('celebrate'); hapticSuccess() }
   }
   // The timer ran out.
   useEffect(() => { if (phase === 'focus' && timer && timer.status === 'running' && isDone(timer, Date.now())) finish(timer, true) })

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Square, Timer, Volume2, VolumeX } from 'lucide-react'
 import Pal from './Pal'
+import { sfx } from '../lib/sound'
 import { chime, haptic, hapticSuccess, stopHaptic } from '../lib/haptics'
 import { isNative, Mindful } from '../lib/native'
 import { breathAt, cycleLength } from '../lib/breathing'
+import { liveEnd, liveStart } from '../lib/liveActivity'
 import type { BreathPattern } from '../lib/types'
 
 const LABEL = { inhale: 'Inhale', hold1: 'Hold', exhale: 'Exhale', hold2: 'Hold' } as const
@@ -48,11 +50,13 @@ export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish
     navigator.wakeLock?.request('screen').then(l => { if (finished) l.release().catch(() => {}); else lock = l }).catch(() => {})
 
     if (isNative()) Mindful.keepAwake({ enabled: true }).catch(() => {})   // wake lock isn't reliable in the app's web view
-    const cleanup = () => { finished = true; cancelAnimationFrame(raf); stopHaptic(); lock?.release().catch(() => {}); if (isNative()) Mindful.keepAwake({ enabled: false }).catch(() => {}) }
+    const start = Date.now()
+    liveStart('breathe', { title: 'Breathing with Wobbi', subtitle: [`In ${pattern.inhale}`, pattern.hold1 ? `hold ${pattern.hold1}` : '', `out ${pattern.exhale}`, pattern.hold2 ? `hold ${pattern.hold2}` : ''].filter(Boolean).join(' · '), startsAt: start, endsAt: start + cycleLen * cycles * 1000 })
+    const cleanup = () => { finished = true; cancelAnimationFrame(raf); stopHaptic(); lock?.release().catch(() => {}); liveEnd(); if (isNative()) Mindful.keepAwake({ enabled: false }).catch(() => {}) }
     const end = (completed: boolean, elapsed: number, cyclesDone: number) => {
       if (finished) return
       cleanup()
-      if (completed && vibrate) hapticSuccess()
+      if (completed) { if (vibrate) hapticSuccess(); sfx('success') }
       done.current({ completed, elapsedSec: Math.round(elapsed), cyclesDone })
     }
     stop.current = () => { const el = (performance.now() - t0) / 1000; end(false, el, Math.floor(el / cycleLen)) }

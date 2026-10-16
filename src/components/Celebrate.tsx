@@ -5,16 +5,17 @@ import { Emoji } from '../lib/emoji'
 import Pal from './Pal'
 import { burst } from '../lib/confetti'
 import { hapticSuccess } from '../lib/haptics'
+import { sfx } from '../lib/sound'
 import { useStore } from '../lib/store'
 
-export interface Celebration { emoji: string; title: string; sub: string; card?: ShareCard }
+export interface Celebration { emoji: string; title: string; sub: string; card?: ShareCard; sound?: 'celebrate' | 'levelup' }
 
 /** "Lesson complete"-style reward screen: big emoji, streak, one chunky button. */
 export default function Celebrate({ c, onClose }: { c: Celebration; onClose: () => void }) {
   const { streak } = useStore()
   const [sharing, setSharing] = useState(false)
   const card = c.card ?? (streak.current >= 3 ? streakCard(streak.current) : null)
-  useEffect(() => { burst(); hapticSuccess() }, [])
+  useEffect(() => { burst(); hapticSuccess(); sfx(c.sound ?? 'celebrate') }, [])   // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="overlay celebrate" role="dialog" aria-modal aria-label={c.title}>
       <div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>

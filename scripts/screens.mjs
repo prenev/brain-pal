@@ -212,7 +212,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // share car
   await p.evaluate(() => localStorage.setItem('bp.guard.events', JSON.stringify([{ id: 'a', at: new Date().toISOString(), challenge: 'pushups', minutes: 10, reps: 20 }, { id: 'b', at: new Date().toISOString(), challenge: 'squats', minutes: 10, reps: 35 }])))
   await p.reload(); await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('[aria-label="Brain rot beaten"]'); await snap('guard-counter')
   await p.click('[aria-label="Brain rot beaten"] button'); await p.waitForSelector('.share-preview svg'); await snap('share-card'); await p.click('.sheet button:has-text("Close")')
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await snap('stickers')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await snap('stickers'); await p.click('[aria-label=Back]'); await p.click('.li >> text=Sounds & haptics'); await snap('sounds-haptics')
 })
 await session('http://localhost:4173', true, async (p, snap) => {
   await p.evaluate(() => { window.__reply = { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4 }, 'Mindful.screenTimePickApps': { count: 4 } } })

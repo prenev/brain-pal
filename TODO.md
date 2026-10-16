@@ -54,5 +54,6 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Build the creator list (200 micro-creators) and approve the claims fact sheet (§11)
 - [ ] Device check for sharing/Siri: say "I'm anxious in Wobbi" (should open SOS); share a card + a sticker to Messages; rating prompt appears after a celebration on a TestFlight build older than 7 days; "Have a code?" opens Apple's redeem sheet
 - [ ] After the app is live: paste the App Store link into `APP_STORE_URL` (`src/lib/share.ts`) so invites/cards point to the store
-- [ ] Widgets + Apple Watch need a Mac session (tell me when you have one)
+- [ ] **Widgets (built, Phase 24):** on your iPhone, long-press the home screen → Edit → Add Widget → Wobbi and try each one; tap the mood faces and an anchor on the widgets, then open the app (they should appear); start a breathing session and lock the phone (Live Activity); on iOS 18, add the Wobbi controls in Control Center. Tell me anything that looks off
+- [ ] Apple Watch app needs a Mac session (tell me when you have one)
 - [ ] **Renamed to Wobbi** (app + mascot). Do the trademark/name search for "Wobbi" (docs/APPSTORE.md §3) before App Store Connect; technical ids stay `com.brainpal.app`, `brainpal://` and the repo name `brain-pal` on purpose (changing them breaks sign-in redirects/purchases)

@@ -31,6 +31,9 @@ import Progress from './components/Progress'
 import Summary from './components/Summary'
 import Wallet from './components/Wallet'
 import { levelCard } from './lib/share.ts'
+import { installFeedback } from './lib/feedback'
+import { useWidgetSync } from './lib/nativeWidgets'
+import { sfx } from './lib/sound'
 import { askForReviewIfHappy, noteFirstSeen } from './lib/reviewAsk'
 import type { JournalEntry } from './lib/journal.ts'
 
@@ -52,6 +55,8 @@ function Shell() {
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
   useGuardRelock()
+  useWidgetSync()
+  useEffect(() => installFeedback(), [])
   const [coached, setCoached] = useState(coachDone)
   const [news, setNews] = useState(() => unseenReleases(seenVersion(), APP_VERSION))
   useEffect(() => { if (seenVersion() === null) markSeen(APP_VERSION) }, [])      // fresh install: first run already explains everything
@@ -62,7 +67,7 @@ function Shell() {
   useEffect(() => {
     if (!ready) return
     const prev = lastCoins.current; lastCoins.current = coins
-    if (prev !== null && coins > prev) setCoinToast({ n: coins - prev, id: Date.now() + Math.random() })
+    if (prev !== null && coins > prev) { setCoinToast({ n: coins - prev, id: Date.now() + Math.random() }); sfx('coin') }
   }, [ready, coins])
   // Its own timer: a later change in coins (spending, undoing an entry) must never cancel the hide.
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
@@ -85,10 +90,13 @@ function Shell() {
   useEffect(() => {
     const go = (e: Event) => {
       const route = (e as CustomEvent<string>).detail
-      if (route === 'sos') { setScreen(null); setSos(true) }
+      if (route === 'sos' || route === 'grounding') { setScreen(null); setSos(true) }   // grounding lives inside SOS (rate first, then 5-4-3-2-1)
       else if (route === 'breathe') setTab('breathe')
       else if (route === 'journal') setJournalOpen({})
       else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
+      else if (route === 'worry') setWorryTime(true)
+      else if (route === 'park') setPark(true)
+      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins') { setTab('entries'); setScreen(route) }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
@@ -110,7 +118,7 @@ function Shell() {
     if (quiet.length || up) save({ ...seen, ...Object.fromEntries(quiet.map(u => [u.skill, u.to])), ...(up ? { [up.skill]: up.to } : {}) })
     if (!up) return
     const def = SKILLS.find(s => s.id === up.skill)!
-    setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count), card: levelCard(def.name, up.to) })
+    setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count), card: levelCard(def.name, up.to), sound: 'levelup' })
   }, [ready, loginOpen, recovery, cel, levels])
 
   // iPhone app: the real UIKit tab bar. Hidden whenever a sheet / full-screen flow is open or before the app proper shows.
