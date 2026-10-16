@@ -1100,6 +1100,24 @@ test('Share: a level-up celebration offers a level card; the rating prompt is as
   await done(newbie)
 })
 
+test('breathing is an immersive full-screen scene: Wobbi swells and settles with the breath, the colour follows the phase, the native tab bar steps aside, sound can be muted, leaving works', async () => {
+  const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
+  await p.waitForSelector('html.native-tabs'); await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'breathe' })); await p.click('button:has-text("Start")'); await p.waitForSelector('.breath-scene')
+  const vp = p.viewportSize(), box = await p.locator('.breath-scene').boundingBox()
+  assert.deepEqual([box.x, box.y, Math.round(box.width), Math.round(box.height)], [0, 0, vp.width, vp.height], 'covers the whole screen')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === true)
+  await p.waitForSelector('.breath-scene[data-phase=inhale] .breath-say >> text=Inhale')
+  const pal = () => p.locator('.breath-pal').evaluate(e => new DOMMatrix(getComputedStyle(e).transform).a)
+  const a = await pal(); await p.waitForTimeout(2500); const b = await pal()
+  assert.ok(b > a + 0.05, `Wobbi grows while breathing in (${a} → ${b})`)
+  await p.waitForSelector('.breath-bar >> text=Muted'); await p.click('[aria-label="Turn tones on"]'); await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted')
+  assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 6/)
+  await p.waitForTimeout(8000); await p.waitForSelector('.breath-scene[data-phase=hold1]')                // box 4: 4 s in, then a hold
+  await p.click('button:has-text("End session")'); await p.waitForSelector('.breath-scene', { state: 'detached' })
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
+  await done(s)
+})
+
 test('Focus guard (iPhone): allow, choose apps, switch on (locks), earn time with push-ups (unlocks), lock again, switch off — and it persists', async () => {
   const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: false, appCount: 0 }, 'Mindful.screenTimePickApps': { count: 3 } } }); const p = s.page
   await openGuard(p); await p.waitForSelector('button:has-text("Allow Screen Time")')

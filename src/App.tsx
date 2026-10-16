@@ -115,7 +115,9 @@ function Shell() {
 
   // iPhone app: the real UIKit tab bar. Hidden whenever a sheet / full-screen flow is open or before the app proper shows.
   const paywallOpen = usePaywallOpen()
-  const overlayOpen = paywallOpen || !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const [immersive, setImmersive] = useState(false)
+  useEffect(() => { const f = (e: Event) => setImmersive(!!(e as CustomEvent<boolean>).detail); window.addEventListener('bp:immersive', f); return () => window.removeEventListener('bp:immersive', f) }, [])
+  const overlayOpen = paywallOpen || immersive || !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
   const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || loginOpen || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
   if (!ready) return <Splash />

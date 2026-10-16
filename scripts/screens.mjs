@@ -90,7 +90,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.cell:not(.off) .bub:has(svg) >> nth=-1'); await p.evaluate(() => window.scrollTo(0, 700)); await snap('calendar-day')
   await p.click('.tab >> text=Breathe'); await snap('breathe')
   await p.click('.seg >> text=Calm 4-6'); await snap('breathe-calm-preset')
-  await p.click('text=Start'); await p.waitForTimeout(5200); await snap('breathe-running'); await p.click('text=End session')
+  await p.click('text=Start'); await p.waitForTimeout(3200); await snap('breathe-running'); await p.waitForTimeout(2200); await snap('breathe-running-2'); await p.click('text=End session')
   // SOS flow
   await p.click('[aria-label^="Anxious right now"]'); await snap('sos-rate')
   await p.click('text=Need more support right now?'); await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await snap('sos-support'); await p.click('text=Hide support options')
