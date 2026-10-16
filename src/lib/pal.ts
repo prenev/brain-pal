@@ -52,9 +52,11 @@ export const ANIMATIONS: Record<string, PoseName[]> = {
 const C = { body: '#c8b8ff', hi: '#eee8ff', edge: '#9f8be6', fold: '#ad9bf0', cheek: '#ff9ec0', ink: '#2a2745', white: '#fff', limb: '#bba8fb', gold: '#ffd95a', blue: '#7cc4ff', pink: '#ff8fb1', green: '#5fd39a' }
 const f = (n: number) => Math.round(n * 10) / 10
 
-// silhouette: a plump, smooth cloud with two soft top bumps (a hint of a brain, nothing gross)
-const BLOBS = [[100, 74, 47], [68, 56, 27], [132, 56, 27], [66, 92, 28], [134, 92, 28], [100, 100, 36]] as const
-const circles = (extra: number) => BLOBS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + extra}"/>`).join('')
+// silhouette: a chubby brain seen from the front: two hemispheres made of soft round lobes, a notch at the top and bottom
+type Blob = readonly [number, number, number]
+const bump = (deg: number, side: 1 | -1): Blob => { const a = (deg * Math.PI) / 180; return [f(100 + side * 54 * Math.cos(a)), f(76 + 37 * Math.sin(a)), 19] }
+const BLOBS: Blob[] = [...[-66, -30, 6, 42, 74].flatMap(d => [bump(d, 1), bump(d, -1)]), [100, 76, 46]]
+const circles = (extra: number) => BLOBS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${f(r + extra)}"/>`).join('')
 
 function limb(x0: number, y0: number, angle: number, len: number, side: -1 | 1, name: string) {
   const a = (angle * Math.PI) / 180
@@ -64,7 +66,7 @@ function limb(x0: number, y0: number, angle: number, len: number, side: -1 | 1, 
 function foot(x: number, y: number, dir: number) { return `<ellipse cx="${f(x + dir * 3)}" cy="${f(y + 1)}" rx="9.5" ry="5.6" fill="${C.limb}" stroke="${C.edge}" stroke-width="2.4"/>` }
 
 function legs(kind: Legs) {
-  const hipY = 120
+  const hipY = 126
   const spec: Record<Legs, [number, number, number, number]> = { // [angleL, lenL, angleR, lenR] — 0 = straight down
     stand: [4, 26, 4, 26], wide: [18, 27, 18, 27], squat: [42, 20, 42, 20], jump: [24, 18, 24, 18], walkA: [-22, 26, 26, 26], walkB: [26, 26, -22, 26],
   }
@@ -124,11 +126,16 @@ export function poseSpec(name: PoseName): PoseSpec { return { ...BASE, ...(POSES
 /** The mascot as an SVG fragment in a 200×200 box (no <svg> wrapper): for building scenes. */
 export function palBody(name: PoseName): string {
   const p = poseSpec(name)
-  const shoulderY = 94
-  const arms = limb(54, shoulderY, p.armL, 35, -1, 'arm armL') + limb(146, shoulderY, p.armR, 35, 1, 'arm armR')
+  const shoulderY = 98
+  const arms = limb(38, shoulderY, p.armL, 34, -1, 'arm armL') + limb(162, shoulderY, p.armR, 34, 1, 'arm armR')
   const body = `<g fill="${C.edge}">${circles(2.4)}</g><g fill="${C.body}">${circles(0)}</g>
-    <g fill="${C.hi}" opacity=".7"><ellipse cx="78" cy="38" rx="15" ry="7.5" transform="rotate(-28 78 38)"/></g>
-    <g fill="none" stroke="${C.fold}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity=".9"><path d="M100 27v9"/><path d="M58 50q6-7 12 0t12-2"/><path d="M142 50q-6-7-12 0t-12-2"/></g>`
+    <g fill="${C.hi}" opacity=".75"><ellipse cx="72" cy="40" rx="13" ry="6.5" transform="rotate(-28 72 40)"/></g>
+    <g fill="none" stroke="${C.fold}" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M100 30v30"/>
+      <path d="M118 42q13 4 11 17"/><path d="M82 42q-13 4 -11 17"/>
+      <path d="M140 74q-9 6 -1 15"/><path d="M60 74q9 6 1 15"/>
+      <path d="M121 101q10 -1 14 8"/><path d="M79 101q-10 -1 -14 8"/>
+    </g>`
   const face = `<ellipse cx="68" cy="90" rx="8" ry="5" fill="${C.cheek}" opacity=".7"/><ellipse cx="132" cy="90" rx="8" ry="5" fill="${C.cheek}" opacity=".7"/>${brows(p.brows)}<g class="eyes">${eyes(p.eyes)}</g>${mouth(p.mouth)}`
   const cx = 100, cy = 100
   const t = `translate(0 ${p.dy}) translate(${cx} ${cy + 20}) rotate(${p.tilt}) scale(${p.scale}) translate(${-cx} ${-(cy + 20)})`
@@ -147,7 +154,7 @@ export function iconSvg(): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs><radialGradient id="bg" cx=".5" cy=".46" r=".72"><stop offset="0" stop-color="#2a3347"/><stop offset=".6" stop-color="#171d2b"/><stop offset="1" stop-color="#0d111a"/></radialGradient></defs>
   <rect width="512" height="512" fill="url(#bg)"/>
-  <g transform="translate(16 34) scale(2.4)">${palBody('idle')}</g>
+  <g transform="translate(26 40) scale(2.3)">${palBody('idle')}</g>
 </svg>
 `
 }
