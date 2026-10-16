@@ -151,7 +151,7 @@ test('create, persist, expand and delete an entry', async () => {
   await reload(s.page)
   await s.page.click('.entry'); await s.page.waitForSelector('text=Thinking traps'); assert.ok(await s.page.locator('.entry .chip >> text=catastrophizing').count())
   s.page.once('dialog', d => d.accept()); await s.page.click('text=Delete entry')
-  await s.page.click('.more-today'); await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.click('.more-today'); await s.page.waitForSelector('text=No entries this month')
+  assert.equal(await s.page.locator('.more-today').count(), 0, 'deleted the only entry: nothing left, so no "All entries" link'); await reload(s.page); assert.equal(await s.page.locator('.entry').count(), 0); assert.equal(await s.page.locator('.more-today').count(), 0)
   await done(s)
 })
 
@@ -1255,11 +1255,17 @@ test('Focus: settings change the lengths and automatic starts; presets; the goal
   await openFocus(p, 'To-do')
   await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("Write what you want to get done")')
   await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Call the dentist'); await p.click('[aria-label="Add to-do"]')
-  await p.fill('[aria-label="New to-do"]', 'call the dentist'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("already on the list")'); assert.equal(await p.locator('.todos li').count(), 2)
-  await p.click('.todo-text >> text=Write the report'); await closeSheet(p)
-  await p.waitForSelector('.pomo-task.set >> text=Write the report')
-  await p.click('.pomo-task'); await p.waitForSelector('.pomo-sheet .todos'); await p.click('.todo-text >> text=Call the dentist'); await closeSheet(p); await p.waitForSelector('.pomo-task.set >> text=Call the dentist')
-  await p.click('.pomo-task'); await p.click('.todo-text >> text=Write the report'); await closeSheet(p); await p.waitForSelector('.pomo-task.set >> text=Write the report')
+  await p.fill('[aria-label="New to-do"]', 'call the dentist'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("already on the list")'); assert.equal(await p.locator('.todo-row').count(), 2)
+  assert.equal(await p.locator('.todos button.todo-text').count(), 0, 'the top-bar list is for ticking off, not for picking'); assert.equal(await p.locator('.todo-row .pomo-count').count(), 2, 'every task shows its pomodoro count')
+  await closeSheet(p)
+  // the task button picks: no ticking off and no deleting from here, and picking closes the sheet
+  await p.click('.pomo-task'); await p.waitForSelector('.pomo-sheet .todos[aria-label="Pick a task"]')
+  assert.equal(await p.locator('.pomo-sheet [role=checkbox]').count(), 0, 'cannot mark done while picking'); assert.equal(await p.locator('.pomo-sheet [aria-label^="Remove"]').count(), 0, 'nor remove')
+  await p.click('.todo-text >> text=Write the report'); await p.waitForSelector('.pomo-sheet', { state: 'detached' }); await p.waitForSelector('.pomo-task.set >> text=Write the report')
+  await p.click('.pomo-task'); await p.click('.todo-text >> text=Call the dentist'); await p.waitForSelector('.pomo-task.set >> text=Call the dentist')
+  await p.click('.pomo-task'); await p.fill('[aria-label="New to-do"]', 'Reply to Sam'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('.pomo-task.set >> text=Reply to Sam')   // add and start on it
+  await p.click('.pomo-task'); await p.click('.todo-text >> text=Write the report'); await p.waitForSelector('.pomo-task.set >> text=Write the report')
+  await p.click('.pomo-nav [aria-label="To-do"]'); await p.click('[aria-label="Remove Reply to Sam"]'); assert.equal(await p.locator('.todo-row').count(), 2); await closeSheet(p)
   await p.click('[aria-label="Timer settings"]'); await p.waitForSelector('[aria-label="Presets"]')
   await p.click('[aria-label="Presets"] >> text=Deep'); assert.equal(await p.locator('.stepper[aria-label="Focus"] b').innerText(), '50 min'); await p.click('[aria-label="More focus"]'); assert.equal(await p.locator('.stepper[aria-label="Focus"] b').innerText(), '55 min')
   await p.click('[aria-label="Less daily goal"]'); await p.click('[role=switch][aria-label="Start focus automatically after a break"]')
@@ -1269,14 +1275,15 @@ test('Focus: settings change the lengths and automatic starts; presets; the goal
   // stats
   // the page's clock, not this machine's
   const now = await p.evaluate(() => Date.now()), blk = (daysAgo, task) => ({ id: 'b' + daysAgo + task, createdAt: new Date(now - daysAgo * 864e5).toISOString(), minutes: 25, actualSec: 1500, completed: true, worryId: null, step: task ? `Pomodoro · ${task}` : 'Pomodoro' })
-  await p.evaluate(b => localStorage.setItem('bp.focus', JSON.stringify(b)), [blk(0, 'Write the report'), blk(0, 'Write the report'), blk(1, 'Email'), blk(2), blk(4, 'Write the report')])
+  await p.evaluate(b => { localStorage.setItem('bp.focus', JSON.stringify(b)); localStorage.setItem('bp.todos', JSON.stringify(JSON.parse(localStorage.getItem('bp.todos')).map(t => (t.text === 'Write the report' ? { ...t, pomos: 3 } : t)))) }, [blk(0, 'Write the report'), blk(0, 'Write the report'), blk(1, 'Email'), blk(2), blk(4, 'Write the report')])
   await reload(p); await openFocus(p, 'Stats')
   await p.waitForSelector('.pomo-stats'); assert.match(await p.locator('.pomo-stats').innerText(), /2 blocks · 50 min focused · goal met!/); assert.equal(await p.locator('.week-bars > div').count(), 7)
   assert.equal(await p.locator('.stat-tiles .card').first().innerText().then(t => t.split('\n')[0]), '3', 'streak: today, yesterday and 2 days ago'); assert.match(await p.locator('.stat-tiles').innerText(), /5\s*blocks/); assert.match(await p.locator('.stat-tiles').innerText(), /2h 5m/)
   assert.match(await p.locator('.pomo-stats').innerText(), /Most-worked tasks[\s\S]*Write the report\s*3/)
-  await closeSheet(p); await p.click('.pomo-nav [aria-label="To-do"]'); await p.click('[aria-label="Done: Write the report"]'); await p.waitForSelector('.todos li.done')
-  await reload(p); await openFocus(p, 'To-do'); assert.equal(await p.locator('.todos li').count(), 2); assert.equal(await p.locator('.todos li.done').count(), 1)
-  p.once('dialog', d => d.accept()); await p.click('[aria-label="Remove Call the dentist"]'); assert.equal(await p.locator('.todos li').count(), 1)
+  await closeSheet(p); await p.click('.pomo-nav [aria-label="To-do"]'); await p.click('[aria-label="Done: Write the report"]'); await p.waitForSelector('.todo-row.done')
+  await reload(p); await openFocus(p, 'To-do'); assert.equal(await p.locator('.todo-row').count(), 2); assert.equal(await p.locator('.todo-row.done').count(), 1)
+  assert.equal(await p.locator('.todo-row.done .pomo-count').getAttribute('aria-label'), '3 pomodoros', 'a finished task keeps its pomodoro count'); assert.match(await p.locator('.todo-head').innerText(), /1 open · 3 pomodoros so far/)
+  p.once('dialog', d => d.accept()); await p.click('[aria-label="Remove Call the dentist"]'); assert.equal(await p.locator('.todo-row').count(), 1)
   await done(s)
 })
 
@@ -1332,7 +1339,7 @@ test('notch / status bar: the first thing on every tab clears the safe area, eve
 })
 
 test('Wobbi the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
-  const s = await open(); const p = s.page
+  const s = await open({ 'bp.thoughts': [rec('old', 45)] }); const p = s.page      // one old entry: the link is there, this month is empty
   assert.ok(await p.locator('.today .pal svg').count(), 'Wobbi waves on the Today card')
   await p.click('.more-today'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/); await p.click('[aria-label=Back]')
   await p.click('.journal-card'); assert.ok(await p.locator('.pal-empty .pal').count()); await p.click('[aria-label=Back]')

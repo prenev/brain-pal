@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, ListChecks, Minus, Plus, Settings, SkipForward, RotateCcw, Target, Trash2 } from 'lucide-react'
+import { ArrowLeft, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, ListChecks, Minus, Plus, Settings, SkipForward, RotateCcw, Target, Timer, Trash2 } from 'lucide-react'
 import Pal from './Pal'
 import { Sheet, Toggle } from './ui'
-import { Emoji } from '../lib/emoji'
 import { usePomo } from '../lib/pomoStore'
 import { fmtClock } from '../lib/focus.ts'
 import { PHASE_LABEL, phaseMinutes, POMO_PRESETS, type PomoPhase } from '../lib/pomodoro.ts'
@@ -34,7 +33,7 @@ function Flowers({ progress }: { progress: number }) {
   )
 }
 
-function Timer({ onTask }: { onTask: () => void }) {
+function TimerStage({ onTask }: { onTask: () => void }) {
   const p = usePomo()
   const { run, settings: s } = p
   const idle = !run.timer
@@ -53,7 +52,7 @@ function Timer({ onTask }: { onTask: () => void }) {
       <div className="pomo-clock" role="timer" aria-label={`${PHASE_LABEL[run.phase]}, ${fmtClock(p.left)} left`}>{fmtClock(p.left)}</div>
       {run.phase === 'work'
         ? <button className={`pomo-task ${p.task ? 'set' : ''}`} onClick={onTask} aria-label={p.task ? `Working on ${p.task.text}. Change task` : 'Pick a task for this session'}>
-            <Target size={18} /><span>{p.task ? p.task.text : 'Pick a task for this session'}</span><ChevronDown size={18} />
+            <Target size={18} /><span>{p.task ? p.task.text : 'Pick a task for this session'}</span>{p.task && p.task.pomos > 0 && <em className="chip-count">{p.task.pomos}×</em>}<ChevronDown size={18} />
           </button>
         : <p className="pomo-line">{run.phase === 'short' ? 'Short break: sip, stretch, look away.' : 'Long break: you earned a proper rest.'}</p>}
       <div className="pomo-phase">
@@ -70,28 +69,65 @@ function Timer({ onTask }: { onTask: () => void }) {
   )
 }
 
-function Todos() {
+const pomoLabel = (n: number) => `${n} ${n === 1 ? 'pomodoro' : 'pomodoros'}`
+/** How many finished blocks went into a task. */
+function PomoCount({ n }: { n: number }) {
+  return <span className={`pomo-count ${n > 0 ? 'has' : ''}`} aria-label={pomoLabel(n)} title={pomoLabel(n)}><Timer size={14} />{n}</span>
+}
+
+/**
+ * Two ways in. `manage` (top bar): add tasks, tick them off, remove them; each shows its pomodoro count. Ticking is only possible here.
+ * `pick` (the task chip under the clock): choose what this block is for, or add something new and start on it. No ticking, no deleting.
+ */
+function Todos({ mode, onPicked }: { mode: 'manage' | 'pick'; onPicked?: () => void }) {
   const p = usePomo()
   const [text, setText] = useState(''), [err, setErr] = useState('')
+  const open = p.todos.filter(t => !t.done), finished = p.todos.filter(t => t.done)
+  const totalPomos = p.todos.reduce((n, t) => n + t.pomos, 0)
+  const pick = (id: string | null) => { p.setTask(id); onPicked?.() }
+  const submit = (e: React.FormEvent) => { e.preventDefault(); const r = p.add(text, mode === 'pick'); setErr(r ?? ''); if (!r) { setText(''); if (mode === 'pick') onPicked?.() } }
   return (
-    <div className="todos" aria-label="To-do">
-      <div className="row spread"><b style={{ fontSize: 20 }}>To-do</b><span className="muted small">{p.todos.filter(t => !t.done).length} open</span></div>
-      <form className="todo-add" onSubmit={e => { e.preventDefault(); const r = p.add(text); setErr(r ?? ''); if (!r) setText('') }}>
-        <input className="input" aria-label="New to-do" placeholder="What do you want to get done?" value={text} maxLength={100} onChange={e => { setText(e.target.value); setErr('') }} />
+    <div className="todos" aria-label={mode === 'pick' ? 'Pick a task' : 'To-do'}>
+      <div className="todo-head">
+        <span className="todo-pal"><Pal pose={mode === 'pick' ? 'focus' : 'read'} size={52} motion="none" /></span>
+        <div><b>{mode === 'pick' ? 'What is this block for?' : 'To-do'}</b>
+          <span className="muted small">{mode === 'pick' ? 'Pick one, or add something new.' : `${open.length} open · ${pomoLabel(totalPomos)} so far`}</span></div>
+      </div>
+      <form className="todo-add" onSubmit={submit}>
+        <input className="input" aria-label="New to-do" placeholder={mode === 'pick' ? 'Something new to work on…' : 'What do you want to get done?'} value={text} maxLength={100} onChange={e => { setText(e.target.value); setErr('') }} />
         <button className="btn primary" type="submit" aria-label="Add to-do"><Plus size={20} /></button>
       </form>
       {err && <p role="alert" style={{ color: 'var(--danger)', margin: '6px 2px 0' }}>{err}</p>}
       {p.todos.length === 0 && <div className="todo-empty"><Pal pose="think" size={64} /><span className="muted">Nothing here yet. One small thing is enough.</span></div>}
-      <ul>
-        {p.todos.map(t => (
-          <li key={t.id} className={`${t.done ? 'done' : ''} ${t.id === p.run.taskId ? 'focus' : ''}`}>
-            <button role="checkbox" aria-checked={t.done} aria-label={`Done: ${t.text}`} className="tickbox-btn" onClick={() => p.toggle(t.id)}><span className="tickbox">{t.done && <Check size={16} strokeWidth={3.4} />}</span></button>
-            <button className="todo-text" aria-pressed={t.id === p.run.taskId} disabled={t.done} onClick={() => p.setTask(t.id === p.run.taskId ? null : t.id)}>{t.text}{t.pomos > 0 && <em><Emoji name="fire" size={14} style={{ verticalAlign: -2 }} /> {t.pomos}</em>}</button>
-            <button className="icon-btn" aria-label={`Remove ${t.text}`} onClick={() => p.remove(t.id)}><Trash2 size={17} /></button>
+      <ul className="todo-list">
+        {open.map(t => (
+          <li key={t.id} className={`todo-row ${t.id === p.run.taskId ? 'focus' : ''}`}>
+            {mode === 'manage'
+              ? <button role="checkbox" aria-checked={false} aria-label={`Done: ${t.text}`} className="tickbox-btn" onClick={() => p.toggle(t.id)}><span className="tickbox" /></button>
+              : <span className={`todo-radio ${t.id === p.run.taskId ? 'on' : ''}`} aria-hidden="true"><i /></span>}
+            {mode === 'pick'
+              ? <button className="todo-text" aria-pressed={t.id === p.run.taskId} onClick={() => pick(t.id === p.run.taskId ? null : t.id)}>{t.text}</button>
+              : <span className="todo-text">{t.text}{t.id === p.run.taskId && <em className="now">now</em>}</span>}
+            <PomoCount n={t.pomos} />
+            {mode === 'manage' && <button className="icon-btn" aria-label={`Remove ${t.text}`} onClick={() => p.remove(t.id)}><Trash2 size={17} /></button>}
           </li>
         ))}
       </ul>
-      {p.todos.some(t => !t.done) && <p className="muted small" style={{ margin: '8px 2px 0' }}>Tap a task to work on it this session. Each finished block counts towards it.</p>}
+      {mode === 'pick' && p.run.taskId && <button className="linkbtn" style={{ display: 'block', margin: '4px auto 0' }} onClick={() => pick(null)}>Work on nothing in particular</button>}
+      {mode === 'manage' && finished.length > 0 && <>
+        <div className="todo-sub">Done</div>
+        <ul className="todo-list done">
+          {finished.map(t => (
+            <li key={t.id} className="todo-row done">
+              <button role="checkbox" aria-checked={true} aria-label={`Done: ${t.text}`} className="tickbox-btn" onClick={() => p.toggle(t.id)}><span className="tickbox"><Check size={16} strokeWidth={3.4} /></span></button>
+              <span className="todo-text">{t.text}</span>
+              <PomoCount n={t.pomos} />
+              <button className="icon-btn" aria-label={`Remove ${t.text}`} onClick={() => p.remove(t.id)}><Trash2 size={17} /></button>
+            </li>
+          ))}
+        </ul>
+      </>}
+      {mode === 'manage' && open.length > 0 && <p className="muted small" style={{ margin: '8px 2px 0' }}>Pick what to work on from the task button under the clock. Each finished block counts towards it.</p>}
     </div>
   )
 }
@@ -199,7 +235,7 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
 /** Focus: a full-screen pomodoro (no scrolling). To-do, stats and settings open as sheets on top of it. */
 export default function FocusHub({ onClose }: { onClose: () => void }) {
   const p = usePomo()
-  const [sheet, setSheet] = useState<'todo' | 'stats' | 'settings' | null>(null)
+  const [sheet, setSheet] = useState<'todo' | 'pick' | 'stats' | 'settings' | null>(null)
   const close = () => setSheet(null)
   return (
     <div className={`pomo-screen ${p.run.phase}`} role="dialog" aria-modal aria-label="Focus">
@@ -212,8 +248,9 @@ export default function FocusHub({ onClose }: { onClose: () => void }) {
           <button aria-label="Timer settings" onClick={() => setSheet('settings')}><Settings size={22} /></button>
         </div>
       </div>
-      <Timer onTask={() => setSheet('todo')} />
-      {sheet === 'todo' && <Sheet onClose={close}><div className="pomo-sheet"><Todos /><button className="btn primary" onClick={close}>Done</button></div></Sheet>}
+      <TimerStage onTask={() => setSheet('pick')} />
+      {sheet === 'todo' && <Sheet onClose={close}><div className="pomo-sheet"><Todos mode="manage" /><button className="btn primary" onClick={close}>Done</button></div></Sheet>}
+      {sheet === 'pick' && <Sheet onClose={close}><div className="pomo-sheet"><Todos mode="pick" onPicked={close} /><button className="btn" style={{ width: '100%', marginTop: 12 }} onClick={close}>Close</button></div></Sheet>}
       {sheet === 'stats' && <Sheet onClose={close}><div className="pomo-sheet"><Stats /><button className="btn" style={{ width: '100%', marginTop: 12 }} onClick={close}>Close</button></div></Sheet>}
       {sheet === 'settings' && <SettingsSheet onClose={close} />}
     </div>

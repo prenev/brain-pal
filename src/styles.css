@@ -687,13 +687,22 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .week-bars i { width: 100%; max-width: 28px; border-radius: 8px 8px 4px 4px; background: #4a5d86; } .week-bars .today i { background: var(--accent); } .week-bars .today { color: var(--accent); } .week-bars .bar-n { color: var(--text, #e8eefc); min-height: 14px; }
 .pomo-stats { display: grid; gap: 12px; } .pomo-stats .card { margin: 0; }
 .stat-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } .stat-tiles .card { text-align: center; padding: 14px 6px; } .stat-tiles b { display: block; font-size: 24px; } .stat-tiles span { color: var(--muted); font-weight: 800; font-size: 12.5px; }
-.todos ul { list-style: none; margin: 10px 0 0; padding: 0; } .todos li { display: flex; align-items: center; gap: 8px; border-top: 2px solid var(--edge); }
-.todo-add { display: flex; gap: 8px; margin-top: 12px; } .todo-add .input { flex: 1; } .todo-add .btn { width: 52px; display: grid; place-items: center; padding: 0; }
-.tickbox-btn { padding: 12px 4px 12px 2px; } .todos .tickbox { width: 26px; height: 26px; border-width: 3px; }
-.todos li.done .tickbox { background: var(--accent); border-color: var(--accent); }
-.todo-text { flex: 1; min-width: 0; text-align: left; padding: 13px 0; font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; } .todo-text em { font-style: normal; color: var(--muted); font-size: 13px; }
-.todos li.done .todo-text { color: var(--muted); text-decoration: line-through; } .todos li.focus .todo-text { color: var(--accent); }
-.todos li.focus { background: linear-gradient(90deg, rgba(53,208,127,.1), transparent); border-radius: 12px; }
+.todos ul { list-style: none; margin: 0; padding: 0; }
+.todo-head { display: flex; align-items: center; gap: 12px; } .todo-head b { display: block; font-size: 20px; letter-spacing: -.01em; } .todo-head .small { display: block; margin-top: 2px; }
+.todo-pal { width: 52px; height: 52px; flex: none; border-radius: 18px; background: rgba(53,208,127,.12); border: 2px solid var(--edge); display: grid; place-items: center; overflow: hidden; }
+.todo-add { display: flex; gap: 8px; margin-top: 14px; } .todo-add .input { flex: 1; } .todo-add .btn { width: 52px; display: grid; place-items: center; padding: 0; }
+.todo-list { margin-top: 12px !important; display: grid; gap: 8px; }
+.todo-row { display: flex; align-items: center; gap: 10px; padding: 4px 10px 4px 8px; border-radius: 18px; background: var(--card2); border: 2px solid var(--edge); border-bottom-width: 4px; }
+.todo-row.focus { border-color: var(--accent); background: linear-gradient(135deg, rgba(53,208,127,.14), rgba(74,168,255,.06)); }
+.todo-row.done { opacity: .7; border-bottom-width: 2px; }
+.tickbox-btn { padding: 10px 2px; } .todos .tickbox { width: 28px; height: 28px; border-width: 3px; }
+.todo-row.done .tickbox { background: var(--accent); border-color: var(--accent); }
+.todo-radio { width: 28px; height: 28px; margin: 0 2px; border-radius: 50%; border: 3px solid var(--edge); flex: none; display: grid; place-items: center; } .todo-radio i { width: 12px; height: 12px; border-radius: 50%; background: transparent; } .todo-radio.on { border-color: var(--accent); } .todo-radio.on i { background: var(--accent); }
+.todo-text { flex: 1; min-width: 0; text-align: left; padding: 13px 0; font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; line-height: 1.25; } .todo-text em.now { font-style: normal; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-ink, #04130a); background: var(--accent); padding: 2px 8px; border-radius: 999px; }
+.todo-row.done .todo-text { color: var(--muted); text-decoration: line-through; } .todo-row.focus .todo-text { color: var(--accent); }
+.pomo-count { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px; font-weight: 900; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.05); border: 2px solid var(--edge); } .pomo-count.has { color: var(--accent); border-color: var(--accent); background: rgba(53,208,127,.12); }
+.todo-sub { margin: 16px 2px 0; font-size: 12px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.pomo-task .chip-count { font-style: normal; font-weight: 900; font-size: 13px; opacity: .85; }
 .todo-empty { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .tech-go { flex: none; margin-left: auto; color: var(--muted); }
 .tech-hero { display: grid; justify-items: start; } .tech-hero .wave { width: 100%; height: 72px; }

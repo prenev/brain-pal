@@ -25,7 +25,7 @@ interface Pomo {
   run: PomoRun; running: boolean; paused: boolean; left: number; progress: number; now: number
   stats: PomoStats; todos: Todo[]; task: Todo | null; doneToday: number; justFinished: number | null
   startPause(): void; reset(): void; skip(): void; setPhase(p: PomoPhase): void; setTask(id: string | null): void
-  add(text: string): string | null; toggle(id: string): void; remove(id: string): void
+  add(text: string, pick?: boolean): string | null; toggle(id: string): void; remove(id: string): void
 }
 const Ctx = createContext<Pomo>(null!)
 export const usePomo = () => useContext(Ctx)
@@ -130,7 +130,11 @@ export function PomoProvider({ children }: { children: ReactNode }) {
     skip() { const next: PomoRun = { ...run, phase: nextPhase(run.phase, doneToday, settings), timer: null }; commit(next); void sync(next) },
     setPhase(p) { if (t) return; commit({ ...run, phase: p }) },
     setTask(id) { const next = { ...run, taskId: id }; latest.current = { ...latest.current, task: todos.find(x => x.id === id && !x.done) ?? null }; commit(next); if (next.timer) void sync(next) },
-    add(text) { const r = addTodo(todos, text, new Date().toISOString(), crypto.randomUUID()); if (r.error) return r.error; persistTodos(r.list); return null },
+    add(text, pick = false) {
+      const r = addTodo(todos, text, new Date().toISOString(), crypto.randomUUID()); if (r.error) return r.error; persistTodos(r.list)
+      if (pick) { const next = { ...run, taskId: r.list[0].id }; latest.current = { ...latest.current, task: r.list[0] }; commit(next); if (next.timer) void sync(next) }   // "add and work on it"
+      return null
+    },
     toggle(id) { const was = todos.find(x => x.id === id)?.done; persistTodos(toggleTodo(todos, id, new Date().toISOString())); if (!was) { hapticSuccess(); if (run.taskId === id) commit({ ...run, taskId: null }) } },
     remove(id) { persistTodos(removeTodo(todos, id)); if (run.taskId === id) commit({ ...run, taskId: null }) },
   }
