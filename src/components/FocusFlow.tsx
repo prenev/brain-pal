@@ -3,7 +3,8 @@ import { Pause, Play, X } from 'lucide-react'
 import BreathRunner from './BreathRunner'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
-import { chime, hapticSuccess } from '../lib/haptics'
+import { hapticSuccess } from '../lib/haptics'
+import { sfx } from '../lib/sound'
 import { isNative, Mindful } from '../lib/native'
 import { CALM_START_SEC, elapsedMs, finishTimer, FOCUS_OPTIONS, fmtClock, isDone, pauseTimer, remainingMs, resumeTimer, startTimer, stepChoices, timerProgress, type Timer } from '../lib/focus.ts'
 import type { BreathPattern } from '../lib/types'
@@ -42,7 +43,7 @@ export default function FocusFlow({ onClose }: { onClose: () => void }) {
     const sec = Math.round(elapsedMs(done, Date.now()) / 1000)
     if (!saved.current) { saved.current = true; addFocus({ minutes, actualSec: sec, completed, worryId, step }) }
     setTimer(done); setResult({ completed, sec }); setPhase('done')
-    if (completed) { chime(); hapticSuccess() }
+    if (completed) { sfx('celebrate'); hapticSuccess() }
   }
   // The timer ran out.
   useEffect(() => { if (phase === 'focus' && timer && timer.status === 'running' && isDone(timer, Date.now())) finish(timer, true) })

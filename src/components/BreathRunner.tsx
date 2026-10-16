@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Square, Timer, Volume2, VolumeX } from 'lucide-react'
 import Pal from './Pal'
+import { sfx } from '../lib/sound'
 import { chime, haptic, hapticSuccess, stopHaptic } from '../lib/haptics'
 import { isNative, Mindful } from '../lib/native'
 import { breathAt, cycleLength } from '../lib/breathing'
@@ -52,7 +53,7 @@ export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish
     const end = (completed: boolean, elapsed: number, cyclesDone: number) => {
       if (finished) return
       cleanup()
-      if (completed && vibrate) hapticSuccess()
+      if (completed) { if (vibrate) hapticSuccess(); sfx('success') }
       done.current({ completed, elapsedSec: Math.round(elapsed), cyclesDone })
     }
     stop.current = () => { const el = (performance.now() - t0) / 1000; end(false, el, Math.floor(el / cycleLen)) }

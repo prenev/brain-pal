@@ -24,7 +24,7 @@ export default function Grounding({ onFinish }: { onFinish: (elapsedSec: number)
       <div className="ground-dots" aria-label={`${got} of ${g.n} noticed`}>
         {Array.from({ length: g.n }, (_, i) => <i key={i} className={i < got ? 'on' : ''} />)}
       </div>
-      <button className="btn primary block" style={{ marginTop: 22 }} onClick={tap}>I noticed one</button>
+      <button className="btn primary block" data-fx="off" style={{ marginTop: 22 }} onClick={tap}>I noticed one</button>
       <button className="btn block" style={{ marginTop: 10, background: 'none', color: 'var(--muted)' }} onClick={next}>
         {step === GROUNDING.length - 1 ? 'Finish' : 'Skip this step'}
       </button>

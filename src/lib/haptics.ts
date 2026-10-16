@@ -8,6 +8,7 @@
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
 import { isNative } from './native'
 import { toImpactSequence } from './nativeCore'
+import { loadFx } from './extras'
 
 let iosLabel: HTMLLabelElement | null = null
 let timers: number[] = []
@@ -30,6 +31,7 @@ export const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navig
 const userHasTapped = () => (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive !== false
 
 export function haptic(pattern: number | number[]) {
+  if (!loadFx().haptics) return
   if (isNative()) {   // iPhone app: real Taptic Engine taps shaped like the pattern
     stopHaptic()
     for (const { at, style } of toImpactSequence(pattern))
@@ -48,6 +50,7 @@ export const stopHaptic = () => {
 
 /** Short "well done" feedback. */
 export function hapticSuccess() {
+  if (!loadFx().haptics) return
   if (isNative()) { Haptics.notification({ type: NotificationType.Success }).catch(() => {}); return }
   haptic([60, 50, 90])
 }

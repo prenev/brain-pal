@@ -820,11 +820,46 @@ test('iPhone app mode: boots without a service worker, styles the status bar, ne
   await done(s)
 })
 
+test('feedback: buttons and chips tick on the Taptic Engine, sliders tick as you drag, celebrations play a sound — and both switch off in More → Sounds & haptics', async () => {
+  const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
+  await reload(p)
+  const impacts = () => calls(p, 'Haptics', 'impact')
+  const n0 = (await impacts()).length
+  await p.click('.fab'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n0)
+  assert.equal((await impacts()).at(-1).options.style, 'MEDIUM', 'the + button is a firm tap'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=2'); await p.waitForSelector('.wiz-body')
+  const n1 = (await impacts()).length; await p.click('.ig >> text=anxious'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n1)
+  assert.equal((await impacts()).at(-1).options.style, 'LIGHT', 'choosing a feeling is a light tick')
+  const n2 = (await impacts()).length; await p.locator('input[type=range]').first().fill('20'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n2)   // a slider tick
+  assert.ok(await p.evaluate(() => window.__osc) > 0, 'selections make a tiny tick sound')
+  await p.click('[aria-label=Close]')
+  await tab(p, 'More'); await p.click('.li >> text=Sounds & haptics'); await p.waitForSelector('[role=switch][aria-label="Sound effects"]')
+  assert.equal(await p.locator('[role=switch][aria-checked=true]').count(), 2, 'both on by default')
+  await p.click('[role=switch][aria-label="Sound effects"]'); await p.click('[role=switch][aria-label="Haptic feedback"]')
+  assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.fx'))), { sound: false, haptics: false })
+  const o = await p.evaluate(() => window.__osc), h = (await impacts()).length
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await p.click('[aria-label=Back]')
+  assert.equal(await p.evaluate(() => window.__osc), o, 'no sound when off'); assert.equal((await impacts()).length, h, 'no taps when off')
+  await done(s)
+})
+
+test('feedback: a celebration plays the fanfare (a bigger one for a level-up)', async () => {
+  const seed = { 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 } }
+  const s = await open(seed, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
+  await p.evaluate(() => localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 0, reframing: 1, worry: 0, consistency: 1 }))); await reload(p)   // the level-up has not been seen yet
+  await p.waitForSelector('.celebrate >> text=Reframing → Level 2')
+  assert.ok(await p.evaluate(() => window.__osc) >= 7, 'the level-up fanfare plays its notes')
+  await done(s)
+})
+
 test('iPhone app mode: breathing uses the Taptic Engine and keeps the screen awake', async () => {
   const s = await open(null, { native: true }); const p = s.page
-  await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6'); await p.click('button:has-text("Start")')
-  await p.waitForFunction(() => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= 4, null, { timeout: 8000 })
-  const raw = await calls(p, 'Haptics', 'impact'), t0 = raw[0].at
+  await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6')
+  const taps = (await calls(p, 'Haptics', 'impact')).length; await p.click('button:has-text("Start")')   // our own button taps are separate from the breathing pattern
+  await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= n + 5, taps, { timeout: 8000 })
+  const raw = (await calls(p, 'Haptics', 'impact')).slice(taps + 1), t0 = raw[0].at
   const impacts = raw.slice(0, 4).map(c => c.options.style)
   assert.deepEqual(impacts, ['LIGHT', 'MEDIUM', 'MEDIUM', 'HEAVY'], 'inhale swells light → heavy; calls: ' + JSON.stringify(raw.map(c => [c.options.style, c.at - t0])))
   assert.equal((await calls(p, 'Mindful', 'keepAwake'))[0].options.enabled, true)
