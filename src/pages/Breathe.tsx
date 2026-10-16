@@ -1,3 +1,4 @@
+import { Siren } from 'lucide-react'
 import { useState } from 'react'
 import { useStore } from '../lib/store'
 import { PalTip } from '../components/Pal'
@@ -42,12 +43,11 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
 
   return (
     <>
-      <div className="topbar"><span className="title">Breathe</span></div>
-
-      {!running && <button className="sos-card" onClick={onSos}>
-        <Emoji name="sos" size={36} />
-        <span style={{ flex: 1 }}><b>Anxious right now?</b><span className="sub">Guided help in under 3 minutes</span></span>
-      </button>}
+      <div className="topbar">
+        <span className="round" aria-hidden="true" />
+        <span className="title">Breathe</span>
+        <button className="glass round sos" aria-label="Anxious right now? Get help" title="Anxious right now?" onClick={onSos}><Siren size={24} /></button>
+      </div>
 
       {running
         ? <div className="card"><BreathRunner pattern={pattern} cycles={cycles} vibrate={vibrate} sound={sound} onFinish={finish} /></div>

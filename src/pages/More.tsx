@@ -17,6 +17,7 @@ import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
 import { PalTip, resetTips } from '../components/Pal'
+import { resetCoach } from '../components/Coach'
 import Guard from '../components/Guard'
 import { loadGuard } from '../lib/extras'
 import { APP_VERSION } from '../lib/appInfo.ts'
@@ -194,7 +195,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="About & legal" onClick={() => setView('legal')} />
         {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={doSignOut} />}
       </div>
-      <p className="muted small" style={{ textAlign: 'center' }}><button className="linkbtn" onClick={() => { resetTips(); setTipsBack(true) }} disabled={tipsBack}>{tipsBack ? 'Pal’s tips are back' : 'Show Pal’s tips again'}</button></p>
+      <p className="muted small" style={{ textAlign: 'center' }}><button className="linkbtn" onClick={() => { resetTips(); resetCoach(); setTipsBack(true) }} disabled={tipsBack}>{tipsBack ? 'Pal’s tips are back' : 'Show Pal’s tips again'}</button></p>
       <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal {APP_VERSION} · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>
   )

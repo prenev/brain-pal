@@ -21,6 +21,7 @@ import { JournalEditor, JournalList } from './components/Journal'
 import FocusFlow from './components/FocusFlow'
 import Onboarding from './components/Onboarding'
 import Splash from './components/Splash'
+import Coach, { coachDone } from './components/Coach'
 import Sleep from './components/Sleep'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
@@ -45,6 +46,8 @@ function Shell() {
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
   useGuardRelock()
+  const [coached, setCoached] = useState(coachDone)
+  useEffect(() => { const back = () => setCoached(false); window.addEventListener('bp:coach-reset', back); return () => window.removeEventListener('bp:coach-reset', back) }, [])
   const [coinToast, setCoinToast] = useState<{ n: number; id: number } | null>(null)
   const lastCoins = useRef<number | null>(null)
   // A quiet "+N coins" when you earn some (never on load, never when coins drop from spending).
@@ -111,7 +114,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onAllEntries={() => setScreen('search')} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -144,7 +147,6 @@ function Shell() {
             <button className="sheet-item" onClick={() => { setMenu(false); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Journal entry</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
             <div className="sheet-label">Calm &amp; focus</div>
-            <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Emoji name="wind" size={30} /></span>Start breathing</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setFocusOpen(true) }}><span className="ic"><Emoji name="rocket" size={30} /></span>Start a small step</button>
             <div className="sheet-label">Entry for another day</div>
@@ -168,6 +170,7 @@ function Shell() {
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
+      {tab === 'entries' && !overlayOpen && !coached && <Coach onDone={() => setCoached(true)} />}
       {coinToast && <div className="coin-toast" role="status"><Emoji name="star" size={20} /> +{coinToast.n} {coinToast.n === 1 ? 'coin' : 'coins'}</div>}
       {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
