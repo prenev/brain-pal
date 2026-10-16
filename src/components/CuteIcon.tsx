@@ -48,7 +48,32 @@ function Sprout() {
   )
 }
 
-const ART = { worry: Jar, sleep: Moon, ground: Sprout }
+/** The coin: gold, a star stamped in the middle. */
+function Coin() {
+  return (
+    <>
+      <circle cx="24" cy="25.5" r="17" fill="#e0a412" stroke={INK} strokeWidth="2" />
+      <circle cx="24" cy="23" r="17" fill="#ffd23f" stroke={INK} strokeWidth="2" />
+      <circle cx="24" cy="23" r="12.5" fill="none" stroke="#f0b419" strokeWidth="2" />
+      <path d="M24 14.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="#fff6c9" stroke="#d99a0b" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M13 17.5a12 12 0 0 1 6-5.6" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity=".8" />
+    </>
+  )
+}
+
+/** A wrapped present: the treat you name yourself. */
+function Gift() {
+  return (
+    <>
+      <rect x="9" y="21" width="30" height="20" rx="3" fill="#ff8fb1" stroke={INK} strokeWidth="2" />
+      <rect x="7" y="15" width="34" height="8" rx="2.5" fill="#ffb3c9" stroke={INK} strokeWidth="2" />
+      <path d="M24 15v26" stroke="#a78bfa" strokeWidth="5" />
+      <path d="M24 15c-4-7-12-6-10-1 1 2 6 2 10 1zM24 15c4-7 12-6 10-1-1 2-6 2-10 1z" fill="#c8b8ff" stroke={INK} strokeWidth="2" strokeLinejoin="round" />
+    </>
+  )
+}
+
+const ART = { worry: Jar, sleep: Moon, ground: Sprout, coin: Coin, gift: Gift }
 export type CuteName = keyof typeof ART
 
 export default function CuteIcon({ name, size = 44 }: { name: CuteName; size?: number }) {

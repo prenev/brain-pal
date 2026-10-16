@@ -693,7 +693,7 @@ test('shop: save up for something (a goal with progress), the title and card sty
 
 test('achievements: a new one pops up as a shareable card with its coins, once; the Achievements list shows earned and locked ones', async () => {
   const s = await open({ 'bp.ach.seen': [] }); const p = s.page
-  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate >> text=Entry saved!'); await p.click('.celebrate .btn.primary')
+  await p.click('[aria-label="Log mood: good"]'); await p.click('.wiz-foot button:has-text("Just save")'); await p.waitForSelector('.celebrate >> text=Entry saved!'); await p.click('.celebrate .btn.primary')
   await p.waitForSelector('.celebrate >> text=Achievement unlocked!'); await p.waitForSelector('.cel-card svg'); assert.match(await p.locator('.cel-card').innerHTML(), /First check-in/); assert.match(await p.locator('.cel-card').innerHTML(), /BRONZE/)
   await p.waitForSelector('.celebrate >> text=+10 coins')
   await p.click('.celebrate .btn:has-text("Share")'); await p.waitForSelector('.share-preview svg'); assert.equal(await p.locator('.share-preview svg').getAttribute('viewBox'), '0 0 1080 1350'); await p.click('.sheet >> text=Close')
@@ -724,7 +724,7 @@ test('shop: a treat you name yourself, and a quiet +N when you earn', async () =
   await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.confirm-buy button.primary:has-text("Get it · 30 coins")')
   await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="112 coins"]')
   assert.equal(await p.locator('.coin-toast').count(), 0, 'spending never pops a toast')
-  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+3 coins')
+  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('.wiz-foot button:has-text("Just save")'); await p.waitForSelector('.coin-toast >> text=+3 coins')
   await done(s)
   const f = await open(); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
 })
@@ -1139,7 +1139,7 @@ test('home: tapping a face opens the entry flow with that mood and "just save my
   assert.match(await p.locator('.tool:has-text("Sleep") small').innerText(), /4h 10m/, 'last night under Sleep')
   await p.click('.worry-tool'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
   await p.click('[aria-label="Log mood: bad"]'); await p.waitForSelector('.wiz-body'); assert.match(await p.locator('.wiz-face').getAttribute('aria-label'), /Change mood/)
-  await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
+  await p.click('.wiz-foot button:has-text("Just save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
   assert.equal(await p.locator('.today').count(), 1, 'the mood card is still there after logging'); assert.equal(await p.locator('.entry').count(), 1)
   await reload(p); assert.equal(await p.locator('.entry').count(), 1)
   await done(s)
@@ -1447,13 +1447,13 @@ test('breathing is an immersive full-screen scene: Wobbi swells and settles with
 
 test('coin toast: "+N coins" always goes away by itself, even when your coins change again while it shows', async () => {
   const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+13 coins'); await p.click('.celebrate .btn.primary')   // 3 for the check-in + 10 for the first-check-in achievement
+  await p.click('[aria-label="Log mood: good"]'); await p.click('.wiz-foot button:has-text("Just save")'); await p.waitForSelector('.coin-toast >> text=+13 coins'); await p.click('.celebrate .btn.primary')   // 3 for the check-in + 10 for the first-check-in achievement
   p.once('dialog', d => d.accept()); await p.click('.entry'); await p.click('text=Delete entry')      // the entry is deleted, so coins drop while the toast is still showing (this used to cancel its timer)
   await p.waitForFunction(() => !document.querySelector('.entry'))
   await p.clock.runFor(4000)
   assert.equal(await p.locator('.coin-toast').count(), 0, 'the toast must be gone after a few seconds')
   // the 13 coins from the deleted entry are kept (earned coins never vanish), so the next entries only pay out once they go beyond that
-  for (const m of ['bad', 'meh']) { await p.click(`[aria-label="Log mood: ${m}"]`); await p.click('button:has-text("Just save my mood")'); await p.click('.celebrate .btn.primary') }
+  for (const m of ['bad', 'meh']) { await p.click(`[aria-label="Log mood: ${m}"]`); await p.click('.wiz-foot button:has-text("Just save")'); await p.click('.celebrate .btn.primary') }
   await p.waitForSelector('.coin-toast >> text=+3 coins'); await p.clock.runFor(4000)
   assert.equal(await p.locator('.coin-toast').count(), 0, 'and the next one too')
   await done(s)
@@ -1567,7 +1567,7 @@ test('Pro (iPhone): an ended subscription locks again (the store is the authorit
 test('offline first: the app needs no account; sign-in is optional and you can walk away from it', async () => {
   const A = await openCloud({ signedIn: false }); const a = A.page
   await a.click('button:has-text("Not now — keep using it offline")'); await tab(a, 'Home'); await a.waitForSelector('[aria-label="Log mood: good"]')
-  await a.click('[aria-label="Log mood: good"]'); await a.click('button:has-text("Just save my mood")'); await a.click('.celebrate .btn.primary'); await a.waitForSelector('.entry'); await tab(a, 'More')
+  await a.click('[aria-label="Log mood: good"]'); await a.click('.wiz-foot button:has-text("Just save")'); await a.click('.celebrate .btn.primary'); await a.waitForSelector('.entry'); await tab(a, 'More')
   assert.equal(await a.locator('.li:has-text("Sync across devices")').count(), 1); assert.equal(await a.locator('.li:has-text("Storage") .val').innerText(), 'This device')
   assert.equal(await a.locator('button:has-text("Sign out")').count(), 0, 'nothing to sign out of')
   await done(A)

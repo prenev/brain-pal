@@ -1,9 +1,8 @@
-import { PalTip } from './Pal'
 import { useMemo, useState } from 'react'
-import { Star, X } from 'lucide-react'
+import { Star } from 'lucide-react'
 import { Sheet } from './ui'
+import CuteIcon from './CuteIcon'
 import AchievementsView from './AchievementsView'
-import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { palSvg } from '../lib/pal.ts'
 import { dayKey, shift } from '../lib/dates.ts'
@@ -12,22 +11,23 @@ import { CATEGORY_LABEL, categoryOf, COLLECTIBLES, owned as ownedSet, RARITY_COL
 import type { Outfit } from '../lib/outfits.ts'
 
 const CATS: Category[] = ['outfit', 'theme', 'card', 'title', 'boost']
+const SECTION: Record<Category, string> = { outfit: 'Wardrobe', theme: 'Colours', card: 'Card styles', title: 'Titles', boost: 'Boosts' }
+const Coin = ({ size = 18 }: { size?: number }) => <CuteIcon name="coin" size={size} />
 const wobbi = (outfit: Outfit, size: number, pose: 'idle' | 'cheer' = 'idle') => ({ __html: palSvg(pose, { size, label: '', outfit }) })
 
 /** What an item looks like before you own it: Wobbi wearing it, the colour, the card background, the title. */
-function Preview({ item }: { item: ShopItem }) {
-  if (item.kind === 'outfit' && item.slot) return <span className="shop-prev" dangerouslySetInnerHTML={wobbi({ [item.slot]: item.id.replace('outfit-', '') }, 92)} />
+function Preview({ item, size = 92 }: { item: ShopItem; size?: number }) {
+  if (item.kind === 'outfit' && item.slot) return <span className="shop-prev" dangerouslySetInnerHTML={wobbi({ [item.slot]: item.id.replace('outfit-', '') }, size)} />
   if (item.kind === 'theme') return <span className="shop-prev"><i className="swatch" style={{ background: item.color }} /></span>
   if (item.kind === 'card') return <span className="shop-prev"><i className={`cardprev ${item.sparkle ? 'sparkle' : ''}`} style={{ background: `linear-gradient(160deg, ${item.stops![0]}, ${item.stops![1]} 55%, ${item.stops![2]})` }} /></span>
   if (item.kind === 'title') return <span className="shop-prev"><b className="titleprev">{item.text}</b></span>
-  return <span className="shop-prev"><Emoji name={item.kind === 'restday' ? 'bed' : 'party'} size={52} /></span>
+  return <span className="shop-prev"><CuteIcon name={item.kind === 'restday' ? 'sleep' : 'gift'} size={Math.round(size * .66)} /></span>
 }
 
 /** Rewards: the marketplace (spend coins on collectibles) and the achievements you've earned. Nothing is ever taken away. */
 export default function Wallet({ initial = 'shop' }: { initial?: 'shop' | 'achievements' }) {
   const { coins, earned, purchases, themeId, equip, buy, setTheme, wear, setCardStyle, setTitle, setGoal } = useStore()
   const [tab, setTab] = useState(initial)
-  const [cat, setCat] = useState<Category>('outfit')
   const [confirm, setConfirm] = useState<ShopItem | null>(null)
   const [tryOn, setTryOn] = useState<ShopItem | null>(null)
   const [note, setNote] = useState('')
@@ -41,7 +41,6 @@ export default function Wallet({ initial = 'shop' }: { initial?: 'shop' | 'achie
     for (const e of earned) byDay.set(e.day, [...(byDay.get(e.day) ?? []), e])
     return [...byDay.entries()].slice(0, 5)
   }, [earned])
-  const items = SHOP.filter(i => categoryOf(i.kind) === cat)
   const haveCount = COLLECTIBLES.filter(i => have.has(i.id)).length
   const goal = equip.goal ? SHOP.find(i => i.id === equip.goal) ?? null : null
   const fitting: Outfit = { ...equip.outfit, ...(tryOn?.slot ? { [tryOn.slot]: tryOn.id.replace('outfit-', '') } : {}) }
@@ -63,16 +62,6 @@ export default function Wallet({ initial = 'shop' }: { initial?: 'shop' | 'achie
 
   return (
     <>
-      <div className="card shop-head" aria-label="Coins">
-        <span className="shop-wobbi" dangerouslySetInnerHTML={wobbi(fitting, 118, 'cheer')} />
-        <div>
-          <div className="muted small">Your coins</div>
-          <div className="shop-coins" aria-label={`${coins} coins`}><Emoji name="star" size={34} />{coins}</div>
-          <p className="muted small" style={{ margin: 0 }}>{todayCoins > 0 ? `+${todayCoins} earned today.` : 'A tap on how you feel is enough to start.'}</p>
-        </div>
-      </div>
-      {tryOn && <div className="card tryon" role="status"><span>Trying on <b>{tryOn.name}</b></span><span className="row"><button className="btn small" onClick={() => setConfirm(tryOn)}>Get · {tryOn.cost}</button><button className="icon-x" aria-label="Stop trying on" onClick={() => setTryOn(null)}><X size={18} /></button></span></div>}
-
       <div className="seg" role="tablist" aria-label="Rewards">
         <button role="tab" aria-selected={tab === 'shop'} className={tab === 'shop' ? 'on' : ''} onClick={() => setTab('shop')}>Shop</button>
         <button role="tab" aria-selected={tab === 'achievements'} className={tab === 'achievements' ? 'on' : ''} onClick={() => setTab('achievements')}>Achievements</button>
@@ -81,39 +70,42 @@ export default function Wallet({ initial = 'shop' }: { initial?: 'shop' | 'achie
       {tab === 'achievements' && <div style={{ marginTop: 14 }}><AchievementsView /></div>}
 
       {tab === 'shop' && <>
-        <PalTip id="coins" pose="love">Coins come from showing up. Spend them on outfits for me, colours, share-card styles, titles, or a rest day for your streak. Try an outfit on before you buy.</PalTip>
-
-        {goal && <div className="card goal" aria-label="Saving for">
-          <div className="row spread"><span className="row"><Star size={18} fill="currentColor" /> <b>Saving for {goal.name}</b></span><button className="linkbtn" onClick={() => setGoal(null)}>Remove</button></div>
-          <div className="bar"><i style={{ width: `${Math.min(100, (coins / goal.cost) * 100)}%` }} /></div>
-          <p className="muted small" style={{ margin: '6px 0 0' }}>{coins >= goal.cost ? 'You can get it now!' : `${goal.cost - coins} more coins to go.`}</p>
-        </div>}
-
-        <div className="shop-cats" role="group" aria-label="Shop sections">
-          {CATS.map(c => <button key={c} className={`chip ${cat === c ? 'on' : ''}`} aria-pressed={cat === c} onClick={() => setCat(c)}>{CATEGORY_LABEL[c]}</button>)}
-        </div>
-        <p className="muted small" style={{ margin: '0 2px 10px' }}>Collected {haveCount} of {COLLECTIBLES.length}. Yours to keep; nothing expires or rotates away.</p>
-
-        <div className="shop-grid">
-          {items.map(item => {
-            const mine = have.has(item.id) && !item.repeatable
-            const afford = coins >= item.cost
-            return (
-              <div key={item.id} className={`card shop-card ${mine ? 'mine' : ''}`} aria-label={item.name} style={{ '--rar': RARITY_COLOR[item.rarity] } as React.CSSProperties}>
-                <span className="rarity" style={{ color: RARITY_COLOR[item.rarity] }}>{RARITY_LABEL[item.rarity]}</span>
-                <Preview item={item} />
-                <b className="shop-name">{item.name}</b>
-                <span className="muted small shop-blurb">{item.blurb}</span>
-                {mine
-                  ? <button className={`btn small block ${inUse(item) ? '' : 'primary'}`} aria-pressed={inUse(item)} onClick={() => toggleUse(item)}>{useLabel(item)}</button>
-                  : <button className="btn primary small block" onClick={() => { setMsg(''); setConfirm(item) }}>{afford ? <><Emoji name="star" size={16} style={{ verticalAlign: -3 }} /> {item.cost}</> : `${item.cost - coins} more`}</button>}
-                {!mine && !item.repeatable && <span className="row shop-extra">
-                  {item.kind === 'outfit' && <button className="linkbtn" onClick={() => setTryOn(tryOn?.id === item.id ? null : item)}>{tryOn?.id === item.id ? 'Stop' : 'Try on'}</button>}
-                  <button className="linkbtn" aria-pressed={equip.goal === item.id} onClick={() => setGoal(equip.goal === item.id ? null : item.id)}>{equip.goal === item.id ? 'Saving ★' : 'Save up'}</button>
-                </span>}
+        <div className="store" aria-label="Shop">
+          <div className="store-awning" aria-hidden="true"><span className="store-sign">Wobbi’s Shop</span></div>
+          <div className="store-front">
+            <div className="store-hero">
+              <span className="store-wobbi" dangerouslySetInnerHTML={wobbi(fitting, 104, 'cheer')} />
+              <div className="store-purse">
+                <span className="store-coins" aria-label={`${coins} coins`}><Coin size={30} />{coins}</span>
+                <span className="store-today">{todayCoins > 0 ? `+${todayCoins} today` : 'Check in to earn'}</span>
+                {tryOn && <span className="store-trying" role="status">Trying on <b>{tryOn.name}</b> <button className="linkbtn" onClick={() => setTryOn(null)}>Stop</button></span>}
               </div>
-            )
-          })}
+            </div>
+            {goal && <div className="store-goal" aria-label="Saving for">
+              <span className="row spread"><b><Star size={14} fill="currentColor" /> Saving for {goal.name}</b><button className="linkbtn" onClick={() => setGoal(null)}>Remove</button></span>
+              <div className="bar"><i style={{ width: `${Math.min(100, (coins / goal.cost) * 100)}%` }} /></div>
+              <small>{coins >= goal.cost ? 'You can get it now!' : `${goal.cost - coins} more coins to go`}</small>
+            </div>}
+            {CATS.map(c => (
+              <section key={c} className="store-sec" aria-label={CATEGORY_LABEL[c]}>
+                <h3 className="store-ribbon">{SECTION[c]}</h3>
+                <div className="store-grid">
+                  {SHOP.filter(i => categoryOf(i.kind) === c).map(item => {
+                    const mine = have.has(item.id) && !item.repeatable, using = mine && inUse(item)
+                    return (
+                      <button key={item.id} className={`store-tile ${item.kind === 'title' ? 'title-tile' : ''} ${item.rarity} ${mine ? 'mine' : ''} ${using ? 'using' : ''}`} aria-label={item.name} style={{ '--rar': RARITY_COLOR[item.rarity] } as React.CSSProperties} onClick={() => { setMsg(''); setConfirm(item) }}>
+                        {item.rarity !== 'common' && <span className="tile-rar">{RARITY_LABEL[item.rarity]}</span>}
+                        <span className="tile-art"><Preview item={item} size={66} /></span>
+                        {item.kind !== 'title' && <span className="tile-name">{item.name}</span>}
+                        <span className={`tile-price ${mine ? 'owned' : coins >= item.cost ? '' : 'short'}`}>{mine ? (using ? '✓ On' : 'Owned') : <>{equip.goal === item.id && <Star size={12} fill="currentColor" aria-label="Saving for this" />}<Coin size={16} />{item.cost}</>}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+            <p className="store-note">Collected {haveCount} of {COLLECTIBLES.length}. Yours to keep, nothing expires.</p>
+          </div>
         </div>
         {msg && <p className="small" role="status" style={{ textAlign: 'center' }}>{msg}</p>}
 
@@ -132,7 +124,7 @@ export default function Wallet({ initial = 'shop' }: { initial?: 'shop' | 'achie
 
       {confirm && check && <Sheet onClose={() => setConfirm(null)}>
         <div className="confirm-buy" role="dialog" aria-label={`Get ${confirm.name}`}>
-          <Preview item={confirm} />
+          <Preview item={confirm} size={120} />
           <h2 style={{ margin: '4px 0' }}>{confirm.name}</h2>
           <span className="rarity" style={{ color: RARITY_COLOR[confirm.rarity] }}>{RARITY_LABEL[confirm.rarity]}</span>
           <p className="muted" style={{ margin: '6px 0 12px' }}>{confirm.blurb}</p>
@@ -140,9 +132,17 @@ export default function Wallet({ initial = 'shop' }: { initial?: 'shop' | 'achie
             <select className="input" aria-label="Day to cover" value={forDay} onChange={e => setForDay(e.target.value)}><option value={today}>Today</option><option value={yesterday}>Yesterday</option></select></label>}
           {confirm.kind === 'treat' && <label className="field"><span>Name your treat</span>
             <input className="input" maxLength={60} placeholder="e.g. A coffee at my favourite place" value={note} onChange={e => setNote(e.target.value)} /></label>}
-          <p className="small" style={{ margin: '4px 0 10px' }}>{coins} coins now · {confirm.cost} for this{check.ok ? ` · ${coins - confirm.cost} left` : ''}</p>
-          {!check.ok && <p className="muted small" role="status">{check.reason}</p>}
-          <button className="btn primary block" disabled={!check.ok} onClick={() => purchase(confirm)}>Get it · {confirm.cost} coins</button>
+          {have.has(confirm.id) && !confirm.repeatable
+            ? <button className={`btn block ${inUse(confirm) ? '' : 'primary'}`} aria-pressed={inUse(confirm)} onClick={() => { toggleUse(confirm); setConfirm(null) }}>{useLabel(confirm)}</button>
+            : <>
+              <p className="small" style={{ margin: '4px 0 10px' }}>{coins} coins now · {confirm.cost} for this{check.ok ? ` · ${coins - confirm.cost} left` : ''}</p>
+              {!check.ok && <p className="muted small" role="status">{check.reason}</p>}
+              <button className="btn primary block buy-btn" disabled={!check.ok} onClick={() => purchase(confirm)}>Get it · <Coin size={20} /> {confirm.cost}</button>
+              {!confirm.repeatable && <div className="row" style={{ justifyContent: 'center', gap: 18, marginTop: 10 }}>
+                {confirm.kind === 'outfit' && <button className="linkbtn" onClick={() => { setTryOn(tryOn?.id === confirm.id ? null : confirm); setConfirm(null) }}>{tryOn?.id === confirm.id ? 'Stop trying on' : 'Try it on'}</button>}
+                <button className="linkbtn" aria-pressed={equip.goal === confirm.id} onClick={() => setGoal(equip.goal === confirm.id ? null : confirm.id)}>{equip.goal === confirm.id ? 'Saving for it ★' : 'Save up for it'}</button>
+              </div>}
+            </>}
           <button className="linkbtn" style={{ display: 'block', margin: '10px auto 0' }} onClick={() => setConfirm(null)}>Not now</button>
         </div>
       </Sheet>}
