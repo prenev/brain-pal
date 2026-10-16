@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Camera, ChevronLeft, Images, Mic, Plus, X } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Images, Mic, Plus, X } from 'lucide-react'
 import { IconGrid } from '../components/ui'
 import { PalSays } from '../components/Pal'
 import VoiceRecorder from '../components/VoiceRecorder'
+import NoteField, { useKeyboardInset } from '../components/NoteField'
 import Support from '../components/Support'
 import { AiError, aiEnabled, looksLikeCrisis, suggestReframes, type Structured } from '../lib/gemini'
 import { Emoji } from '../lib/emoji'
@@ -21,14 +22,15 @@ const fmtWhen = (d: Date) => {
   return `${day}, ${d.getDate()} ${d.toLocaleDateString(undefined, { month: 'short' })} at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
 }
 
-type StepId = 'feel' | 'happened' | 'thought' | 'kinder' | 'finish'
+/** Short on purpose: feel → write (save from either) → optionally untangle the thought (the CBT part). */
+type StepId = 'feel' | 'write' | 'kinder'
 const SAY: Record<StepId, { pose: PoseName; text: string }> = {
   feel: { pose: 'idle', text: 'Which feelings are here? Pick as many as fit.' },
-  happened: { pose: 'think', text: 'What was going on? A few words is plenty.' },
-  thought: { pose: 'worried', text: 'What went through your mind? Write it like you thought it.' },
+  write: { pose: 'think', text: 'What’s on your mind? Write it the way you thought it, or say it out loud.' },
   kinder: { pose: 'love', text: 'Now be kind: what would you tell a friend who thought this?' },
-  finish: { pose: 'cheer', text: 'Nearly there! Tags and photos are optional.' },
 }
+/** Limits that say what each box is for: one thought, not an essay (the Journal is for long writing). */
+export const LIMITS = { thought: 280, situation: 140, alt: 280 } as const
 
 export default function NewEntry({ date, onClose, onSaved, initialMood = null }: { date: Date; onClose: () => void; onSaved: () => void; initialMood?: number | null }) {
   const { addThought, allTags, thoughts } = useStore()
@@ -74,8 +76,8 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
 
   /** Merge an AI-structured transcript into the form without overwriting what the user already wrote. */
   function applyStructured(r: Structured) {
-    setSituation(v => v || r.situation); setThought(v => v || r.thought)
-    setAlt(v => v || r.alternateThought)
+    setSituation(v => v || r.situation.slice(0, LIMITS.situation)); setThought(v => v || r.thought.slice(0, LIMITS.thought))
+    setAlt(v => v || r.alternateThought.slice(0, LIMITS.alt))
     setEmotions(cur => [...cur, ...r.emotions.filter(e => !cur.some(c => c.name === e.name))])
     setTraps(cur => [...new Set([...cur, ...r.distortions])]); setTags(cur => [...new Set([...cur, ...r.tags])])
     setFilled(true)
@@ -104,11 +106,11 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
     } catch (e: any) { setError(e?.message ?? 'Could not save'); setSaving(false) }
   }
 
-  // The kinder-thought step only appears once there is a thought to look at again.
-  const steps: StepId[] = ['feel', 'happened', 'thought', ...(thought.trim() ? ['kinder' as const] : []), 'finish']
+  useKeyboardInset()
+  // Untangling the thought is an extra step you choose; the bar shows it only once you do.
+  const steps: StepId[] = ['feel', 'write', ...(step === 'kinder' ? ['kinder' as const] : [])]
   const at = Math.max(0, steps.indexOf(step))
   const go = (d: 1 | -1) => { const n = at + d; if (n < 0) setMood(null); else if (n < steps.length) setStep(steps[n]) }
-  const filledHere: Record<StepId, boolean> = { feel: emotions.length > 0, happened: !!situation.trim() || !!clip, thought: !!thought.trim() || traps.length > 0 || !!clip, kinder: !!alt.trim() || !!clip, finish: true }
 
   if (mood === null) return (
     <div className="overlay"><div className="inner mood-stage">
@@ -127,14 +129,11 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
     </div></div>
   )
 
-  const last = step === 'finish'
-  // "Speak instead": one voice memo for the whole entry, offered on every writing step. A memo counts as an answer.
-  const voice = (
+  const mic = clip || showVoice ? null : <button type="button" className="note-mic" onClick={() => setShowVoice(true)}><Mic size={17} /> Voice memo</button>
+  const voice = (showVoice || clip) && (
     <div className="wiz-voice">
-      {!showVoice && !clip
-        ? <button type="button" className="btn block" onClick={() => setShowVoice(true)}><Mic size={18} style={{ display: 'inline', verticalAlign: -3, marginRight: 8 }} />Speak instead</button>
-        : <><VoiceRecorder clip={clip} onChange={setClip} onFill={applyStructured} />
-          {filled && <p role="status" style={{ color: 'var(--accent)', margin: '4px 6px', fontWeight: 800 }}>✨ Filled in from your memo. Review as you go.</p>}</>}
+      <VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setShowVoice(false) }} onFill={applyStructured} />
+      {filled && <p role="status" style={{ color: 'var(--accent)', margin: '4px 6px', fontWeight: 800 }}>✨ Filled in from your memo. Have a look.</p>}
     </div>
   )
   return (
@@ -151,7 +150,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
         <PalSays pose={SAY[step].pose} size={72}>{SAY[step].text}</PalSays>
         {crisis && <div role="alert"><Support /></div>}
 
-        {step === 'feel' && <><div className="wiz-card">
+        {step === 'feel' && <div className="wiz-card">
           <IconGrid options={[...emoOptions, ...customEmos]} value={emotions.map(e => e.name)} onChange={setEmos} />
           <div className="row spread" style={{ marginTop: 4 }}>
             <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllEmos(!allEmos)}>{allEmos ? 'Show fewer' : `More emotions (${EMOTIONS.length - emoOptions.length})`}</button>
@@ -168,17 +167,34 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
               </div>
             ))}
           </>}
-        </div>
-        <button type="button" className="linkbtn" style={{ alignSelf: 'center' }} disabled={saving} onClick={save}>Just save my mood</button></>}
+        </div>}
 
-        {step === 'happened' && <>
-          <label className="field"><span className="sr-only">Situation</span><textarea className="input wiz-text" autoFocus value={situation} onChange={e => setSituation(e.target.value)} placeholder="What was happening?" /></label>
+        {step === 'write' && <>
+          <NoteField big autoFocus label="What’s on your mind?" value={thought} onChange={setThought} max={LIMITS.thought} placeholder="e.g. Everyone will notice I messed up the demo" tools={mic} />
           {voice}
+          <NoteField label="What was happening? (optional)" value={situation} onChange={setSituation} max={LIMITS.situation} placeholder="e.g. Team meeting, 3 pm" />
+          <details className="wiz-extras">
+            <summary>Tags and photos <span className="muted">(optional{tags.length + files.length ? ` · ${tags.length + files.length} added` : ''})</span></summary>
+            <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />
+            <div className="row spread">
+              {allTags.length > 6 ? <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllTagsShown(!allTagsShown)}>{allTagsShown ? 'Show fewer' : `More tags (${Math.max(0, allTags.length - tagOptions.length)})`}</button> : <span />}
+              <button className="linkbtn" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={16} style={{ display: 'inline', verticalAlign: -3 }} /> Add your own</button>
+            </div>
+            <div className="photos-edit">
+              <label><Camera size={22} />Take photo<input hidden type="file" accept="image/*" capture="environment" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
+              <label><Images size={22} />From gallery<input hidden type="file" accept="image/*" multiple onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
+            </div>
+            {files.length > 0 && <div className="photos">{files.map((f, i) => (
+              <div key={i} style={{ position: 'relative' }}><img src={URL.createObjectURL(f)} alt="" style={{ height: 96, borderRadius: 14 }} />
+                <button className="icon-btn" aria-label="Remove photo" style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, background: '#000a' }} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={16} /></button></div>))}</div>}
+          </details>
+          {thought.trim() && <button type="button" className="untangle" onClick={() => setStep('kinder')}>
+            <Emoji name="bulb" size={30} /><span><b>Untangle this thought</b><small>Spot the thinking trap and find a kinder one · 1 min</small></span><ChevronRight size={20} />
+          </button>}
         </>}
 
-        {step === 'thought' && <>
-          <label className="field"><span className="sr-only">The thought</span><textarea className="input wiz-text" autoFocus value={thought} onChange={e => setThought(e.target.value)} placeholder="What went through your mind?" /></label>
-          {voice}
+        {step === 'kinder' && <>
+          <div className="wiz-quote" aria-label="Your thought">“{thought.trim()}”</div>
           <div className="wiz-card">
             <b>Does it fit a thinking trap?</b><span className="muted small"> (optional)</span>
             <div className="chips" style={{ marginTop: 10 }}>{TRAPS.map(t => (
@@ -187,18 +203,13 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
             {TRAPS.filter(t => traps.includes(t.name)).slice(-1).map(t => (
               <div className="trap" key={t.name} style={{ marginTop: 10 }}><b>{t.name}</b>: {t.blurb}<div className="muted" style={{ marginTop: 4 }}>Try asking: {t.ask}</div></div>))}
           </div>
-        </>}
-
-        {step === 'kinder' && <>
-          <div className="wiz-quote" aria-label="Your thought">“{thought.trim()}”</div>
-          <label className="field"><span className="sr-only">Alternate thought</span><textarea className="input wiz-text" autoFocus value={alt} onChange={e => setAlt(e.target.value)} placeholder="What would you tell a friend? What’s the evidence?" /></label>
-          {voice}
+          <NoteField big autoFocus label="A kinder thought" value={alt} onChange={setAlt} max={LIMITS.alt} placeholder="What would you tell a friend? What’s the evidence?" />
           <div className="wiz-card">
             <span className="muted small">Need a nudge? Tap a question.</span>
-            <div style={{ marginTop: 8 }}>{REFRAME_QUESTIONS.slice(0, 4).map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => (a ? a + '\n' : '') + q + ' ')}>{q}</button>)}</div>
+            <div style={{ marginTop: 8 }}>{REFRAME_QUESTIONS.slice(0, 4).map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => ((a ? a + '\n' : '') + q + ' ').slice(0, LIMITS.alt))}>{q}</button>)}</div>
             {aiEnabled() && !crisis && <>
               <button type="button" className="btn" disabled={ideaBusy} onClick={getIdeas}><Emoji name="sparkles" size={18} style={{ display: 'inline', verticalAlign: -4, marginRight: 6 }} />{ideaBusy ? 'Thinking…' : 'Suggest reframes'}</button>
-              {ideas.map(i => <button type="button" key={i} className="reframe-card" style={{ marginTop: 8 }} onClick={() => setAlt(a => (a ? a + '\n' : '') + i)}>{i}<div className="muted small">Tap to use</div></button>)}
+              {ideas.map(i => <button type="button" key={i} className="reframe-card" style={{ marginTop: 8 }} onClick={() => setAlt(a => ((a ? a + '\n' : '') + i).slice(0, LIMITS.alt))}>{i}<div className="muted small">Tap to use</div></button>)}
               {ideaErr && <p role="alert" style={{ color: 'var(--danger)', margin: '8px 0 0' }}>{ideaErr}</p>}
             </>}
           </div>
@@ -207,32 +218,16 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
             <input type="range" min={0} max={100} value={outcome ?? peak} aria-label="Intensity after reframe" onChange={e => setOutcome(+e.target.value)} />
           </div>}
         </>}
-
-        {step === 'finish' && <>
-          <div className="wiz-card">
-            <b>Tags</b><span className="muted small"> (optional)</span>
-            <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />
-            <div className="row spread">
-              {allTags.length > 6 ? <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllTagsShown(!allTagsShown)}>{allTagsShown ? 'Show fewer' : `More tags (${Math.max(0, allTags.length - tagOptions.length)})`}</button> : <span />}
-              <button className="linkbtn" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={16} style={{ display: 'inline', verticalAlign: -3 }} /> Add your own</button>
-            </div>
-          </div>
-          <div className="photos-edit">
-            <label><Camera size={22} />Take photo<input hidden type="file" accept="image/*" capture="environment" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-            <label><Images size={22} />From gallery<input hidden type="file" accept="image/*" multiple onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-          </div>
-          {files.length > 0 && <div className="photos">{files.map((f, i) => (
-            <div key={i} style={{ position: 'relative' }}><img src={URL.createObjectURL(f)} alt="" style={{ height: 96, borderRadius: 14 }} />
-              <button className="icon-btn" aria-label="Remove photo" style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, background: '#000a' }} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={16} /></button></div>))}</div>}
-          {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
-        </>}
+        {error && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
       </div>
 
       <div className="wiz-foot">
         <button className="btn" aria-label="Back" onClick={() => go(-1)}><ChevronLeft size={22} style={{ display: 'block' }} /></button>
-        {last
-          ? <button className="btn primary" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
-          : <button className="btn primary" style={{ flex: 1 }} onClick={() => go(1)}>{filledHere[step] ? 'Next' : 'Skip'}</button>}
+        {step === 'feel' && <>
+          <button className="btn" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Just save'}</button>
+          <button className="btn primary" style={{ flex: 1.4 }} onClick={() => go(1)}>Write about it</button>
+        </>}
+        {step !== 'feel' && <button className="btn primary" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>}
       </div>
     </div></div>
   )
