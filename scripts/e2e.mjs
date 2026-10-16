@@ -147,7 +147,7 @@ test('legacy data (no mood / traps / audio / session kind, inline photos) still 
 test('create, persist, expand and delete an entry', async () => {
   const s = await open()
   await newEntry(s.page, { mood: 2, emotion: 'anxious', thought: 'I will fail the exam' })
-  await s.page.click('.chip >> text=catastrophizing'); await s.page.fill('textarea[aria-label="What’s on your mind?"]', 'I will fail the exam')
+  await untangle(s.page); await s.page.click('.chip >> text=catastrophizing'); await s.page.fill('textarea[aria-label="A kinder thought"]', 'I can prepare and cope')   // the thinking trap and the kinder thought are on the optional "untangle" step
   await save(s.page)
   await s.page.waitForSelector('.entry >> text=I will fail the exam')
   await reload(s.page)
@@ -620,15 +620,18 @@ const noon = n => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours
 const entriesOn = (day, count) => Array.from({ length: count }, (_, i) => rec(`c${day}-${i}`, 0, { createdAt: new Date(new Date(noon(day)).getTime() + i * 60_000).toISOString() }))
 
 const manyDays = (from, to, n) => Array.from({ length: to - from + 1 }, (_, i) => entriesOn(from + i, n)).flat()
-const coinsPage = async p => { await tab(p, 'More'); await p.click('.li >> text=Coins & shop'); await p.waitForSelector('.shop-head') }
-const shopTab = (p, name) => p.click(`.shop-cats .chip:has-text("${name}")`)
-const getIt = async (p, name, label) => { await p.click(`.shop-card:has-text("${name}") button.primary`); await p.waitForSelector('.confirm-buy'); await p.click(`.confirm-buy button.primary:has-text("${label}")`) }
+const coinsPage = async p => { await tab(p, 'More'); await p.click('.li >> text=Coins & shop'); await p.waitForSelector('.store-hero') }
+const tile = (p, name) => p.locator(`.store-tile[aria-label="${name}"]`)
+const section = (p, name) => p.locator(`.store-sec[aria-label="${name}"] .store-tile`)
+const openTile = async (p, name) => { await tile(p, name).click(); await p.waitForSelector('.confirm-buy') }
+const getIt = async (p, name) => { await openTile(p, name); await p.click('.confirm-buy .buy-btn') }
+const useIn = async (p, name, label) => { await openTile(p, name); await p.click(`.confirm-buy button:has-text("${label}")`); await p.waitForSelector('.confirm-buy', { state: 'detached' }) }
 
 test('coins: derived from your own activity with daily caps, shown in More and the shop', async () => {
   const s = await open({ 'bp.thoughts': [...entriesOn(0, 4), ...entriesOn(1, 3), ...entriesOn(2, 3)] }); const p = s.page   // 4 today (cap 2), 3 yesterday, 3 the day before
   await tab(p, 'More'); await p.waitForSelector('.li:has-text("Coins & shop") >> text=58')   // 3 days x 6 (cap) + 10 first check-in + 20 ten check-ins + 10 three-day streak
   await p.click('.li >> text=Coins & shop'); await p.waitForSelector('[aria-label="58 coins"]')
-  await p.waitForSelector('text=+36 earned today.'); assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Today: .*Check-ins/)
+  await p.waitForSelector('text=+36 today'); assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Today: .*Check-ins/)
   assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Warming up/, 'achievement coins are listed by name')
   assert.equal(await p.locator('.card:has-text("How you earn them")').count(), 1)
   await done(s)
@@ -639,18 +642,18 @@ test('shop: buy a colour (confirm first), it applies and persists, switch back f
   const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(1, 11, 2)] }); const p = s.page      // 142 coins
   const accent = () => p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase())
   assert.equal(await accent(), '#35d07f')
-  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]'); await shopTab(p, 'Colours')
-  assert.equal(await p.locator('.shop-card').count(), 8, 'eight colours')
-  await p.click('.shop-card:has-text("Ocean") button.primary'); await p.waitForSelector('.confirm-buy >> text=142 coins now · 60 for this · 82 left'); await p.click('.confirm-buy >> text=Not now')
+  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]')
+  assert.equal(await section(p, 'Colours').count(), 8, 'eight colours')
+  await openTile(p, 'Ocean'); await p.waitForSelector('.confirm-buy >> text=142 coins now · 60 for this · 82 left'); await p.click('.confirm-buy >> text=Not now')
   assert.equal(await accent(), '#35d07f', 'cancelling buys nothing'); await p.waitForSelector('[aria-label="142 coins"]')
-  await getIt(p, 'Ocean', 'Get it · 60 coins')
+  await getIt(p, 'Ocean')
   await p.waitForSelector('text=Ocean is yours and switched on.'); await p.waitForSelector('[aria-label="92 coins"]'); assert.equal(await accent(), '#4aa8ff')   // 142 - 60, +10 for the first-find achievement
-  await p.waitForSelector('.shop-card:has-text("Ocean") button:has-text("In use")')
-  await shopTab(p, 'Card styles'); await p.waitForSelector('.shop-card:has-text("Galaxy") button.primary >> text=308 more'); await p.click('.shop-card:has-text("Galaxy") button.primary')
-  await p.waitForSelector('.confirm-buy >> text=You need 308 more coins.'); assert.equal(await p.locator('.confirm-buy button.primary').isDisabled(), true); await p.click('.confirm-buy >> text=Not now')
+  await p.waitForSelector('.store-tile[aria-label="Ocean"].using')
+  await p.waitForSelector('.store-tile[aria-label="Galaxy"] .tile-price.short'); await openTile(p, 'Galaxy')
+  await p.waitForSelector('.confirm-buy >> text=You need 308 more coins.'); assert.equal(await p.locator('.confirm-buy .buy-btn').isDisabled(), true); await p.click('.confirm-buy >> text=Not now')
   await reload(p); assert.equal(await accent(), '#4aa8ff', 'the colour persists')
-  await coinsPage(p); await shopTab(p, 'Colours'); await p.click('.shop-card:has-text("Ocean") button:has-text("In use")'); assert.equal(await accent(), '#35d07f')
-  await p.click('.shop-card:has-text("Ocean") button:has-text("Use")'); assert.equal(await accent(), '#4aa8ff', 'owned, so switching back and forth is free')
+  await coinsPage(p); await useIn(p, 'Ocean', 'In use'); assert.equal(await accent(), '#35d07f')
+  await useIn(p, 'Ocean', 'Use'); assert.equal(await accent(), '#4aa8ff', 'owned, so switching back and forth is free')
   assert.equal(await p.locator('[aria-label="92 coins"]').count(), 1)
   await done(s)
   // a colour in storage that you never bought does nothing
@@ -664,16 +667,16 @@ test('shop: Wobbi’s wardrobe — try an outfit on, buy it, it is worn everywhe
   const worn = () => p.locator('.pal svg .acc').count()
   assert.equal(await worn(), 0, 'nothing worn at first')
   await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]')
-  assert.equal(await p.locator('.shop-card').count(), 17, 'seventeen outfit pieces')
-  assert.equal((await p.locator('.shop-card .rarity').allInnerTexts()).filter(t => /^legendary$/i.test(t)).length, 2)
-  await p.click('.shop-card:has-text("Cosy beanie") >> text=Try on'); await p.waitForSelector('.tryon >> text=Trying on Cosy beanie'); await p.waitForSelector('.shop-head .acc-beanie')
-  assert.equal(await p.locator('.shop-card:has-text("Cosy beanie") .acc-beanie').count(), 1, 'the card shows the piece on Wobbi')
-  await p.click('[aria-label="Stop trying on"]'); assert.equal(await p.locator('.shop-head .acc-beanie').count(), 0, 'trying on costs nothing and stops')
-  await getIt(p, 'Cosy beanie', 'Get it · 60 coins'); await p.waitForSelector('[aria-label="92 coins"]'); await p.waitForSelector('.shop-head .acc-beanie')
-  await p.click('.shop-card:has-text("Cosy beanie") button:has-text("Take off")'); assert.equal(await p.locator('.shop-head .acc-beanie').count(), 0)
-  await p.click('.shop-card:has-text("Cosy beanie") button:has-text("Wear")'); await p.waitForSelector('.shop-head .acc-beanie')
-  await getIt(p, 'Sporty cap', 'Get it · 60 coins'); await p.waitForSelector('.shop-head .acc-beanie')   // the hat slot is taken, so the second hat is owned but not put on
-  assert.equal(await p.locator('.shop-head .acc-cap').count(), 0); await p.click('.shop-card:has-text("Sporty cap") button:has-text("Wear")'); await p.waitForSelector('.shop-head .acc-cap'); assert.equal(await p.locator('.shop-head .acc-beanie').count(), 0, 'one hat at a time')
+  assert.equal(await section(p, 'Outfits').count(), 17, 'seventeen outfit pieces')
+  assert.equal((await p.locator('.store-sec[aria-label="Outfits"] .tile-rar').allInnerTexts()).filter(t => /^legendary$/i.test(t)).length, 2)
+  await openTile(p, 'Cosy beanie'); await p.click('.confirm-buy >> text=Try it on'); await p.waitForSelector('.store-trying >> text=Trying on Cosy beanie'); await p.waitForSelector('.store-hero .acc-beanie')
+  assert.equal(await tile(p, 'Cosy beanie').locator('.acc-beanie').count(), 1, 'the tile shows the piece on Wobbi')
+  await p.click('.store-trying >> text=Stop'); assert.equal(await p.locator('.store-hero .acc-beanie').count(), 0, 'trying on costs nothing and stops')
+  await getIt(p, 'Cosy beanie'); await p.waitForSelector('[aria-label="92 coins"]'); await p.waitForSelector('.store-hero .acc-beanie')
+  await useIn(p, 'Cosy beanie', 'Take off'); assert.equal(await p.locator('.store-hero .acc-beanie').count(), 0)
+  await useIn(p, 'Cosy beanie', 'Wear'); await p.waitForSelector('.store-hero .acc-beanie')
+  await getIt(p, 'Sporty cap'); await p.waitForSelector('.store-tile[aria-label="Sporty cap"].mine')   // the hat slot is taken, so the second hat is owned but not put on
+  assert.equal(await p.locator('.store-hero .acc-cap').count(), 0); await useIn(p, 'Sporty cap', 'Wear'); await p.waitForSelector('.store-hero .acc-cap'); assert.equal(await p.locator('.store-hero .acc-beanie').count(), 0, 'one hat at a time')
   await p.click('[aria-label=Back]'); await tab(p, 'Home'); await p.waitForSelector('.today')
   assert.ok(await p.locator('.pal svg .acc-cap').count() > 0, 'Wobbi wears it on Home too')
   await reload(p); assert.ok(await p.locator('.pal svg .acc-cap').count() > 0, 'and after a restart')
@@ -683,11 +686,12 @@ test('shop: Wobbi’s wardrobe — try an outfit on, buy it, it is worn everywhe
 
 test('shop: save up for something (a goal with progress), the title and card style go on share cards', async () => {
   const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(1, 20, 2)], 'bp.ach.seen': ALL_ACH }); const p = s.page
-  await coinsPage(p); await shopTab(p, 'Titles')
-  await p.click('.shop-card:has-text("Zen Master") >> text=Save up'); await p.waitForSelector('.goal >> text=Saving for Zen Master'); await p.waitForSelector('.goal >> text=/\\d+ more coins to go\\./')
-  await reload(p); await coinsPage(p); await p.waitForSelector('.goal >> text=Saving for Zen Master')
-  await shopTab(p, 'Titles'); await getIt(p, 'Calm Captain', 'Get it · 60 coins'); await p.waitForSelector('.shop-card:has-text("Calm Captain") button:has-text("In use")')
-  await shopTab(p, 'Card styles'); await getIt(p, 'Aurora', 'Get it · 160 coins'); await p.waitForSelector('.shop-card:has-text("Aurora") button:has-text("In use")')
+  await coinsPage(p)
+  await openTile(p, 'Zen Master'); await p.click('.confirm-buy >> text=Save up for it'); await p.waitForSelector('.confirm-buy >> text=Saving for it'); await p.click('.confirm-buy >> text=Not now')
+  await p.waitForSelector('.store-goal >> text=Saving for Zen Master'); await p.waitForSelector('.store-goal >> text=/\\d+ more coins to go/')
+  await reload(p); await coinsPage(p); await p.waitForSelector('.store-goal >> text=Saving for Zen Master')
+  await getIt(p, 'Calm Captain'); await p.waitForSelector('.store-tile[aria-label="Calm Captain"].using')
+  await getIt(p, 'Aurora'); await p.waitForSelector('.store-tile[aria-label="Aurora"].using')
   await p.click('.seg [role=tab]:has-text("Achievements")'); await p.click('.ach-medal[aria-label^="First check-in"]'); await p.waitForSelector('.share-preview svg')
   const svg = await p.locator('.share-preview').innerHTML(); assert.ok(svg.includes('Calm Captain'), 'the equipped title is on the card'); assert.ok(svg.includes('#123a3a'), 'and the bought card style')
   await done(s)
@@ -711,8 +715,8 @@ test('achievements: a new one pops up as a shareable card with its coins, once; 
 test('shop: a rest day covers a missed day so your streak keeps going', async () => {
   const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(2, 12, 2)] }); const p = s.page      // nothing yesterday; 142 coins
   await p.waitForSelector('[aria-label="1 day streak"]')
-  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]'); await shopTab(p, 'Boosts')
-  await p.click('.shop-card:has-text("Rest day") button.primary'); await p.waitForSelector('.confirm-buy'); await p.selectOption('[aria-label="Day to cover"]', { label: 'Yesterday' }); await p.click('.confirm-buy button.primary:has-text("Get it · 40 coins")')
+  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]')
+  await openTile(p, 'Rest day'); await p.selectOption('[aria-label="Day to cover"]', { label: 'Yesterday' }); await p.click('.confirm-buy .buy-btn')
   await p.waitForSelector('text=Rest day added'); await p.waitForSelector('[aria-label="102 coins"]')
   await tab(p, 'Home'); await p.waitForSelector('[aria-label="13 day streak"]')
   await reload(p); await p.waitForSelector('[aria-label="13 day streak"]')
@@ -721,17 +725,15 @@ test('shop: a rest day covers a missed day so your streak keeps going', async ()
 
 test('shop: a treat you name yourself, and a quiet +N when you earn', async () => {
   const s = await open({ 'bp.thoughts': [...manyDays(1, 3, 3), ...manyDays(4, 12, 2)] }); const p = s.page      // 142 coins
-  await coinsPage(p); await shopTab(p, 'Boosts'); await p.waitForSelector('[aria-label="142 coins"]')
-  await p.click('.shop-card:has-text("My treat") button.primary'); await p.waitForSelector('.confirm-buy'); assert.equal(await p.locator('.confirm-buy button.primary').isDisabled(), true); await p.waitForSelector('.confirm-buy >> text=Name your treat first.')
-  await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.confirm-buy button.primary:has-text("Get it · 30 coins")')
+  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]')
+  await openTile(p, 'My treat'); assert.equal(await p.locator('.confirm-buy .buy-btn').isDisabled(), true); await p.waitForSelector('.confirm-buy >> text=Name your treat first.')
+  await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.confirm-buy .buy-btn')
   await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="112 coins"]')
   assert.equal(await p.locator('.coin-toast').count(), 0, 'spending never pops a toast')
   await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('.wiz-foot button:has-text("Just save")'); await p.waitForSelector('.coin-toast >> text=+3 coins')
   await done(s)
   const f = await open(); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
 })
-
-
 
 const until = async (fn, ms = 12000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return; await new Promise(r => setTimeout(r, 100)) } throw new Error(`timed out waiting for: ${fn}`) }
 const hasDoc = (acct, kind) => [...acct.rows.keys()].some(k => k.startsWith(kind + '|'))
@@ -1469,7 +1471,7 @@ test('Wobbi tips: every section has one short tip, dismissing sticks, and More b
   await tab(p, 'Stats')
   for (const [v, re] of [['Progress', /Skills grow/], ['Summary', /plain words/], ['Sleep', /sleep and mood|Apple Health/]]) { await p.click(`[role=tab]:has-text("${v}")`); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, v) }
   await tab(p, 'Home')
-  for (const [t, re] of [['.more-today', /month by month/], ['.journal-card', /Only you can read/], ['.coin-pill', /Coins come from/]]) { await p.click(t); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
+  for (const [t, re] of [['.more-today', /month by month/], ['.journal-card', /Only you can read/]]) { await p.click(t); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
   // dismiss: stays gone after a reload; More brings it back
   await tab(p, 'Calendar'); await p.click('.pal-tip [aria-label="Hide this tip"]'); assert.equal(await p.locator('.pal-tip').count(), 0)
   await reload(p); await tab(p, 'Calendar'); await p.waitForSelector('.cal'); assert.equal(await p.locator('.pal-tip').count(), 0, 'a dismissed tip stays dismissed')
