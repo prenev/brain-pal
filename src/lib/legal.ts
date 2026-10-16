@@ -102,7 +102,7 @@ export const support = (): LegalDoc => ({
 /** Third-party software and art bundled in the app. scripts/test-store.mjs checks every runtime dependency is listed. */
 export const NOTICES: { name: string; license: string; by: string; url: string; npm?: string[] }[] = [
   { name: 'React', license: 'MIT', by: 'Meta Platforms, Inc. and affiliates', url: 'https://react.dev', npm: ['react', 'react-dom'] },
-  { name: 'Capacitor', license: 'MIT', by: 'Ionic / Drifty Co.', url: 'https://capacitorjs.com', npm: ['@capacitor/app', '@capacitor/core', '@capacitor/haptics', '@capacitor/local-notifications', '@capacitor/splash-screen', '@capacitor/status-bar'] },
+  { name: 'Capacitor', license: 'MIT', by: 'Ionic / Drifty Co.', url: 'https://capacitorjs.com', npm: ['@capacitor/app', '@capacitor/core', '@capacitor/haptics', '@capacitor/keyboard', '@capacitor/local-notifications', '@capacitor/splash-screen', '@capacitor/status-bar'] },
   { name: 'Supabase JS', license: 'MIT', by: 'Supabase, Inc.', url: 'https://supabase.com', npm: ['@supabase/supabase-js'] },
   { name: 'Lucide icons', license: 'ISC', by: 'Lucide Contributors (portions Cole Bemis, Feather)', url: 'https://lucide.dev', npm: ['lucide-react'] },
   { name: 'Phosphor Icons', license: 'MIT', by: 'Phosphor Icons (Tobias Fried, Helena Zhang)', url: 'https://phosphoricons.com', npm: ['@phosphor-icons/react'] },
