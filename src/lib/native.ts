@@ -43,6 +43,15 @@ export interface MindfulPlugin {
   proStatus(): Promise<{ active: boolean; until?: number }>
   proRedeemCode(): Promise<{ shown: boolean }>
   requestReview(): Promise<void>
+  /** Widgets: stores the JSON snapshot (lib/widgetData.ts) in the shared App Group and asks iOS to redraw the widgets. */
+  widgetUpdate(opts: { snapshot: string }): Promise<void>
+  /** Widgets: returns and clears what interactive widgets / controls queued (JSON array of actions) and the screen one asked to open. */
+  widgetTake(): Promise<{ actions: string; route?: string }>
+  /** Live Activity (lock screen + Dynamic Island) for a breathing session or a focus timer. Times are ms since 1970. No-op before iOS 16.2. */
+  liveActivityStart(opts: { kind: 'breathe' | 'focus'; title: string; subtitle: string; startsAt: number; endsAt: number }): Promise<{ started: boolean }>
+  /** `remainingSec` set = paused (the clock stops at that value); otherwise counts down to `endsAt`. */
+  liveActivityUpdate(opts: { title: string; subtitle: string; startsAt: number; endsAt: number; remainingSec?: number }): Promise<void>
+  liveActivityEnd(): Promise<void>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
 }

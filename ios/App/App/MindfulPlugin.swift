@@ -8,6 +8,10 @@ import SwiftUI
 import FamilyControls
 import ManagedSettings
 import StoreKit
+import WidgetKit
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 /// Saves breathing / grounding sessions to Apple Health as "Mindful Minutes" (HKCategoryType .mindfulSession).
 /// JS name: "Mindful"  (see src/lib/native.ts). Write-only: we never read your health data.
@@ -39,7 +43,12 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "proRestore", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "proStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "proRedeemCode", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "widgetUpdate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "widgetTake", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "liveActivityStart", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "liveActivityUpdate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "liveActivityEnd", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -375,6 +384,81 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             call.resolve()
         }
+    }
+
+    // MARK: widgets (WobbiShared.swift + the WobbiWidgets extension)
+
+    /// Saves the snapshot JSON built by src/lib/widgetData.ts and redraws the widgets. Rejects JSON the widgets couldn't read.
+    @objc func widgetUpdate(_ call: CAPPluginCall) {
+        guard let json = call.getString("snapshot"), let data = json.data(using: .utf8),
+              (try? JSONDecoder().decode(WidgetSnapshot.self, from: data)) != nil else { call.reject("bad snapshot"); return }
+        WobbiGroup.defaults.set(json, forKey: WobbiGroup.snapshotKey)
+        WidgetCenter.shared.reloadAllTimelines()
+        call.resolve()
+    }
+
+    /// Hands JS what widgets queued (mood taps, anchor ticks) and the screen a control asked for, and clears it.
+    @objc func widgetTake(_ call: CAPPluginCall) {
+        let t = WidgetQueue.take()
+        var r: [String: Any] = ["actions": t.actions]
+        if let route = t.route { r["route"] = route }
+        call.resolve(r)
+    }
+
+    // MARK: Live Activity (breathing / focus countdown on the lock screen and in the Dynamic Island)
+
+    private func liveState(_ call: CAPPluginCall) -> (String, String, Date, Date, Double?) {
+        let starts = Date(timeIntervalSince1970: (call.getDouble("startsAt") ?? Date().timeIntervalSince1970 * 1000) / 1000)
+        let ends = Date(timeIntervalSince1970: (call.getDouble("endsAt") ?? 0) / 1000)
+        return (call.getString("title") ?? "Wobbi", call.getString("subtitle") ?? "", starts, max(ends, starts.addingTimeInterval(1)), call.getDouble("remainingSec"))
+    }
+
+    @objc func liveActivityStart(_ call: CAPPluginCall) {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            let (title, subtitle, starts, ends, paused) = liveState(call)
+            let kind = call.getString("kind") == "focus" ? "focus" : "breathe"
+            Task {
+                for a in Activity<WobbiActivityAttributes>.activities { await a.end(nil, dismissalPolicy: .immediate) }   // only ever one
+                guard ActivityAuthorizationInfo().areActivitiesEnabled else { call.resolve(["started": false]); return }
+                let state = WobbiActivityAttributes.ContentState(title: title, subtitle: subtitle, startsAt: starts, endsAt: ends, pausedRemaining: paused)
+                do {
+                    _ = try Activity.request(attributes: WobbiActivityAttributes(kind: kind), content: .init(state: state, staleDate: ends.addingTimeInterval(60)), pushType: nil)
+                    call.resolve(["started": true])
+                } catch { call.resolve(["started": false]) }
+            }
+            return
+        }
+        #endif
+        call.resolve(["started": false])
+    }
+
+    @objc func liveActivityUpdate(_ call: CAPPluginCall) {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            let (title, subtitle, starts, ends, paused) = liveState(call)
+            let state = WobbiActivityAttributes.ContentState(title: title, subtitle: subtitle, startsAt: starts, endsAt: ends, pausedRemaining: paused)
+            Task {
+                for a in Activity<WobbiActivityAttributes>.activities { await a.update(.init(state: state, staleDate: paused == nil ? ends.addingTimeInterval(60) : nil)) }
+                call.resolve()
+            }
+            return
+        }
+        #endif
+        call.resolve()
+    }
+
+    @objc func liveActivityEnd(_ call: CAPPluginCall) {
+        #if canImport(ActivityKit)
+        if #available(iOS 16.2, *) {
+            Task {
+                for a in Activity<WobbiActivityAttributes>.activities { await a.end(nil, dismissalPolicy: .immediate) }
+                call.resolve()
+            }
+            return
+        }
+        #endif
+        call.resolve()
     }
 
     @objc func proStatus(_ call: CAPPluginCall) {

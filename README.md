@@ -67,6 +67,9 @@ Mood entries, calming sessions and worries live in their own Supabase tables. Ev
 - **Sign out clears this device's copies** (after syncing; it warns if something couldn't be saved yet), so the next person on a shared browser never sees your journal.
 - Not verified against the live service from this sandbox (its network blocks Supabase): the table, policies and constraints are tested on a real Postgres, the sync engine by unit tests and a two-device end-to-end simulation. Your first real sign-in on two devices is the check — see `TODO.md`.
 
+## Widgets (iPhone)
+18 widgets and controls with Wobbi: streak, one-tap breathe, SOS, worry jar, Focus guard (small + large), journal prompt, sleep, "Wobbi says", interactive mood check-in and anchors, mood week, calm kit, a large Today dashboard, a StandBy night-stand clock, lock-screen widgets, a Live Activity for breathing / focus timers, and iOS 18 Control Center buttons. The app writes a small on-device snapshot to a shared App Group; widgets read it and queue taps for the app to apply. Details and what's verified: `docs/IOS.md`.
+
 ## iPhone app (Apple Health, real haptics, on-device reminders)
 
 The same code runs as a native iPhone app via Capacitor — see **[docs/IOS.md](docs/IOS.md)** for the Mac steps (`npm ci && npm run ios:sync && npm run ios:open`, then ▶ Run).

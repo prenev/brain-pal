@@ -1156,6 +1156,51 @@ test('Share: a level-up celebration offers a level card; the rating prompt is as
   await done(newbie)
 })
 
+test('widgets (iPhone app): the app keeps the widget snapshot fresh, applies moods and anchor ticks tapped on widgets, opens the screen a control asked for, and drives the Live Activity', async () => {
+  const t = new Date('2026-10-16T12:00:00').getTime()
+  const queued = JSON.stringify([
+    { kind: 'mood', mood: 2, at: t - 60_000 },
+    { kind: 'anchor', id: 'walk', done: true, day: '2026-10-16', at: t - 30_000 },
+    { kind: 'anchor', id: 'water', done: true, day: '2026-10-15', at: t - 86_400_000 },   // yesterday's tick: ignored
+    { kind: 'mood', mood: 9, at: t },                                                    // junk: ignored
+  ])
+  const anchors = ['walk', 'water'].map((id, order) => ({ id, label: id === 'walk' ? 'Walk' : 'Water', emoji: id, link: null, order, createdAt: '2026-10-01T09:00:00.000Z', archivedAt: null }))
+  const s = await open({ 'bp.anchors': anchors }, { native: true, time: new Date(t), reply: { 'Mindful.widgetTake': { actions: queued, route: 'worry' } } }); const p = s.page
+  // the control's screen opens, the queued mood is logged at the time it was tapped, the anchor is ticked
+  await p.waitForSelector('[aria-label="Park a worry"]')
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]' } } })
+  await p.click('[aria-label="Back"]'); await p.waitForSelector('.topbar .title >> text=Home')
+  const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.thoughts') ?? '[]'))
+  assert.equal(stored.length, 1, 'one mood logged (the junk one is dropped)'); assert.equal(stored[0].mood, 2); assert.equal(stored[0].createdAt, new Date(t - 60_000).toISOString())
+  const checks = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.anchorChecks') ?? '[]'))
+  assert.equal(checks.length, 1); assert.match(checks[0], /^walk/)
+  // and the widgets are told: the latest snapshot has today's mood, the streak and the ticked anchor
+  await p.clock.runFor(1000)
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'widgetUpdate').some(c => JSON.parse(c.options.snapshot).todayMood === 2))
+  const snap = await p.evaluate(() => JSON.parse(window.__native.filter(c => c.method === 'widgetUpdate').pop().options.snapshot))
+  assert.equal(snap.day, '2026-10-16'); assert.equal(snap.activeToday, true); assert.equal(snap.streak, 1)
+  assert.deepEqual(snap.anchors.map(a => [a.id, a.done]), [['walk', true], ['water', false]])
+  assert.equal(snap.week.length, 7); assert.ok(snap.prompt.length > 5); assert.ok(snap.wobbi.text.length > 5)
+  // going to the background pushes again; coming back drains the queue again
+  const before = (await nativeCalls(p, 'widgetUpdate')).length, takes = (await nativeCalls(p, 'widgetTake')).length
+  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: false })); await p.waitForFunction(n => window.__native.filter(c => c.method === 'widgetUpdate').length > n, before)
+  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: true })); await p.waitForFunction(n => window.__native.filter(c => c.method === 'widgetTake').length > n, takes)
+  // a control asking for SOS opens SOS
+  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]', route: 'sos' } } })
+  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: true })); await p.waitForSelector('[aria-label="Anxiety right now, 0 to 10"]')
+  await done(s)
+
+  // Live Activity: a breathing session starts one with the real end time and ends it when you leave
+  const b = await open(null, { native: true }); const q = b.page
+  await tab(q, 'Breathe'); await q.click('button:has-text("Start")'); await q.waitForSelector('.breath-scene')
+  await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityStart'))
+  const [start] = await nativeCalls(q, 'liveActivityStart')
+  assert.equal(start.kind, 'breathe'); assert.match(start.subtitle, /^In \d/); assert.ok(start.endsAt - start.startsAt >= 30_000, 'ends when the session ends')
+  await q.click('button:has-text("End session")'); await q.waitForSelector('.breath-scene', { state: 'detached' })
+  await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityEnd'))
+  await done(b)
+})
+
 test('breathing is an immersive full-screen scene: Wobbi swells and settles with the breath, the colour follows the phase, the native tab bar steps aside, sound can be muted, leaving works', async () => {
   const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
   await p.waitForSelector('html.native-tabs'); await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'breathe' })); await p.click('button:has-text("Start")'); await p.waitForSelector('.breath-scene')
