@@ -124,7 +124,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('button:has-text("Stop")'); await p.waitForSelector('audio'); await p.fill('textarea[placeholder^="Type it yourself"]', 'Talked it through: the demo went fine in the end.'); await snap('voice-recorded')
   await p.click('text=Save'); await p.waitForSelector('.celebrate'); await p.waitForTimeout(900); await snap('celebrate')
   await p.click('.celebrate .btn'); await snap('entries-after-save')
-  await p.locator('.entry:has-text("Voice memo")').first().click(); await snap('entry-with-voice-memo')
+  await p.click('.tool >> text=Thoughts'); await p.locator('.overlay .entry:has-text("Voice memo")').first().click(); await snap('entry-with-voice-memo')
 })
 
 await session('http://localhost:4173', true, async (p, snap) => {   // AI helper (Gemini mocked)

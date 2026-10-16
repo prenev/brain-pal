@@ -42,6 +42,7 @@ export default function TodayCard({ onDetails, onWorry, onBreathe, onStep }: { o
   async function undo() { if (logged) { await deleteThought(logged.id); setLogged(null) } }
   async function details() { if (logged) { const m = logged.mood; await deleteThought(logged.id); setLogged(null); onDetails(m) } }
 
+  if (action.kind === 'anchors' && !logged && !err) return null      // the anchors card is right below: no second banner saying the same thing
   return (
     <div className="card today" aria-label="Today">
       {logged && <div className="toast-row" role="status">
@@ -61,13 +62,12 @@ export default function TodayCard({ onDetails, onWorry, onBreathe, onStep }: { o
           ))}
         </div>
       </>}
-      {action.kind === 'anchors' && <p className="today-line"><Emoji name="target" size={26} /><span><b>{action.left} {action.left === 1 ? 'anchor' : 'anchors'} left today.</b> Tick them off below.</span></p>}
       {action.kind === 'step' && <button className="today-line linklike" onClick={onStep}>
         <Emoji name="rocket" size={26} /><span style={{ flex: 1, textAlign: 'left' }}><b>A small step is waiting:</b> {nextStep}</span></button>}
       {action.kind === 'worries' && <button className="today-line linklike" onClick={onWorry}>
-        <Emoji name="worry" size={26} /><span style={{ flex: 1, textAlign: 'left' }}><b>{action.count} parked {action.count === 1 ? 'worry' : 'worries'}.</b> Take a few minutes to go through them?</span></button>}
+        <Emoji name="worry" size={26} /><span style={{ flex: 1, textAlign: 'left' }}><b>{action.count} parked {action.count === 1 ? 'worry' : 'worries'}.</b> Review them?</span></button>}
       {action.kind === 'done' && <button className="today-line linklike" onClick={onBreathe}>
-        <Pal pose="cheer" size={48} /><span style={{ flex: 1, textAlign: 'left' }}><b>You’re all set today.</b> A slow breath is always on offer.</span></button>}
+        <Pal pose="cheer" size={48} /><span style={{ flex: 1, textAlign: 'left' }}><b>You’re all set today.</b></span></button>}
       {err && <p role="alert" style={{ color: 'var(--danger)', margin: '10px 0 0' }}>{err}</p>}
     </div>
   )

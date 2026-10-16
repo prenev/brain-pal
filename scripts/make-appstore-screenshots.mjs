@@ -57,7 +57,7 @@ async function capture(fn) {
 const tab = (p, n) => p.click(`.tab >> text=${n}`)
 
 const SHOTS = [
-  ['01-check-in', 'Check in with one tap', async p => { await p.waitForSelector('.quickmood, .today'); await p.click('.pal-tip [aria-label="Hide this tip"]').catch(() => {}) }],
+  ['01-check-in', 'Check in with one tap', async p => { await p.waitForSelector('.tools-row'); await p.click('.pal-tip [aria-label="Hide this tip"]').catch(() => {}) }],
   ['02-calm', 'Calm your body in minutes', async p => { await tab(p, 'Breathe'); await p.click('text=Start'); await p.waitForTimeout(5200) }],
   ['03-calendar', 'See your month at a glance', p => tab(p, 'Calendar')],
   ['04-worries', 'Park worries, plan one small step', async p => { await tab(p, 'More'); await p.click('.li >> text=Worry time'); await p.waitForTimeout(300) }],

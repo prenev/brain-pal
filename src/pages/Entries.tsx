@@ -19,21 +19,21 @@ export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'guard' | 'sleep' | 'p
 
 /** Home: today's check-in, the secondary tools, anchors and today's entries. */
 export default function Entries({ onTool, onSos, onSupport, onAllAnchors, onCompose, onWorry, onBreathe, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onSupport: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onBreathe: () => void; onStep: () => void }) {
-  const { thoughts, deleteThought, streak, worries, journal, coins } = useStore()
+  const { thoughts, deleteThought, streak, worries, coins } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
   const parked = worryStats(worries).open
   // A strip you can scroll sideways: thoughts lead, then the things that used to be buried in Stats and More.
-  const tools: { id: HomeTool; emoji: string; label: string; sub: string }[] = [
-    { id: 'thoughts', emoji: 'nib', label: 'Thoughts', sub: thoughts.length ? `${thoughts.length} ${thoughts.length === 1 ? 'entry' : 'entries'}` : 'All entries' },
-    { id: 'journal', emoji: 'notebook', label: 'Journal', sub: journal.length ? `${journal.length} ${journal.length === 1 ? 'entry' : 'entries'}` : 'Write' },
-    { id: 'worry', emoji: 'worry', label: 'Worry time', sub: parked ? `${parked} parked` : 'Nothing parked' },
-    { id: 'guard', emoji: 'shield', label: 'Focus guard', sub: loadGuard().enabled ? 'On' : 'Off' },
-    { id: 'sleep', emoji: 'sleep', label: 'Sleep', sub: 'Last night' },
-    { id: 'progress', emoji: 'chart', label: 'Progress', sub: 'Your levels' },
-    { id: 'summary', emoji: 'memo', label: 'Summary', sub: 'Week in words' },
-    { id: 'coins', emoji: 'star', label: 'Coins', sub: String(coins) },
+  const tools: { id: HomeTool; emoji: string; label: string; badge?: string }[] = [
+    { id: 'thoughts', emoji: 'nib', label: 'Thoughts' },
+    { id: 'journal', emoji: 'notebook', label: 'Journal' },
+    { id: 'worry', emoji: 'worry', label: 'Worry time', badge: parked ? String(parked) : undefined },
+    { id: 'guard', emoji: 'shield', label: 'Focus guard', badge: loadGuard().enabled ? 'On' : undefined },
+    { id: 'sleep', emoji: 'sleep', label: 'Sleep' },
+    { id: 'progress', emoji: 'chart', label: 'Progress' },
+    { id: 'summary', emoji: 'memo', label: 'Summary' },
+    { id: 'coins', emoji: 'star', label: 'Coins', badge: coins ? String(coins) : undefined },
   ]
 
   return (
@@ -55,7 +55,7 @@ export default function Entries({ onTool, onSos, onSupport, onAllAnchors, onComp
       <div className="tools-row" role="group" aria-label="Tools">
         {tools.map(t => (
           <button key={t.id} className={`card tool ${t.id === 'thoughts' ? 'lead' : ''}`} onClick={() => onTool(t.id)}>
-            <Emoji name={t.emoji} size={34} /><b>{t.label}</b><span className="sub">{t.sub}</span>
+            <Emoji name={t.emoji} size={30} /><b>{t.label}</b>{t.badge && <i className="badge" aria-label={t.badge}>{t.badge}</i>}
           </button>
         ))}
       </div>
@@ -65,7 +65,8 @@ export default function Entries({ onTool, onSos, onSupport, onAllAnchors, onComp
           <Emoji name="blueheart" size={30} /><span style={{ flex: 1 }}>It’s been a rough patch lately. You don’t have to handle it alone — tap for support options.</span>
         </button>
       )}
-      {today.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
+      {today.slice(0, 1).map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
+      {today.length > 1 && <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>{today.length - 1} more today</button>}
 
       {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
     </>
