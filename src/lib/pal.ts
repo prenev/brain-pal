@@ -54,8 +54,8 @@ const f = (n: number) => Math.round(n * 10) / 10
 
 // silhouette: a chubby brain seen from the front: two hemispheres made of soft round lobes, a notch at the top and bottom
 type Blob = readonly [number, number, number]
-const bump = (deg: number, side: 1 | -1): Blob => { const a = (deg * Math.PI) / 180; return [f(100 + side * 54 * Math.cos(a)), f(76 + 37 * Math.sin(a)), 19] }
-const BLOBS: Blob[] = [...[-66, -30, 6, 42, 74].flatMap(d => [bump(d, 1), bump(d, -1)]), [100, 76, 46]]
+const bump = (deg: number, side: 1 | -1): Blob => { const a = (deg * Math.PI) / 180; return [f(100 + side * 43 * Math.cos(a)), f(76 + 38 * Math.sin(a)), 19] }
+const BLOBS: Blob[] = [...[-64, -22, 24, 66].flatMap(d => [bump(d, 1), bump(d, -1)]), [100, 76, 40]]
 const circles = (extra: number) => BLOBS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${f(r + extra)}"/>`).join('')
 
 function limb(x0: number, y0: number, angle: number, len: number, side: -1 | 1, name: string) {
@@ -127,16 +127,14 @@ export function poseSpec(name: PoseName): PoseSpec { return { ...BASE, ...(POSES
 export function palBody(name: PoseName): string {
   const p = poseSpec(name)
   const shoulderY = 98
-  const arms = limb(38, shoulderY, p.armL, 34, -1, 'arm armL') + limb(162, shoulderY, p.armR, 34, 1, 'arm armR')
+  const arms = limb(44, shoulderY, p.armL, 32, -1, 'arm armL') + limb(156, shoulderY, p.armR, 32, 1, 'arm armR')
   const body = `<g fill="${C.edge}">${circles(2.4)}</g><g fill="${C.body}">${circles(0)}</g>
-    <g fill="${C.hi}" opacity=".75"><ellipse cx="72" cy="40" rx="13" ry="6.5" transform="rotate(-28 72 40)"/></g>
-    <g fill="none" stroke="${C.fold}" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M100 30v30"/>
-      <path d="M118 42q13 4 11 17"/><path d="M82 42q-13 4 -11 17"/>
-      <path d="M140 74q-9 6 -1 15"/><path d="M60 74q9 6 1 15"/>
-      <path d="M121 101q10 -1 14 8"/><path d="M79 101q-10 -1 -14 8"/>
+    <g fill="${C.hi}" opacity=".75"><ellipse cx="76" cy="41" rx="11" ry="5.5" transform="rotate(-28 76 41)"/></g>
+    <g fill="none" stroke="${C.fold}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M100 31v26"/>
+      <path d="M121 47q10 5 8 16"/><path d="M79 47q-10 5 -8 16"/>
     </g>`
-  const face = `<ellipse cx="68" cy="90" rx="8" ry="5" fill="${C.cheek}" opacity=".7"/><ellipse cx="132" cy="90" rx="8" ry="5" fill="${C.cheek}" opacity=".7"/>${brows(p.brows)}<g class="eyes">${eyes(p.eyes)}</g>${mouth(p.mouth)}`
+  const face = `<ellipse cx="71" cy="90" rx="7.5" ry="4.8" fill="${C.cheek}" opacity=".7"/><ellipse cx="129" cy="90" rx="7.5" ry="4.8" fill="${C.cheek}" opacity=".7"/>${brows(p.brows)}<g class="eyes">${eyes(p.eyes)}</g>${mouth(p.mouth)}`
   const cx = 100, cy = 100
   const t = `translate(0 ${p.dy}) translate(${cx} ${cy + 20}) rotate(${p.tilt}) scale(${p.scale}) translate(${-cx} ${-(cy + 20)})`
   return `<g class="pal-fig" transform="${t}">${legs(p.legs)}${arms}${body}${face}</g>${p.extras.map(extra).join('')}`
@@ -154,7 +152,7 @@ export function iconSvg(): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs><radialGradient id="bg" cx=".5" cy=".46" r=".72"><stop offset="0" stop-color="#2a3347"/><stop offset=".6" stop-color="#171d2b"/><stop offset="1" stop-color="#0d111a"/></radialGradient></defs>
   <rect width="512" height="512" fill="url(#bg)"/>
-  <g transform="translate(26 40) scale(2.3)">${palBody('idle')}</g>
+  <g transform="translate(26 36) scale(2.3)">${palBody('idle')}</g>
 </svg>
 `
 }
