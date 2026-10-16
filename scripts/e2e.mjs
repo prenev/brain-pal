@@ -242,8 +242,8 @@ test('worry time: park, let go, make a plan, persist, stats', async () => {
 })
 
 test('daily anchors: choose up to 5, tick, persist, cap, auto-tick from a breathing session, all-done moment', async () => {
-  const now = new Date().toISOString()
-  const s = await open({ 'bp.sessions': [{ id: 'b1', createdAt: now, pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 100, completed: true }] }); const p = s.page
+  const at = middayToday(), now = at.toISOString()   // pinned: a run that crosses midnight must not move "today" under the test
+  const s = await open({ 'bp.sessions': [{ id: 'b1', createdAt: now, pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 100, completed: true }] }, { time: at }); const p = s.page
   assert.equal(await p.locator('text=Daily goals').count(), 1, 'the simple goals card shows until anchors are chosen')
   await p.click('text=Choose your daily anchors')
   await p.click('.sheet .chip >> text=Slow breathing'); await p.click('.sheet .chip >> text=Walk 10 minutes')
