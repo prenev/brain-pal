@@ -116,7 +116,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [purchases, setPurchases] = useState<Purchase[]>(loadPurchases)
   const [themeId, setThemeId] = useState<string | null>(loadTheme)
   const [equip, setEquipState] = useState<Equip>(() => loadEquip(loadPurchases()))
-  const setEquip = (e: Equip) => { setEquipState(e); saveEquip(e) }
+  const equipRef = useRef(equip)
+  const setEquip = (e: Equip) => { equipRef.current = e; setEquipState(e); saveEquip(e) }
   const [healthNights, setHealthNights] = useState<Night[]>(loadHealthNights)
   const [manualNights, setManualNights] = useState<Night[]>(loadManualNights)
   const [sleepOn, setSleepOn] = useState(sleepConnected)
@@ -207,7 +208,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const applyExtras = (x: Extras) => {
     setJournal(x.journal); saveJournal(x.journal); setAnchors(x.anchors); saveAnchors(x.anchors); setChecks(x.checks); saveChecks(x.checks)
     setFocusSessions(x.focus); saveFocus(x.focus); setManualNights(x.manualNights); saveManualNights(x.manualNights)
-    setPurchases(x.purchases); savePurchases(x.purchases); setRitualsState(x.rituals); saveRituals(x.rituals); setThemeId(x.themeId); saveTheme(x.themeId); if (x.equip) setEquip(x.equip)
+    setPurchases(x.purchases); savePurchases(x.purchases); setRitualsState(x.rituals); saveRituals(x.rituals); setThemeId(x.themeId); saveTheme(x.themeId); if (x.equip && JSON.stringify(x.equip) !== JSON.stringify(equipRef.current)) setEquip(x.equip)
   }
   const syncNow = useCallback(async () => {
     if (!supabase || !authSession) return
