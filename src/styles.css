@@ -448,3 +448,18 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .pro-row.on { background: rgba(53,208,127,.1); border-radius: 12px; }
 .free-box ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-weight: 700; }
 .paywall .inner a { color: var(--accent); }
+
+/* ---- calmer Home: compact anchors row, slim tools strip ---- */
+.anchor-list { grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 6px; margin-top: 12px; }
+.anchor-item { flex-direction: column; justify-content: flex-start; gap: 6px; padding: 4px 0; background: none; border: 0; text-align: center; box-shadow: none; min-height: 44px; }
+.anchor-item:active:not(:disabled) { transform: scale(.94); }
+.anchor-box { width: 48px; height: 48px; position: relative; }
+.anchor-label { flex: none; width: 100%; font-size: 11.5px; font-weight: 800; line-height: 1.15; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); }
+.anchor-item.done { background: none; }
+.anchor-item.done .anchor-label { color: var(--accent); }
+.anchor-box .auto { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--blue, #4aa8ff); border: 2px solid var(--card); }
+.card.tool { flex: 0 0 84px; padding: 10px 4px 9px; gap: 5px; position: relative; }
+.tool b { font-size: 12.5px; }
+.tool .badge { position: absolute; top: 6px; right: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-style: normal; font-weight: 900; display: grid; place-items: center; }
+.tools-row { margin-bottom: 10px; }
+.more-today { display: block; margin: -4px auto 10px; }

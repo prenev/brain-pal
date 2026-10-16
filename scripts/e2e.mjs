@@ -212,12 +212,14 @@ test('Gemini (mocked): connect, transcribe, fill thought record, reframes, trans
   await p.click('.entry'); await p.waitForSelector('.etranscript >> text=presentation tomorrow')
   // a memo saved without a transcript can be transcribed afterwards
   await newEntry(p, { mood: 3 }); await record(p); await save(p)
-  await p.locator('.entry >> text=Voice memo').first().click()
-  await p.click('.entry button:has-text("Transcribe")')
-  await p.waitForSelector('.entry button:has-text("Transcrib")', { state: 'detached' })   // done only when THIS entry got its transcript
-  assert.equal(await p.locator('.entry .etranscript').count(), 2, 'both transcripts visible before reload')
-  await reload(p); await p.click('.entry >> nth=0'); await p.waitForSelector('.entry:nth-of-type(1) .etranscript, .etranscript')
-  await p.click('.entry >> nth=1'); assert.equal(await p.locator('.entry .etranscript').count(), 2, 'both transcripts survive a reload')
+  await p.click('.tool >> text=Thoughts')       // Home shows only the latest entry of the day; the full list is one tap away
+  await p.locator('.overlay .entry >> text=Voice memo').first().click()
+  await p.click('.overlay .entry button:has-text("Transcribe")')
+  await p.waitForSelector('.overlay .entry button:has-text("Transcrib")', { state: 'detached' })   // done only when THIS entry got its transcript
+  for (const e of await p.locator('.overlay .entry').all()) if (!(await e.locator('.etranscript').count())) await e.click()      // expand the other one too
+  assert.equal(await p.locator('.overlay .entry .etranscript').count(), 2, 'both transcripts visible before reload')
+  await reload(p); await p.click('.tool >> text=Thoughts'); await p.click('.overlay .entry >> nth=0'); await p.waitForSelector('.overlay .etranscript')
+  await p.click('.overlay .entry >> nth=1'); assert.equal(await p.locator('.overlay .entry .etranscript').count(), 2, 'both transcripts survive a reload')
   await done(s)
 })
 
@@ -304,7 +306,7 @@ test('Today card follows your anchors and parked worries', async () => {
   await p.waitForSelector('.today >> text=1 parked worry')
   await p.click('.today >> text=1 parked worry'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
   await p.click('text=Choose your daily anchors'); await p.click('.sheet .chip >> text=Walk 10 minutes'); await p.click('button:has-text("Done")')
-  await p.waitForSelector('.today >> text=1 anchor left today')
+  await p.waitForSelector('[role=checkbox][aria-label="Walk 10 minutes"]'); assert.equal(await p.locator('.today').count(), 0, 'while anchors are left there is no second banner: the anchors card says it')
   await p.click('[role=checkbox][aria-label="Walk 10 minutes"]'); await p.waitForSelector('.today >> text=1 parked worry')
   await done(s)
 })

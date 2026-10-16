@@ -28,8 +28,8 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
   }
   return (
     <div className="card anchors" aria-label="Daily anchors">
-      <div className="row spread" style={{ marginBottom: 10 }}>
-        <b style={{ fontSize: 18 }}>Daily anchors</b>
+      <div className="row spread" style={{ marginBottom: 8 }}>
+        <b style={{ fontSize: 17 }}>Daily anchors</b>
         <span className="row" style={{ gap: 10 }}>
           <span className="muted" style={{ fontWeight: 800 }} aria-label={`${p.done} of ${p.total} done`}>{p.done}/{p.total}</span>
           <button className="linkbtn" onClick={onEdit}>Edit</button>
@@ -42,13 +42,12 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
             className={`anchor-item ${done ? 'done' : ''}`} disabled={auto && !manual}
             title={auto && !manual ? 'Done automatically — you did it in the app' : undefined}
             onClick={() => tick(anchor.id, manual)}>
-            <span className="anchor-box">{done ? <Emoji name="check" size={26} /> : <Emoji name={anchor.emoji} size={26} />}</span>
+            <span className="anchor-box">{done ? <Emoji name="check" size={26} /> : <Emoji name={anchor.emoji} size={26} />}{auto && !manual && <em className="auto" aria-hidden="true" />}</span>
             <span className="anchor-label">{anchor.label}</span>
-            {auto && !manual && <em className="auto">auto</em>}
           </button>
         ))}
       </div>
-      {st.current > 0 && <p className="muted small" style={{ margin: '12px 0 0' }}><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {st.current} {st.current === 1 ? 'day' : 'days'} with every anchor done</p>}
+      {st.current > 0 && <p className="muted small" style={{ margin: '10px 0 0' }}><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {st.current} {st.current === 1 ? 'day' : 'days'} with every anchor done</p>}
     </div>
   )
 }
