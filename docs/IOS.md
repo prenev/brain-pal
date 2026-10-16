@@ -66,3 +66,13 @@ Email + password works as-is. For magic-link / password-reset emails to open the
 - When the Watch and iPhone both report the same minutes they are merged (named stage wins; an explicit *awake* beats sleep), so time is never counted twice. Short blips (< 20 min) are ignored, naps are kept apart from the night, and a night belongs to the morning you woke up.
 - The Health permission text (`NSHealthShareUsageDescription`) now says it reads sleep; `python3 scripts/ios-patch.py` updates existing projects.
 - Not verified on a real Watch yet: the Swift query is compile-checked on the macOS CI job and the JS side is tested with simulated segments (`scripts/native-stub.mjs`).
+
+
+## Native tab bar (Liquid Glass)
+
+In the iPhone app the bottom bar is a **real `UITabBar`** added by `MindfulPlugin` (`setTabs` / `selectTab` / `setTabsHidden`, event `tabSelected`), drawn above the web view. We never set its background or appearance, so when the app is built with Xcode 26 and run on iOS 26 the system draws it as Liquid Glass; on older iOS it is the standard blurred bar. Icons are SF Symbols (`house`, `chart.bar`, `calendar`, `wind`, `ellipsis.circle`). The web bar (the CSS capsule) is only used in browsers/PWA, or if the native call fails.
+
+- The bar is hidden while a sheet or full-screen flow is open (so it never covers one) and before the app proper shows (login, first-run).
+- The web page leaves room via `--native-tab-h` (height the bar covers) and the + button sits above it.
+- **Not verified on a device:** the Swift compiles on macOS CI, and the JS side is covered by e2e with the simulated bridge, but I could not see the real bar. Check on your iPhone: glass look on iOS 26, tab taps switch screens, bar hides behind the + menu, nothing is cut off at the bottom of scrolled screens, and the + button position.
+- Because it is a standalone `UITabBar` (not a `UITabBarController`), iOS 26 may draw it docked rather than as the floating capsule. If you want the floating capsule exactly, the next step is a `UITabBarController` shell — say so.

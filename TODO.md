@@ -26,3 +26,5 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 
 ## Later / App Store (if you decide to publish)
 - [ ] Privacy policy + health-data disclosures, screenshots, review notes (no medical claims), age rating
+
+- [ ] **iPhone: check the native Liquid Glass tab bar** (docs/IOS.md → "Native tab bar"): glass look on iOS 26, taps switch tabs, hides behind sheets, nothing cut off at the bottom, + button position. Tell me if it should be the floating capsule (needs a UITabBarController shell).

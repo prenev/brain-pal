@@ -13,7 +13,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **UX pass** 🧱 Home tab (Today / Entries / Journal switch), grouped + menu, uniform tab icons, calendar grid fix — verified locally; pending CI + screens review
+- **Native tab bar** 📱 real UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback — e2e with simulated bridge; Swift compile on macOS CI; device check pending
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -21,6 +21,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- UX pass: Home tab (Today / Entries / Journal), grouped + menu, uniform tab icons, calendar fix
 - Fix: CI flake — anchors e2e crossed midnight UTC (clock pinned)
 - Fix: calendar today cell was squashed (`.today` CSS collided with the Today card)
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time

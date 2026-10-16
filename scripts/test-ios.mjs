@@ -12,7 +12,7 @@ for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitle
 
 /* 2. every method the JS calls on the Mindful plugin exists in Swift, and vice versa */
 const iface = read('src/lib/native.ts').match(/export interface MindfulPlugin \{([\s\S]*?)\n\}/)[1]
-const jsMethods = [...iface.matchAll(/^\s{2}(\w+)\(/gm)].map(m => m[1]).sort()
+const jsMethods = [...iface.matchAll(/^\s{2}(\w+)\(/gm)].map(m => m[1]).filter(m => m !== 'addListener').sort()   // addListener is built into every Capacitor plugin
 const swift = read('ios-native/MindfulPlugin.swift')
 const swiftRegistered = [...swift.matchAll(/CAPPluginMethod\(name: "(\w+)"/g)].map(m => m[1]).sort()
 const swiftImplemented = [...swift.matchAll(/@objc func (\w+)\(_ call: CAPPluginCall\)/g)].map(m => m[1]).sort()
@@ -42,6 +42,10 @@ assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.brainpal\.app/)
 /* 4b. social sign-in plumbing */
 assert.match(swift, /ASWebAuthenticationSession\(/); assert.match(swift, /ASAuthorizationAppleIDProvider/)
 assert.match(swift, /request\.nonce = Self\.sha256\(nonce\)/, 'Apple must receive the hashed nonce, JS the raw one')
+
+/* 4c. native tab bar: a real UITabBar, never restyled (so iOS 26 draws it as Liquid Glass) */
+assert.match(swift, /UITabBar\(\)/); assert.match(swift, /UITabBarDelegate/); assert.match(swift, /notifyListeners\("tabSelected"/)
+assert.doesNotMatch(swift, /tabBar\??\.(backgroundColor|barTintColor|backgroundImage|standardAppearance|scrollEdgeAppearance|isTranslucent)|bar\.(backgroundColor|barTintColor|backgroundImage|standardAppearance|scrollEdgeAppearance|isTranslucent)/, 'do not restyle the tab bar background: that is what removes the system glass')
 
 /* 5. the only health data we ever READ is sleep analysis (privacy promise in the UI and docs) */
 assert.equal((swift.match(/HKSampleQuery\(/g) ?? []).length, 1, 'exactly one read query')

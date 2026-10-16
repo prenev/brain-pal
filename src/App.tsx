@@ -3,6 +3,7 @@ import { Plus, ArrowLeft, House, ChartColumn, CalendarDays, Wind, CircleEllipsis
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
+import { useNativeTabs } from './lib/nativeTabs'
 import { StoreProvider, useStore } from './lib/store'
 import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
 import Entries, { type HomeView } from './pages/Entries'
@@ -22,13 +23,14 @@ import type { JournalEntry } from './lib/journal.ts'
 
 type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
 // One family of line icons for the tab bar, so every tab has the same weight and size.
-const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
-  { id: 'entries', label: 'Home', icon: House },
-  { id: 'stats', label: 'Stats', icon: ChartColumn },
-  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-  { id: 'breathe', label: 'Breathe', icon: Wind },
-  { id: 'more', label: 'More', icon: CircleEllipsis },
+const TABS: { id: Tab; label: string; icon: LucideIcon; symbol: string }[] = [   // symbol = SF Symbol for the native iPhone tab bar
+  { id: 'entries', label: 'Home', icon: House, symbol: 'house' },
+  { id: 'stats', label: 'Stats', icon: ChartColumn, symbol: 'chart.bar' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, symbol: 'calendar' },
+  { id: 'breathe', label: 'Breathe', icon: Wind, symbol: 'wind' },
+  { id: 'more', label: 'More', icon: CircleEllipsis, symbol: 'ellipsis.circle' },
 ]
+const NATIVE_ITEMS = TABS.map(({ id, label, symbol }) => ({ id, label, symbol }))
 
 function Shell() {
   const { ready, needsLogin, recovery, levels, coins, thoughts, sessions, worries, journal, anchors } = useStore()
@@ -86,6 +88,10 @@ function Shell() {
     setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count) })
   }, [ready, needsLogin, recovery, cel, levels])
 
+  // iPhone app: the real UIKit tab bar. Hidden whenever a sheet / full-screen flow is open or before the app proper shows.
+  const overlayOpen = menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || needsLogin || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
+
   if (!ready) return <div className="center-screen muted">Loading…</div>
   if (needsLogin || recovery) return <Login />
   if (!onboarded && !hasData) return <Onboarding onDone={finishOnboarding} />
@@ -104,13 +110,13 @@ function Shell() {
       </div>
 
       <div className="dock">
-        <nav className="tabbar" aria-label="Main">
+        {!nativeBar && <nav className="tabbar" aria-label="Main">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => { setMoreView(null); setTab(id) }}>
               <Icon size={24} strokeWidth={2.2} />{label}
             </button>
           ))}
-        </nav>
+        </nav>}
         {tab !== 'more' && tab !== 'breathe' && <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={3} /></button>}
       </div>
 

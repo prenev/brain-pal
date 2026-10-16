@@ -31,7 +31,7 @@ const STRUCTURED = { situation: 'Presentation tomorrow', thought: 'I will mess i
 /** Fresh browser context + page with error capture and a mocked Gemini API. */
 const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filter(c => c.plugin === a && (!b || c.method === b)), [plugin, method])
 
-async function open(seed, { native = false, time = null, onboarding = false } = {}) {
+async function open(seed, { native = false, time = null, onboarding = false, reply = null } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
   if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })   // the first-run screens have their own test
   if (time) await ctx.clock.install({ time })      // for tests whose outcome depends on the time of day: pin it so they don't flake near midnight
@@ -52,6 +52,7 @@ async function open(seed, { native = false, time = null, onboarding = false } = 
     return json({ error: { message: 'unexpected request' } }, 400)
   })
   if (native) await ctx.addInitScript(nativeStub)
+  if (native && reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
   if (seed) await ctx.addInitScript(([k, v]) => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, ['seed', seed])
   const page = await ctx.newPage()
   const errors = []
@@ -958,6 +959,29 @@ test('home: Today / Entries / Journal switch at the top, and the + menu groups w
   await tab(p, 'More'); assert.equal(await p.locator('.fab').count(), 0, 'no + button on More (it sat on top of the settings)')
   await tab(p, 'Calendar'); assert.equal(await p.locator('.fab').count(), 1)
   await done(s)
+})
+
+test('iPhone app: the real native tab bar takes over (Liquid Glass on iOS 26); web bar steps aside; overlays hide it; failure keeps the web bar', async () => {
+  const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
+  await p.waitForSelector('html.native-tabs'); assert.equal(await p.locator('.tabbar').count(), 0, 'the web tab bar is gone')
+  const calls = () => p.evaluate(() => window.__native.filter(c => c.plugin === 'Mindful' && /Tab/.test(c.method)).map(c => ({ m: c.method, o: c.options })))
+  const first = (await calls()).find(c => c.m === 'setTabs')
+  assert.deepEqual(first.o.items.map(i => [i.id, i.label, i.symbol]), [['entries', 'Home', 'house'], ['stats', 'Stats', 'chart.bar'], ['calendar', 'Calendar', 'calendar'], ['breathe', 'Breathe', 'wind'], ['more', 'More', 'ellipsis.circle']])
+  assert.equal(first.o.selected, 'entries')
+  assert.equal(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--native-tab-h').trim()), '83px', 'web content leaves room for the bar')
+  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'calendar' })); await p.waitForSelector('.cal')
+  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'more' })); await p.waitForSelector('.li >> text=Reminders')
+  assert.ok((await calls()).some(c => c.m === 'selectTab' && c.o.id === 'more'), 'the native highlight follows')
+  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'entries' })); await p.waitForSelector('.home-seg')
+  await p.click('.fab'); await p.waitForSelector('.sheet')
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === true)
+  await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
+  await done(s)
+  const f = await open(null, { native: true, reply: { 'Mindful.setTabs': { __reject: 'UNIMPLEMENTED', message: 'old shell' } } })   // an older app build without the native bar
+  await f.page.waitForSelector('.home-seg'); await f.page.waitForTimeout(300)
+  assert.equal(await f.page.locator('.tabbar').count(), 1, 'the web tab bar stays when native fails'); assert.equal(await f.page.locator('html.native-tabs').count(), 0)
+  await done(f)
 })
 
 test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {

@@ -1,4 +1,4 @@
-import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 
 /** True inside the iPhone/iPad app (Capacitor shell); false in browsers and the installed PWA. */
 export const isNative = (): boolean => Capacitor.isNativePlatform()
@@ -21,5 +21,13 @@ export interface MindfulPlugin {
   webAuth(opts: { url: string; callbackScheme: string }): Promise<{ url: string }>
   /** Native "Sign in with Apple" sheet. `nonce` is the raw nonce (its SHA-256 was sent to Apple). Rejects with code CANCELLED if dismissed. */
   appleSignIn(): Promise<{ idToken: string; nonce: string; email?: string; givenName?: string; familyName?: string }>
+  /** Shows the real UIKit tab bar (Liquid Glass on iOS 26) over the web view. `height` is how many points it covers. */
+  setTabs(opts: { items: { id: string; label: string; symbol: string }[]; selected: string }): Promise<{ native: boolean; height: number }>
+  /** Moves the native highlight (does not fire tabSelected). */
+  selectTab(opts: { id: string }): Promise<void>
+  /** Hide / show the native tab bar (hidden while sheets and full-screen flows are open). */
+  setTabsHidden(opts: { hidden: boolean }): Promise<void>
+  /** Fired when a native tab is tapped. */
+  addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
 }
 export const Mindful = registerPlugin<MindfulPlugin>('Mindful')

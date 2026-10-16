@@ -336,3 +336,7 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .sheet-label.first { border-top: 0; margin-top: 0; padding-top: 4px; }
 .anchor-empty b { display: block; }
 .anchor-empty .sub { display: block; color: var(--muted); font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+/* iPhone app: the tab bar is the real UIKit one (Liquid Glass), drawn above the web view, so we just leave room for it */
+.native-tabs .app { padding-bottom: calc(var(--native-tab-h, 0px) + 24px); }
+.native-tabs .fab { bottom: calc(var(--native-tab-h, 0px) + 12px); }

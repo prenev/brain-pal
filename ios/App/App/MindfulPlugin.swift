@@ -20,13 +20,21 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestSleepAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readSleep", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "webAuth", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "appleSignIn", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "appleSignIn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTabs", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "selectTab", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTabsHidden", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
     private var webSession: ASWebAuthenticationSession?
     private var appleController: ASAuthorizationController?
     private var appleDelegate: AppleDelegate?
+
+    // The real UIKit tab bar. We never style its background: on iOS 26 the system draws it as Liquid Glass by itself.
+    private var tabBar: UITabBar?
+    private var tabIds: [String] = []
+    private let tabDelegate = TabBarDelegate()
 
     private let store = HKHealthStore()
     private var mindfulType: HKCategoryType? { HKObjectType.categoryType(forIdentifier: .mindfulSession) }
@@ -140,6 +148,65 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// Opens `url` in the system web-auth sheet and resolves with the URL it redirects to (callbackScheme://…).
+    // MARK: native tab bar
+
+    /// Shows a native UITabBar over the web view. Resolves { native: true, height } (height = points the bar covers, for web padding).
+    @objc func setTabs(_ call: CAPPluginCall) {
+        var ids: [String] = []
+        var items: [UITabBarItem] = []
+        for entry in call.getArray("items") ?? [] {
+            guard let d = entry as? [String: Any], let id = d["id"] as? String, let title = d["label"] as? String else { continue }
+            let image = (d["symbol"] as? String).flatMap { UIImage(systemName: $0) }
+            items.append(UITabBarItem(title: title, image: image, tag: ids.count))
+            ids.append(id)
+        }
+        let selected = call.getString("selected")
+        DispatchQueue.main.async {
+            guard !items.isEmpty, let host = self.bridge?.viewController?.view else { call.resolve(["native": false, "height": 0]); return }
+            let bar = self.tabBar ?? UITabBar()
+            if bar.superview == nil {
+                bar.translatesAutoresizingMaskIntoConstraints = false
+                host.addSubview(bar)
+                NSLayoutConstraint.activate([
+                    bar.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+                    bar.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+                    bar.bottomAnchor.constraint(equalTo: host.bottomAnchor)
+                ])
+            }
+            self.tabIds = ids
+            bar.items = items
+            bar.tintColor = UIColor(red: 0.208, green: 0.816, blue: 0.498, alpha: 1)   // the app's accent green
+            bar.delegate = self.tabDelegate
+            self.tabDelegate.onSelect = { [weak self] index in
+                guard let self = self, index >= 0, index < self.tabIds.count else { return }
+                self.notifyListeners("tabSelected", data: ["id": self.tabIds[index]])
+            }
+            if let selected = selected, let index = ids.firstIndex(of: selected) { bar.selectedItem = items[index] }
+            bar.isHidden = false
+            self.tabBar = bar
+            host.layoutIfNeeded()
+            call.resolve(["native": true, "height": Double(host.bounds.height - bar.frame.minY)])
+        }
+    }
+
+    /// Moves the highlight without firing tabSelected (the web side already knows).
+    @objc func selectTab(_ call: CAPPluginCall) {
+        let id = call.getString("id") ?? ""
+        DispatchQueue.main.async {
+            if let bar = self.tabBar, let index = self.tabIds.firstIndex(of: id), let items = bar.items, index < items.count { bar.selectedItem = items[index] }
+            call.resolve()
+        }
+    }
+
+    /// Hidden while a sheet / full-screen flow is open, so it never covers the bottom of one.
+    @objc func setTabsHidden(_ call: CAPPluginCall) {
+        let hidden = call.getBool("hidden") ?? false
+        DispatchQueue.main.async {
+            self.tabBar?.isHidden = hidden
+            call.resolve()
+        }
+    }
+
     @objc func webAuth(_ call: CAPPluginCall) {
         guard let urlString = call.getString("url"), let url = URL(string: urlString),
               let scheme = call.getString("callbackScheme"), !scheme.isEmpty else {
@@ -227,4 +294,9 @@ private final class AppleDelegate: NSObject, ASAuthorizationControllerDelegate, 
         done(.success(out))
     }
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) { done(.failure(error)) }
+}
+
+final class TabBarDelegate: NSObject, UITabBarDelegate {
+    var onSelect: ((Int) -> Void)?
+    func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) { onSelect?(item.tag) }
 }

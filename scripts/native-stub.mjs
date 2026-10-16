@@ -10,7 +10,7 @@ function nativeStub() {
   }
   const methods = {
     Haptics: ['impact', 'notification', 'vibrate', 'selectionStart', 'selectionChanged', 'selectionEnd'],
-    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep'],
+    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep', 'setTabs', 'selectTab', 'setTabsHidden', 'addListener', 'removeListener'],
     LocalNotifications: ['checkPermissions', 'requestPermissions', 'schedule', 'cancel', 'getPending', 'addListener', 'removeListener'],
     StatusBar: ['setStyle', 'setBackgroundColor', 'show', 'hide', 'setOverlaysWebView'],
     SplashScreen: ['hide', 'show'],
