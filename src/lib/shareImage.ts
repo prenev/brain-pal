@@ -28,7 +28,7 @@ export async function shareImage(svg: string, w: number, h: number, name: string
   } catch { return 'failed' }
 }
 
-export async function shareText(text: string, title = 'Brain Pal'): Promise<ShareResult> {
+export async function shareText(text: string, title = 'Wobbi'): Promise<ShareResult> {
   try {
     if (navigator.share) { try { await navigator.share({ title, text }); return 'shared' } catch (e) { if ((e as Error).name === 'AbortError') return 'cancelled' } }
     await navigator.clipboard.writeText(text); return 'saved'

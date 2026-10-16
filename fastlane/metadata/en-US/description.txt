@@ -1,4 +1,4 @@
-Brain Pal is a friendly, private mood diary and calming toolkit. Check in with how you feel in one tap, write things down, breathe, and take one small step at a time.
+Wobbi is a friendly, private mood diary and calming toolkit. Check in with how you feel in one tap, write things down, breathe, and take one small step at a time.
 
 CHECK IN IN ONE TAP
 • Tap a face to log your mood — add details only when you want to.
@@ -32,7 +32,7 @@ REMINDERS THAT RESPECT YOU
 • Breathe at 07:00 and again at night, or whenever suits you. Reminders skip themselves once you have already done the thing.
 
 SLEEP (OPTIONAL)
-• Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Brain Pal only reads sleep, only if you allow it, and it never leaves your device.
+• Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Wobbi only reads sleep, only if you allow it, and it never leaves your device.
 
 BRAIN PAL PRO (OPTIONAL MONTHLY SUBSCRIPTION)
 • Unlock sync across devices, Focus guard, sleep insights, weekly and monthly summaries, proof of progress and more daily anchors.
@@ -45,4 +45,4 @@ PRIVATE BY DESIGN
 • No ads. No analytics. No tracking. We never sell your data.
 • AI helpers are off by default and use your own key. Anything that looks like self-harm is never sent to an AI; support options are shown instead.
 
-Brain Pal is a self-help tool and is not medical care. It does not diagnose or treat any condition. If you might be in danger, call your local emergency number.
+Wobbi is a self-help tool and is not medical care. It does not diagnose or treat any condition. If you might be in danger, call your local emergency number.

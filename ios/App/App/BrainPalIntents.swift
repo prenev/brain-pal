@@ -6,7 +6,7 @@ import UIKit
 @available(iOS 16.0, *)
 struct StartSosIntent: AppIntent {
     static var title: LocalizedStringResource = "I’m anxious"
-    static var description = IntentDescription("Opens Brain Pal’s calming SOS.")
+    static var description = IntentDescription("Opens Wobbi’s calming SOS.")
     static var openAppWhenRun: Bool = true
     @MainActor func perform() async throws -> some IntentResult {
         if let url = URL(string: "brainpal://sos") { await UIApplication.shared.open(url) }
@@ -28,7 +28,7 @@ struct StartBreathingIntent: AppIntent {
 @available(iOS 16.0, *)
 struct LogMoodIntent: AppIntent {
     static var title: LocalizedStringResource = "Log my mood"
-    static var description = IntentDescription("Opens Brain Pal on today’s check-in.")
+    static var description = IntentDescription("Opens Wobbi on today’s check-in.")
     static var openAppWhenRun: Bool = true
     @MainActor func perform() async throws -> some IntentResult {
         if let url = URL(string: "brainpal://checkin") { await UIApplication.shared.open(url) }

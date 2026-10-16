@@ -115,5 +115,5 @@ export const monthSummary = (d: SummaryData, end: string) => summarize(d, end, M
 
 /** Text for sharing / printing. */
 export function shareText(title: string, s: PeriodSummary, label?: string, prevLabel?: string): string {
-  return `${title}\n${s.start} – ${s.end}\n\n${sentences(s, label, prevLabel).map(x => `• ${x}`).join('\n')}\n\nFrom Brain Pal — a self-help tool, not medical advice.`
+  return `${title}\n${s.start} – ${s.end}\n\n${sentences(s, label, prevLabel).map(x => `• ${x}`).join('\n')}\n\nFrom Wobbi — a self-help tool, not medical advice.`
 }

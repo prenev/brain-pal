@@ -6,7 +6,7 @@ import { SITE_URL } from './legal.ts'
 /** Set to the App Store link once the app is live (https://apps.apple.com/app/id…); until then invites point at the project site. */
 export const APP_STORE_URL = ''
 export const inviteUrl = () => APP_STORE_URL || SITE_URL
-export const INVITE_TEXT = 'I’ve been using Brain Pal: a free, private little buddy for calming down, parking worries and building tiny habits. No account, no ads, works offline.'
+export const INVITE_TEXT = 'I’ve been using Wobbi: a free, private little buddy for calming down, parking worries and building tiny habits. No account, no ads, works offline.'
 export const inviteMessage = () => `${INVITE_TEXT}\n${inviteUrl()}`
 
 export interface ShareCard { kind: 'streak' | 'level' | 'guard'; pose: PoseName; kicker: string; big: string; unit: string; line: string; accent: string }
@@ -34,7 +34,7 @@ export const canShareGuard = (t: GuardTotals) => t.challenges > 0
 
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-/** 1080×1350 (4:5) card as SVG text: dark Brain Pal look, Pal on top, one big number, small footer. */
+/** 1080×1350 (4:5) card as SVG text: dark Wobbi look, Wobbi on top, one big number, small footer. */
 export function cardSvg(c: ShareCard): string {
   const F = `font-family="Nunito, -apple-system, 'Helvetica Neue', Arial, sans-serif"`
   const bigSize = c.big.length > 6 ? 150 : 230
@@ -46,12 +46,12 @@ export function cardSvg(c: ShareCard): string {
 <text x="540" y="${c.unit ? 960 : 980}" ${F} font-size="${bigSize}" font-weight="900" fill="#fff" text-anchor="middle">${esc(c.big)}</text>
 ${c.unit ? `<text x="540" y="1035" ${F} font-size="64" font-weight="800" fill="${c.accent}" text-anchor="middle">${esc(c.unit)}</text>` : ''}
 <text x="540" y="1120" ${F} font-size="42" font-weight="700" fill="#aab4c8" text-anchor="middle">${esc(c.line)}</text>
-<text x="540" y="1270" ${F} font-size="46" font-weight="900" fill="#fff" text-anchor="middle">Brain Pal</text>
+<text x="540" y="1270" ${F} font-size="46" font-weight="900" fill="#fff" text-anchor="middle">Wobbi</text>
 <text x="540" y="1313" ${F} font-size="30" font-weight="700" fill="#7d889e" text-anchor="middle">free · private · works offline</text>
 </svg>`
 }
 
-/** A sticker is just Pal on a transparent square. */
+/** A sticker is just Wobbi on a transparent square. */
 export function stickerSvg(pose: PoseName): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">${palBody(pose)}</svg>`
 }

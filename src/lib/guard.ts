@@ -14,7 +14,7 @@ export const CHALLENGES: Challenge[] = [
   { id: 'squats', label: 'Squats', kind: 'reps', target: 15, unit: 'reps', pose: 'squat', how: 'Do a squat, then tap. One tap per rep.' },
   { id: 'plank', label: 'Plank', kind: 'timer', target: 30, unit: 'seconds', pose: 'flex', how: 'Hold a plank (or a wall sit) until the clock ends.' },
   { id: 'walk', label: 'Walk', kind: 'timer', target: 120, unit: 'seconds', pose: 'walkA', how: 'Get up and walk around for two minutes.' },
-  { id: 'breathe', label: 'Slow breathing', kind: 'breathe', target: 60, unit: 'seconds', pose: 'breatheIn', how: 'One minute of slow breathing with Pal.' },
+  { id: 'breathe', label: 'Slow breathing', kind: 'breathe', target: 60, unit: 'seconds', pose: 'breatheIn', how: 'One minute of slow breathing with Wobbi.' },
   { id: 'journal', label: 'Write a line', kind: 'journal', target: 12, unit: 'characters', pose: 'think', how: 'Write one honest line about how you feel.' },
 ]
 export const challengeOf = (id: string) => CHALLENGES.find(c => c.id === id)

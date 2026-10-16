@@ -1,4 +1,4 @@
-// "Pal", the mascot: a soft lavender cloud-brain with stubby arms and legs. Every pose is plain data rendered to SVG,
+// "Wobbi", the mascot: a soft lavender cloud-brain with stubby arms and legs. Every pose is plain data rendered to SVG,
 // so the app (inline SVG, CSS-animated), the sprite-sheet PNG and the app icon all come from the same drawing.
 // Pure (no imports): unit-tested by scripts/test-pal.mjs.
 
@@ -35,8 +35,8 @@ export const POSE_NAMES = Object.keys(POSES) as PoseName[]
 
 /** Short phrases for aria-labels (the mascot is decorative, but the pose can carry meaning). */
 export const POSE_LABEL: Record<PoseName, string> = {
-  idle: 'Pal smiling', wave: 'Pal waving', wave2: 'Pal waving', cheer: 'Pal cheering', celebrate: 'Pal celebrating', think: 'Pal thinking', worried: 'Pal looking worried', sleepy: 'Pal sleepy',
-  breatheIn: 'Pal breathing in', breatheOut: 'Pal breathing out', flex: 'Pal flexing', squat: 'Pal squatting', walkA: 'Pal walking', walkB: 'Pal walking', love: 'Pal with hearts', stop: 'Pal holding up a hand',
+  idle: 'Wobbi smiling', wave: 'Wobbi waving', wave2: 'Wobbi waving', cheer: 'Wobbi cheering', celebrate: 'Wobbi celebrating', think: 'Wobbi thinking', worried: 'Wobbi looking worried', sleepy: 'Wobbi sleepy',
+  breatheIn: 'Wobbi breathing in', breatheOut: 'Wobbi breathing out', flex: 'Wobbi flexing', squat: 'Wobbi squatting', walkA: 'Wobbi walking', walkB: 'Wobbi walking', love: 'Wobbi with hearts', stop: 'Wobbi holding up a hand',
 }
 
 /** Named animations = ordered pose frames (used for the sprite sheet; in the app CSS animates the same pieces). */
@@ -146,7 +146,7 @@ export function palSvg(name: PoseName, opts: { size?: number; label?: string; cl
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"${dim}${aria} class="${opts.className ?? 'pal-svg'}">${palBody(name)}</svg>`
 }
 
-/** The app icon: Pal on a dark rounded-square-ready background (iOS rounds the corners itself, so it is a full-bleed square). 512×512. */
+/** The app icon: Wobbi on a dark rounded-square-ready background (iOS rounds the corners itself, so it is a full-bleed square). 512×512. */
 export function iconSvg(): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs><radialGradient id="bg" cx=".5" cy=".46" r=".72"><stop offset="0" stop-color="#2a3347"/><stop offset=".6" stop-color="#171d2b"/><stop offset="1" stop-color="#0d111a"/></radialGradient></defs>

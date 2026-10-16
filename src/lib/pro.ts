@@ -1,5 +1,5 @@
 /**
- * Brain Pal Pro: one optional monthly subscription (Apple In-App Purchase). Pure rules only; the purchase itself is StoreKit 2
+ * Wobbi Pro: one optional monthly subscription (Apple In-App Purchase). Pure rules only; the purchase itself is StoreKit 2
  * (ios-native/MindfulPlugin.swift), the screens are components/Pro.tsx. Money design: docs/MONETIZATION.md.
  *
  * Ethics are part of the rules: anything that keeps someone safe, or is their own data, is NEVER behind the paywall (see ALWAYS_FREE).
@@ -54,4 +54,4 @@ export function priceLine(p: { price?: string; trialDays?: number } | null): str
   return `${trial}${p.price} per month`
 }
 export const DISCLOSURE = (price: string | null) =>
-  `Brain Pal Pro is a monthly auto-renewing subscription${price ? ` at ${price} per month` : ''}. Payment is charged to your Apple ID at confirmation of purchase. It renews automatically each month unless you cancel at least 24 hours before the end of the current period; your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in Settings → [your name] → Subscriptions. Any free-trial time that is not used is forfeited when you subscribe.`
+  `Wobbi Pro is a monthly auto-renewing subscription${price ? ` at ${price} per month` : ''}. Payment is charged to your Apple ID at confirmation of purchase. It renews automatically each month unless you cancel at least 24 hours before the end of the current period; your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in Settings → [your name] → Subscriptions. Any free-trial time that is not used is forfeited when you subscribe.`

@@ -26,7 +26,7 @@ export default function AiSettings() {
         <p className="small" style={{ margin: '0 0 10px' }}><b>Privacy — please read.</b> When you use it, your voice memo audio or text is sent to Google’s Gemini API using <b>your own</b> free key.
           On Google’s free tier, Google may use what you send to improve its products, and human reviewers may read it. If you want your journal to stay private, leave this off.
           If you’re in the UK, EEA or Switzerland, Google’s terms may require a paid project — check before enabling.</p>
-        <p className="small muted" style={{ margin: 0 }}>Brain Pal never sees your key: it stays in this browser. Entries that look like they mention self-harm are never sent.</p>
+        <p className="small muted" style={{ margin: 0 }}>Wobbi never sees your key: it stays in this browser. Entries that look like they mention self-harm are never sent.</p>
       </div>
 
       <div className="card">

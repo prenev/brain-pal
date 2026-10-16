@@ -9,7 +9,7 @@ export const OWNER = {
   governingLaw: '',         // e.g. "the laws of England and Wales" / "the State of California, USA"
 }
 export const SITE_URL = 'https://prenev.github.io/brain-pal'
-export const APP_NAME = 'Brain Pal'
+export const APP_NAME = 'Wobbi'
 export const LEGAL_UPDATED = '16 October 2026'
 
 export interface Section { h: string; p?: string[]; li?: string[] }
@@ -41,8 +41,8 @@ export const privacy = (): LegalDoc => ({
       'You can withdraw access at any time in the Health app or iOS Settings.',
     ] },
     { h: 'AI helper (optional, off by default)', p: ['If you turn it on you add your own Google Gemini API key. The key stays on your device. When you tap an AI action (for example transcribe a voice memo or suggest reframes), only the text or audio for that action is sent from your device directly to Google. It does not pass through our servers.', 'Google handles it under its own terms. On Google’s free tier, Google may use what you send to improve its products and humans may review it, so do not send anything you would not want that to apply to. Text that looks like self-harm is never sent to an AI; the app shows support options instead.'] },
-    { h: 'Focus guard (iPhone, optional)', p: ['If you turn on the Focus guard you choose apps with Apple’s Screen Time picker. iOS gives Brain Pal only anonymous tokens for what you chose: we cannot see which apps they are, how you use them, or your Screen Time data. The choice and unlock times are stored on your device only and never uploaded. You can switch the guard off at any time.'] },
-    { h: 'Purchases', p: ['Subscriptions are bought and managed through Apple. We never see your payment details. We only learn, from Apple, whether your Brain Pal Pro subscription is active and when it ends, so we can unlock the Pro features on your device.'] },
+    { h: 'Focus guard (iPhone, optional)', p: ['If you turn on the Focus guard you choose apps with Apple’s Screen Time picker. iOS gives Wobbi only anonymous tokens for what you chose: we cannot see which apps they are, how you use them, or your Screen Time data. The choice and unlock times are stored on your device only and never uploaded. You can switch the guard off at any time.'] },
+    { h: 'Purchases', p: ['Subscriptions are bought and managed through Apple. We never see your payment details. We only learn, from Apple, whether your Wobbi Pro subscription is active and when it ends, so we can unlock the Pro features on your device.'] },
     { h: 'Notifications', p: ['Reminders on the iPhone app are scheduled on your device and never leave it. On the web version, if you turn on push reminders, your browser’s push address is stored with your account so we can send them.'] },
     { h: 'Camera, microphone and photos', p: ['Only used when you tap the matching button to attach a photo or record a voice memo. Media stays on your device unless you are signed in, in which case it syncs with your entry.'] },
     { h: 'How long we keep data', p: ['On your device: until you delete it or the app. In your account: until you delete the account (More → Account → Delete account), which permanently removes your account, entries, photos and voice memos from our systems. Routine backups at our provider may take a short time to expire.'] },
@@ -68,7 +68,7 @@ export const terms = (): LegalDoc => ({
     ] },
     { h: 'Focus guard', p: ['The optional Focus guard uses iOS Screen Time to pause apps you choose until you finish a quick activity. Activities such as push-ups are on the honour system and must only be done if they are safe for you. It is self-help, not medical or parental-control software, and you can switch it off at any time.'] },
     { h: 'AI features', p: ['AI features are optional and use your own Google API key. Output can be wrong or unsuitable. It is untrusted suggestion, not advice. Your use of Google’s service is governed by Google’s terms and billing.'] },
-    { h: 'Brain Pal Pro (optional subscription)', p: ['Brain Pal Pro is an optional auto-renewing monthly subscription sold through the Apple App Store. Payment is charged to your Apple ID at confirmation of purchase and renews each month unless you cancel at least 24 hours before the period ends. Manage or cancel it in your Apple ID settings (Settings → your name → Subscriptions). Any unused part of a free trial is forfeited when you subscribe. Prices may vary by country and are shown by the App Store before you confirm. Refunds are handled by Apple under its policies.', 'Things that keep you safe, and your own data, are never behind the subscription: the SOS siren, breathing and grounding, crisis support, check-ins, journal, worry time, reminders, and exporting or deleting your data.'] },
+    { h: 'Wobbi Pro (optional subscription)', p: ['Wobbi Pro is an optional auto-renewing monthly subscription sold through the Apple App Store. Payment is charged to your Apple ID at confirmation of purchase and renews each month unless you cancel at least 24 hours before the period ends. Manage or cancel it in your Apple ID settings (Settings → your name → Subscriptions). Any unused part of a free trial is forfeited when you subscribe. Prices may vary by country and are shown by the App Store before you confirm. Refunds are handled by Apple under its policies.', 'Things that keep you safe, and your own data, are never behind the subscription: the SOS siren, breathing and grounding, crisis support, check-ins, journal, worry time, reminders, and exporting or deleting your data.'] },
     { h: 'Coins and rewards', p: ['Coins are a fun in-app marker of your own activity. They have no cash value, cannot be bought with money and cannot be transferred.'] },
     { h: 'Acceptable use', li: ['No attempting to break, overload or reverse-engineer the service.', 'No using another person’s account.', 'No unlawful, harassing or harmful content.'] },
     { h: 'Availability and changes', p: ['We try to keep the app and sync working but cannot promise uninterrupted service. Features may change. Because the app works on your device, keep your own export if your data matters to you.'] },
@@ -89,8 +89,8 @@ export const support = (): LegalDoc => ({
     { h: 'Do I need an account?', p: ['No. Everything works on your device without one. An account only adds sync between devices.'] },
     { h: 'How do I delete my data?', p: ['On the device: delete the app. In your account: More → Account → Delete account. That permanently removes your account, entries, photos and voice memos.'] },
     { h: 'How do I export my entries?', p: ['More → Export data. You get a JSON file of your entries (photos and audio are not included).'] },
-    { h: 'Apple Health', p: ['Turn it on or off in More → Apple Health. You can also manage access in the Health app → Sharing → Apps → Brain Pal.'] },
-    { h: 'Reminders are not arriving', p: ['Check iOS Settings → Notifications → Brain Pal is allowed, and that the reminder is on in More → Reminders. Reminders are skipped for today once you have already done the thing.'] },
+    { h: 'Apple Health', p: ['Turn it on or off in More → Apple Health. You can also manage access in the Health app → Sharing → Apps → Wobbi.'] },
+    { h: 'Reminders are not arriving', p: ['Check iOS Settings → Notifications → Wobbi is allowed, and that the reminder is on in More → Reminders. Reminders are skipped for today once you have already done the thing.'] },
     { h: 'Is my AI key safe?', p: ['The key is stored only on your device and used only when you tap an AI action. It is never sent to us.'] },
     { h: 'Contact', p: [`${who()} · ${mail()}`] },
   ],

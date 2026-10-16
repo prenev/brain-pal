@@ -16,14 +16,14 @@ export function ShareCardSheet({ card, onClose }: { card: ShareCard; onClose: ()
       <h2 style={{ margin: '0 0 8px' }}>Share your win</h2>
       <div className="share-preview" dangerouslySetInnerHTML={{ __html: svg.replace(' width="1080" height="1350"', '') }} />
       <p className="muted small">Only this picture is shared: no entries, no moods, nothing you wrote.</p>
-      <button className="btn primary block" onClick={async () => setRes(await shareImage(svg, 1080, 1350, `brain-pal-${card.kind}`, 'Brain Pal'))}><Share2 size={18} style={{ display: 'inline', verticalAlign: -3 }} /> Share</button>
+      <button className="btn primary block" onClick={async () => setRes(await shareImage(svg, 1080, 1350, `brain-pal-${card.kind}`, 'Wobbi'))}><Share2 size={18} style={{ display: 'inline', verticalAlign: -3 }} /> Share</button>
       {note(res) && <p className="muted small" role="status">{note(res)}</p>}
       <button className="linkbtn" style={{ display: 'block', margin: '10px auto 0' }} onClick={onClose}>Close</button>
     </Sheet>
   )
 }
 
-/** More → Pal stickers: tap one to send it to a friend as a transparent PNG. */
+/** More → Wobbi stickers: tap one to send it to a friend as a transparent PNG. */
 export function Stickers() {
   const [res, setRes] = useState<ShareResult | null>(null)
   return (
@@ -31,7 +31,7 @@ export function Stickers() {
       <p className="muted small">Tap a sticker to send it in Messages, WhatsApp, anything. Free, and nothing is tracked.</p>
       <div className="stickers">
         {POSE_NAMES.map((p: PoseName) => (
-          <button key={p} className="sticker" aria-label={`Share sticker: ${POSE_LABEL[p]}`} onClick={async () => setRes(await shareImage(stickerSvg(p), 512, 512, `pal-${p}`, 'Pal from Brain Pal'))}>
+          <button key={p} className="sticker" aria-label={`Share sticker: ${POSE_LABEL[p]}`} onClick={async () => setRes(await shareImage(stickerSvg(p), 512, 512, `pal-${p}`, 'Wobbi from Wobbi'))}>
             <span dangerouslySetInnerHTML={{ __html: palSvg(p, { size: 72, label: '' }) }} />
           </button>
         ))}
@@ -41,4 +41,4 @@ export function Stickers() {
   )
 }
 
-export const inviteFriend = () => shareText(inviteMessage(), 'Brain Pal')
+export const inviteFriend = () => shareText(inviteMessage(), 'Wobbi')

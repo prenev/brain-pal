@@ -1,4 +1,4 @@
-/* Brain Pal — playful dark theme.
+/* Wobbi — playful dark theme.
    Principles: chunky 3D buttons, thick-bordered cards, rounded bold type, bright colour on deep navy,
    progress you can see, celebration on completion. */
 :root {
@@ -347,7 +347,7 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .stats-head { position: sticky; top: 0; z-index: 10; padding: calc(var(--safe-t) + 10px) 14px 10px; margin: 0 -14px 4px; background: linear-gradient(var(--bg) 80%, transparent); }
 .topbar.flat { position: static; padding: 0 0 12px; margin: 0; background: none; }
 
-/* ---- Pal, the mascot ---- */
+/* ---- Wobbi, the mascot ---- */
 .dots { display: flex; gap: 7px; align-items: center; }
 .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--edge); transition: width .25s, background .25s; }
 .dots i.past { background: var(--accent-dark, #1f9d63); }
@@ -428,7 +428,7 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .round.sos svg { color: #ff6b81; }
 /* tools strip starts exactly where the cards below start (the snap would otherwise pin the first tile to the screen edge) */
 .tools-row { scroll-padding-inline: 14px; }
-/* Pal's coach: bottom-right, above the + button, says what to do */
+/* Wobbi's coach: bottom-right, above the + button, says what to do */
 .coach { position: fixed; right: 12px; bottom: calc(max(12px, calc(var(--safe-b) - 4px)) + 156px); z-index: 25; display: flex; align-items: flex-end; gap: 4px; max-width: min(340px, calc(100vw - 24px)); }
 .native-tabs .coach { bottom: calc(var(--native-tab-h, 0px) + 92px); }
 .coach .bubble { position: relative; background: var(--card); border: 2px solid var(--accent); border-radius: 18px; padding: 12px 14px; font-weight: 700; line-height: 1.35; box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: rise .3s cubic-bezier(.2,.9,.3,1); }

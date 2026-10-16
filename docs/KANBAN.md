@@ -1,4 +1,4 @@
-# Brain Pal — working board
+# Wobbi — working board
 
 The agent's own board. **Rules:** one card *In progress* at a time · a card moves to *Done* only when the CLAUDE.md "definition of done" holds (tests green, pushed, CI green, docs updated) · update this file in the same commit as the work · cards link to the GitHub issue (`#n`) when one exists. Details for every phase live in [`ROADMAP.md`](../ROADMAP.md); things only the owner can do live in [`TODO.md`](../TODO.md).
 
@@ -14,7 +14,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## 🔨 In progress
 - **P20 Growth** 📄 marketing strategy written (docs/MARKETING.md); share cards, stickers, invite, rating prompt, Siri links done; next: landing page + waitlist, widgets/Watch (Mac)
-- **P18 Pal + Focus guard** 🧱 mascot, onboarding story, notch fix, Screen Time guard — verify, CI, screens
+- **P18 Wobbi + Focus guard** 🧱 mascot, onboarding story, notch fix, Screen Time guard — verify, CI, screens
 - (done earlier) **P17 App Store pack** 📄 mascot icon, screenshots, listing, legal pages (in-app + site), privacy manifest, fastlane/TestFlight, docs/APPSTORE.md — verify + CI, then owner steps in TODO.md
 
 ## 🔎 Verify / blocked on the owner
@@ -24,8 +24,8 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## ✅ Done
 - P19 Offline first + Pro monthly subscription (StoreKit 2 + paywall + gates), What's new, SOS-first coach, no scroll bars, streak box removed — verified with the simulated bridge; real purchases need a device + App Store Connect setup
-- SOS is a siren in the Home/Breathe action bar (cards + menu entry removed), no daily-goals card, tools strip starts level with the cards, Pal's corner coach replaces the swipe tip
-- Home tools strip scrolls (Thoughts leads; Sleep/Progress/Summary/Coins no longer buried), Pal tips per section, splash screen, Pal v3 (no centre line), fix: "+N coins" toast could stay forever (its timer was cancelled by later coin changes; e2e fails without the fix)
+- SOS is a siren in the Home/Breathe action bar (cards + menu entry removed), no daily-goals card, tools strip starts level with the cards, Wobbi's corner coach replaces the swipe tip
+- Home tools strip scrolls (Thoughts leads; Sleep/Progress/Summary/Coins no longer buried), Wobbi tips per section, splash screen, Wobbi v3 (no centre line), fix: "+N coins" toast could stay forever (its timer was cancelled by later coin changes; e2e fails without the fix)
 - UI: Home tools row (Focus guard · Worry time · Journal) above the anchors, each opens its own screen; Today/Entries/Journal switch removed (month list → *All entries*); Notes-style journal editor (borderless title + growing page, mood/tags in a glass toolbar)
 - Native UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback (device check pending)
 - UX pass: Home tab (Today / Entries / Journal), grouped + menu, uniform tab icons, calendar fix

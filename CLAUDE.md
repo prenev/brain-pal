@@ -1,4 +1,4 @@
-# Brain Pal — instructions for the agent
+# Wobbi — instructions for the agent
 
 Mood diary + CBT thought records + anxiety toolkit (SOS, breathing, grounding, worry time), as a PWA and an iPhone app (Capacitor).
 Stack: React 18 + TypeScript + Vite, local-first (localStorage + IndexedDB) with optional Supabase sync, Capacitor 8 for iOS.

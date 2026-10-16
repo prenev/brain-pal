@@ -14,7 +14,7 @@ export default function Support() {
         <h3 style={{ marginBottom: 8 }}>You don’t have to do this alone</h3>
         <p className="muted" style={{ marginTop: 0 }}>
           Anxiety is common and very treatable. Talking to a GP, therapist or someone you trust can help — CBT in particular
-          has strong evidence for anxiety. Brain Pal is a self-help tool, not a substitute for professional care.
+          has strong evidence for anxiety. Wobbi is a self-help tool, not a substitute for professional care.
         </p>
         <p style={{ marginBottom: 0 }}><b>If you might be in danger, call your local emergency number now.</b></p>
       </div>

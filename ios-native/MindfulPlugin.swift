@@ -282,7 +282,7 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
-    // MARK: Brain Pal Pro (StoreKit 2, auto-renewing monthly subscription)
+    // MARK: Wobbi Pro (StoreKit 2, auto-renewing monthly subscription)
     // Apple verifies every transaction; we never see card details. Product id must equal PRODUCT_ID in src/lib/pro.ts.
     private static let proId = "com.brainpal.app.pro.monthly"
 

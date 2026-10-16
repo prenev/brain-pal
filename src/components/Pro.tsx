@@ -60,10 +60,10 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
   const link = (path: string) => `${SITE_URL}/${path}`
 
   return (
-    <div className="overlay paywall" role="dialog" aria-modal aria-label="Brain Pal Pro"><div className="inner">
+    <div className="overlay paywall" role="dialog" aria-modal aria-label="Wobbi Pro"><div className="inner">
       <div className="topbar" style={{ background: 'none' }}>
         <span style={{ width: 50 }} />
-        <span className="title">Brain Pal Pro</span>
+        <span className="title">Wobbi Pro</span>
         <button className="glass round" aria-label="Close" onClick={onClose}><X size={24} /></button>
       </div>
 
@@ -76,7 +76,7 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
         <div style={{ textAlign: 'center' }}>
           <Pal pose="love" size={130} />
           <h1 style={{ fontSize: 28, margin: '6px 0 4px' }}>{feature ? featureInfo(feature).title : 'Go further with Pro'}</h1>
-          <p className="muted" style={{ margin: 0 }}>{feature ? featureInfo(feature).blurb : 'Support Brain Pal and unlock everything below.'}</p>
+          <p className="muted" style={{ margin: 0 }}>{feature ? featureInfo(feature).blurb : 'Support Wobbi and unlock everything below.'}</p>
         </div>
         <div className="card" style={{ marginTop: 14 }} aria-label="What Pro includes">
           {PRO_FEATURES.map(f => <div key={f.id} className={`pro-row ${f.id === feature ? 'on' : ''}`}><Emoji name={f.emoji} size={26} /><span><b>{f.title}</b><span className="muted small" style={{ display: 'block' }}>{f.blurb}</span></span></div>)}

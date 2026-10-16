@@ -23,7 +23,7 @@ export default function Rituals() {
     setMsg('')
     if (on) {
       try {
-        if (!(await requestNotificationPermission())) { setMsg('Notifications are blocked. Turn them on in Settings → Notifications → Brain Pal.'); return }
+        if (!(await requestNotificationPermission())) { setMsg('Notifications are blocked. Turn them on in Settings → Notifications → Wobbi.'); return }
       } catch { setMsg('Could not ask for notification permission.'); return }
     }
     patch(r.id, { enabled: on })

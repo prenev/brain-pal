@@ -34,7 +34,7 @@ const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filt
 async function open(seed, { native = false, time = null, onboarding = false, reply = null, coach = false, pro = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
   if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })   // the first-run screens have their own test
-  if (!coach) await ctx.addInitScript(() => { try { localStorage.setItem('bp.coach.done', '1') } catch { /* ignore */ } })   // Pal's corner coach has its own test
+  if (!coach) await ctx.addInitScript(() => { try { localStorage.setItem('bp.coach.done', '1') } catch { /* ignore */ } })   // Wobbi's corner coach has its own test
   if (time) await ctx.clock.install({ time })      // for tests whose outcome depends on the time of day: pin it so they don't flake near midnight
   const gemini = { calls: [], mode: 'ok' }
   await ctx.route('https://generativelanguage.googleapis.com/**', async route => {
@@ -705,10 +705,10 @@ test('cloud sync: data that predates sync is pushed on first sign-in; sign-out c
 })
 
 
-test('first run: Pal explains the app in skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
+test('first run: Wobbi explains the app in skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
   const s = await open(null, { onboarding: true }); const p = s.page
-  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await p.waitForSelector('text=Hi, I’m Pal!'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
-  assert.ok(await p.locator('.onboarding .pal svg').count() >= 1, 'Pal explains it')
+  await p.waitForSelector('[aria-label="Welcome to Wobbi"]'); await p.waitForSelector('text=Hi, I’m Wobbi!'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
+  assert.ok(await p.locator('.onboarding .pal svg').count() >= 1, 'Wobbi explains it')
   for (const t of ['Check in with one tap', 'Calm down, together', 'Grow a little each day', 'Your data stays yours']) { await p.click('button:has-text("Next")'); await p.waitForSelector(`.onboarding h1:has-text("${t}")`) }
   assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
   await p.click('button:has-text("Next")'); await p.waitForSelector('text=Pick up to three daily anchors')
@@ -1010,7 +1010,7 @@ test('About & legal: version, privacy policy, terms, support and open-source not
   await p.click('text=All documents'); await p.click('.li >> text=Open-source notices'); await p.waitForSelector('article.legal h3 >> text=Fluent Emoji')
   await p.click('text=All documents'); await p.click('.li >> text=Support'); await p.waitForSelector('text=988')
   await p.click('[aria-label=Back]'); await p.waitForSelector('.li >> text=About & legal')
-  assert.ok(await p.evaluate(() => document.body.innerText.includes('Brain Pal 1.0.0')), 'More shows the real version')
+  assert.ok(await p.evaluate(() => document.body.innerText.includes('Wobbi 1.0.0')), 'More shows the real version')
   await done(s)
 })
 
@@ -1029,16 +1029,16 @@ test('notch / status bar: the first thing on every tab clears the safe area, eve
   await done(s)
 })
 
-test('Pal the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
+test('Wobbi the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
   const s = await open(); const p = s.page
-  assert.ok(await p.locator('.today .pal svg').count(), 'Pal waves on the Today card')
+  assert.ok(await p.locator('.today .pal svg').count(), 'Wobbi waves on the Today card')
   await p.click('.tool >> text=Thoughts'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/); await p.click('[aria-label=Back]')
   await p.click('.tool >> text=Journal'); assert.ok(await p.locator('.pal-empty .pal').count()); await p.click('[aria-label=Back]')
-  await tab(p, 'More'); await p.click('.li >> text=About & legal'); assert.ok(await p.locator('.pal svg').count(), 'About shows Pal')
+  await tab(p, 'More'); await p.click('.li >> text=About & legal'); assert.ok(await p.locator('.pal svg').count(), 'About shows Wobbi')
   const anim = async page => page.$eval('.pal', el => parseFloat(getComputedStyle(el).animationDuration) * 1000)
-  assert.ok(await anim(p) > 1000, 'Pal bobs normally')
+  assert.ok(await anim(p) > 1000, 'Wobbi bobs normally')
   const pm = await open(); await pm.page.emulateMedia({ reducedMotion: 'reduce' })
-  assert.ok(await anim(pm.page) < 1, 'reduced motion stops Pal’s bobbing')
+  assert.ok(await anim(pm.page) < 1, 'reduced motion stops Wobbi’s bobbing')
   await done(pm); await done(s)
 })
 
@@ -1070,13 +1070,13 @@ test('Share: the Focus guard "brain rot, beaten" counter makes a numbers-only ca
   await p.click('button:has-text("Done")')
   await p.waitForSelector('[aria-label="Brain rot beaten"] >> text=/10 reps/')
   await p.click('[aria-label="Brain rot beaten"] button:has-text("Share")'); await p.waitForSelector('.share-preview svg')
-  const card = await p.locator('.share-preview').innerText(); assert.match(card, /10/); assert.match(card, /Brain Pal/)
+  const card = await p.locator('.share-preview').innerText(); assert.match(card, /10/); assert.match(card, /Wobbi/)
   await p.click('.sheet button:has-text("Share")')
   await p.waitForFunction(() => window.__shared.length === 1)
   const sent = await p.evaluate(() => window.__shared[0]); assert.equal(sent.files[0].name, 'brain-pal-guard.png'); assert.equal(sent.files[0].type, 'image/png'); assert.ok(sent.files[0].size > 2000, 'a real picture')
   await p.click('.sheet button:has-text("Close")'); await reload(p)
-  await tab(p, 'More'); await p.click('.li >> text=Pal stickers'); assert.equal(await p.locator('.sticker').count(), 16)
-  await p.click('[aria-label="Share sticker: Pal cheering"]').catch(async () => { await p.locator('.sticker').nth(3).click() })
+  await tab(p, 'More'); await p.click('.li >> text=Wobbi stickers'); assert.equal(await p.locator('.sticker').count(), 16)
+  await p.click('[aria-label="Share sticker: Wobbi cheering"]').catch(async () => { await p.locator('.sticker').nth(3).click() })
   await p.waitForFunction(() => window.__shared.length === 1); assert.match(await p.evaluate(() => window.__shared[0].files[0].name), /^pal-.*\.png$/)
   await p.click('[aria-label=Back]'); await p.click('.li >> text=Invite a friend')
   await p.waitForFunction(() => window.__shared.length === 2); const inv = await p.evaluate(() => window.__shared[1].text); assert.match(inv, /free, private/i); assert.match(inv, /https:\/\/prenev\.github\.io\/brain-pal/)
@@ -1151,10 +1151,10 @@ test('coin toast: "+N coins" always goes away by itself, even when your coins ch
   await done(s)
 })
 
-test('Pal tips: every section has one short tip, dismissing sticks, and More brings them back', async () => {
+test('Wobbi tips: every section has one short tip, dismissing sticks, and More brings them back', async () => {
   const s = await open({ 'bp.thoughts': [rec('t1', 0)], 'bp.journal': [] }); const p = s.page
   const tip = () => p.locator('.pal-tip .bubble').first().innerText()
-    assert.equal(await p.locator('.pal-tip').count(), 0, 'Home itself has no tip: Pal’s corner coach covers it')
+    assert.equal(await p.locator('.pal-tip').count(), 0, 'Home itself has no tip: Wobbi’s corner coach covers it')
   for (const [t, re] of [['Calendar', /Tap a day/], ['Breathe', /follow the circle/]]) { await tab(p, t); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, t) }
   await tab(p, 'Stats')
   for (const [v, re] of [['Progress', /Skills grow/], ['Summary', /plain words/], ['Sleep', /sleep and mood|Apple Health/]]) { await p.click(`[role=tab]:has-text("${v}")`); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, v) }
@@ -1163,14 +1163,14 @@ test('Pal tips: every section has one short tip, dismissing sticks, and More bri
   // dismiss: stays gone after a reload; More brings it back
   await tab(p, 'Calendar'); await p.click('.pal-tip [aria-label="Hide this tip"]'); assert.equal(await p.locator('.pal-tip').count(), 0)
   await reload(p); await tab(p, 'Calendar'); await p.waitForSelector('.cal'); assert.equal(await p.locator('.pal-tip').count(), 0, 'a dismissed tip stays dismissed')
-  await tab(p, 'More'); await p.click('button:has-text("Show Pal’s tips again")'); await tab(p, 'Calendar'); await p.waitForSelector('.pal-tip >> text=Tap a day')
+  await tab(p, 'More'); await p.click('button:has-text("Show Wobbi’s tips again")'); await tab(p, 'Calendar'); await p.waitForSelector('.pal-tip >> text=Tap a day')
   await done(s)
 })
 
-test('splash: the page paints Pal’s app icon + name from index.html before any script runs, and the app shows its own splash (no bare "Loading…")', async () => {
+test('splash: the page paints Wobbi’s app icon + name from index.html before any script runs, and the app shows its own splash (no bare "Loading…")', async () => {
   const html = await (await fetch(URL_)).text()
-  assert.match(html, /<div id="root"><div class="boot"[^>]*>\s*<img src="\/icon-192\.png"/); assert.match(html, /<b>Brain Pal<\/b>/); assert.doesNotMatch(html, /Loading…/)
-  assert.doesNotMatch(readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8'), /Loading…/); assert.match(readFileSync(new URL('../src/components/Splash.tsx', import.meta.url), 'utf8'), /Brain Pal/)
+  assert.match(html, /<div id="root"><div class="boot"[^>]*>\s*<img src="\/icon-192\.png"/); assert.match(html, /<b>Wobbi<\/b>/); assert.doesNotMatch(html, /Loading…/)
+  assert.doesNotMatch(readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8'), /Loading…/); assert.match(readFileSync(new URL('../src/components/Splash.tsx', import.meta.url), 'utf8'), /Wobbi/)
 })
 
 test('SOS is a siren in the action bar (Home, Breathe) and nowhere else in the flow; the daily-goals card is gone; the tools strip starts level with the cards', async () => {
@@ -1188,19 +1188,19 @@ test('SOS is a siren in the action bar (Home, Breathe) and nowhere else in the f
   await done(s)
 })
 
-test('Pal’s corner coach: first visit only, three bubbles in the bottom-right, skippable, never again; More can bring it back', async () => {
+test('Wobbi’s corner coach: first visit only, three bubbles in the bottom-right, skippable, never again; More can bring it back', async () => {
   const s = await open(null, { coach: true }); const p = s.page
   await p.waitForSelector('.coach'); assert.match(await p.locator('.coach').innerText(), /red SOS siren/)
   const box = await p.$eval('.coach', el => { const r = el.getBoundingClientRect(); return { right: r.right, top: r.top, w: innerWidth, h: innerHeight } })
-  assert.ok(box.right > box.w - 20 && box.top > box.h * 0.4, `bubble + Pal sit in the bottom-right corner ${JSON.stringify(box)}`)
-  assert.ok(await p.locator('.coach .pal svg').count(), 'Pal is there')
+  assert.ok(box.right > box.w - 20 && box.top > box.h * 0.4, `bubble + Wobbi sit in the bottom-right corner ${JSON.stringify(box)}`)
+  assert.ok(await p.locator('.coach .pal svg').count(), 'Wobbi is there')
   await p.click('.coach button:has-text("Next")'); await p.waitForSelector('.coach >> text=tap a face')
   await p.click('.coach button:has-text("Next")'); await p.waitForSelector('.coach >> text=Swipe the row of tools')
   await p.click('.coach button:has-text("Next")'); await p.waitForSelector('.coach >> text=red siren'); await p.click('.coach button:has-text("Got it")')
   assert.equal(await p.locator('.coach').count(), 0)
   await reload(p); await p.waitForSelector('.topbar'); assert.equal(await p.locator('.coach').count(), 0, 'once only')
   await tab(p, 'Calendar'); assert.equal(await p.locator('.coach').count(), 0, 'and only on Home')
-  await tab(p, 'More'); await p.click('button:has-text("Show Pal’s tips again")'); await tab(p, 'Home'); await p.waitForSelector('.coach')
+  await tab(p, 'More'); await p.click('button:has-text("Show Wobbi’s tips again")'); await tab(p, 'Home'); await p.waitForSelector('.coach')
   await p.click('.coach button:has-text("Skip")'); assert.equal(await p.locator('.coach').count(), 0)
   await done(s)
 })
@@ -1210,9 +1210,9 @@ test('Pro (web): features show a friendly lock, the paywall says Pro lives in th
   const s = await open(null, { pro: false }); const p = s.page
   assert.equal(await p.locator('[aria-label^="Anxious right now"]').count(), 1, 'SOS is always there')
   await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Focus guard/)
-  await p.click('.pro-lock button:has-text("Unlock with Pro")'); await p.waitForSelector('[aria-label="Brain Pal Pro"]')
-  assert.match(await p.locator('[aria-label="Brain Pal Pro"]').innerText(), /Pro is part of the iPhone app/); assert.equal(await p.locator('button:has-text("Subscribe"), button:has-text("Start free trial")').count(), 0, 'no purchase button on the web')
-  await p.click('[aria-label="Brain Pal Pro"] [aria-label=Close]'); await p.click('[aria-label=Back]')
+  await p.click('.pro-lock button:has-text("Unlock with Pro")'); await p.waitForSelector('[aria-label="Wobbi Pro"]')
+  assert.match(await p.locator('[aria-label="Wobbi Pro"]').innerText(), /Pro is part of the iPhone app/); assert.equal(await p.locator('button:has-text("Subscribe"), button:has-text("Start free trial")').count(), 0, 'no purchase button on the web')
+  await p.click('[aria-label="Wobbi Pro"] [aria-label=Close]'); await p.click('[aria-label=Back]')
   // always free: breathing, SOS flow, export, support
   await tab(p, 'Breathe'); await p.waitForSelector('button:has-text("Start")'); await p.click('[aria-label^="Anxious right now"]'); await p.waitForSelector('input[aria-label="Anxiety right now, 0 to 10"]'); await p.click('[aria-label=Close]')
   await tab(p, 'More'); for (const r of ['Export data', 'Get support']) assert.equal(await p.locator(`.li:has-text("${r}")`).count(), 1, `${r} stays free`)
@@ -1229,8 +1229,8 @@ test('Pro (iPhone): gates sit exactly where promised, the paywall shows price, t
   await tab(p, 'Home'); await p.click('text=Edit'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /More than 3 daily anchors/); await p.click('button:has-text("Done")')
   await tab(p, 'More')
   // paywall
-  await p.click('.li >> text=Brain Pal Pro'); await p.waitForSelector('[aria-label="Brain Pal Pro"]')
-  const wall = p.locator('[aria-label="Brain Pal Pro"]'); const txt = await wall.innerText()
+  await p.click('.li >> text=Wobbi Pro'); await p.waitForSelector('[aria-label="Wobbi Pro"]')
+  const wall = p.locator('[aria-label="Wobbi Pro"]'); const txt = await wall.innerText()
   assert.match(txt, /7-day free trial, then \$4\.99 per month/); assert.match(txt, /auto-renewing subscription/); assert.match(txt, /cancel at least 24 hours/); assert.match(txt, /Always free, for everyone/); assert.match(txt, /SOS siren/)
   assert.ok(await wall.locator('a:has-text("Terms of Service")').count() && await wall.locator('a:has-text("Privacy Policy")').count() && await wall.locator('a:has-text("standard EULA")').count(), 'terms, privacy and EULA links are on the paywall')
   assert.equal(await wall.locator('button:has-text("Restore purchases")').count(), 1); assert.equal(await wall.locator('button:has-text("Start free trial")').count(), 1)
@@ -1264,7 +1264,7 @@ test('offline first: the app needs no account; sign-in is an optional Pro step y
   await done(A)
   const B = await openCloud({ signedIn: false, pro: false, gotoLogin: false }); const b = B.page            // not Pro: sync is part of Pro and opens the paywall, not the sign-in form
   await tab(b, 'More'); assert.match(await b.locator('.li:has-text("Sync across devices") .val').innerText(), /Pro/); await b.click('.li >> text=Sync across devices')
-  await b.waitForSelector('[aria-label="Brain Pal Pro"]'); assert.equal(await b.locator('form.card').count(), 0, 'no sign-in form without Pro'); await b.click('[aria-label="Brain Pal Pro"] [aria-label=Close]')
+  await b.waitForSelector('[aria-label="Wobbi Pro"]'); assert.equal(await b.locator('form.card').count(), 0, 'no sign-in form without Pro'); await b.click('[aria-label="Wobbi Pro"] [aria-label=Close]')
   await done(B)
 })
 
@@ -1273,7 +1273,7 @@ test('What’s new: shown once after an update (not on a fresh install), reachab
   assert.equal(await fresh.page.evaluate(() => localStorage.getItem('bp.seenVersion')), '1.0.0')
   assert.equal(await fresh.page.evaluate(() => getComputedStyle(document.documentElement, '::-webkit-scrollbar').display), 'none', 'an app, not a website: no scroll bars')
   await tab(fresh.page, 'Stats'); assert.equal(await fresh.page.locator('.chain .total').count(), 0, 'the streak box is gone from Days in a Row')
-  await tab(fresh.page, 'More'); await fresh.page.click('.li >> text=What’s new'); await fresh.page.waitForSelector('[aria-label="What’s new"] >> text=Meet Pal'); await fresh.page.click('button:has-text("Got it")'); await done(fresh)
+  await tab(fresh.page, 'More'); await fresh.page.click('.li >> text=What’s new'); await fresh.page.waitForSelector('[aria-label="What’s new"] >> text=Meet Wobbi'); await fresh.page.click('button:has-text("Got it")'); await done(fresh)
   const upd = await open(); await upd.page.evaluate(() => localStorage.setItem('bp.seenVersion', '0.9.0')); await reload(upd.page)
   await upd.page.waitForSelector('[aria-label="What’s new"]'); assert.match(await upd.page.locator('[aria-label="What’s new"]').innerText(), /Focus guard/)
   await upd.page.click('button:has-text("Got it")'); assert.equal(await upd.page.evaluate(() => localStorage.getItem('bp.seenVersion')), '1.0.0')

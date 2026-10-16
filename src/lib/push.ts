@@ -77,6 +77,6 @@ export async function sendTest(): Promise<boolean> {
   if (isNative()) { try { await sendNativeTest(); return true } catch { return false } }
   if (!pushSupported() || Notification.permission !== 'granted') return false
   const reg = await navigator.serviceWorker.ready
-  await reg.showNotification('Brain Pal', { body: 'Reminders are working. 🌱', icon: '/icon-192.png', badge: '/icon-192.png' })
+  await reg.showNotification('Wobbi', { body: 'Reminders are working. 🌱', icon: '/icon-192.png', badge: '/icon-192.png' })
   return true
 }

@@ -196,7 +196,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // coins
 })
 
 await session('http://localhost:4173', false, async (p, snap) => {   // first run
-  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await snap('welcome-1')
+  await p.waitForSelector('[aria-label="Welcome to Wobbi"]'); await snap('welcome-1')
   for (let i = 2; i <= 5; i++) { await p.click('button:has-text("Next")'); await snap(`welcome-${i}`) }
   await p.click('button:has-text("Next")'); await p.click('.chip:has-text("Slow breathing")'); await p.click('.chip:has-text("Walk 10 minutes")'); await snap('welcome-6-anchors')
 }, { onboarding: true })
@@ -209,7 +209,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // share car
   await p.evaluate(() => localStorage.setItem('bp.guard.events', JSON.stringify([{ id: 'a', at: new Date().toISOString(), challenge: 'pushups', minutes: 10, reps: 20 }, { id: 'b', at: new Date().toISOString(), challenge: 'squats', minutes: 10, reps: 35 }])))
   await p.reload(); await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('[aria-label="Brain rot beaten"]'); await snap('guard-counter')
   await p.click('[aria-label="Brain rot beaten"] button'); await p.waitForSelector('.share-preview svg'); await snap('share-card'); await p.click('.sheet button:has-text("Close")')
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Pal stickers'); await snap('stickers')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await snap('stickers')
 })
 await session('http://localhost:4173', true, async (p, snap) => {
   await p.evaluate(() => { window.__reply = { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4 }, 'Mindful.screenTimePickApps': { count: 4 } } })
@@ -225,7 +225,7 @@ await session('http://localhost:4174', false, async (p, snap) => {
 })
 
 await session('http://localhost:4173', true, async (p, snap) => {   // not Pro: the lock card and the paywall
-  await p.click('.tool >> text=Focus guard'); await snap('pro-locked'); await p.click('.pro-lock button'); await p.waitForSelector('[aria-label="Brain Pal Pro"]'); await snap('paywall')
+  await p.click('.tool >> text=Focus guard'); await snap('pro-locked'); await p.click('.pro-lock button'); await p.waitForSelector('[aria-label="Wobbi Pro"]'); await snap('paywall')
 }, { native: true, pro: false })
 
 await local.close(); await cloud.close(); await browser.close()

@@ -70,11 +70,11 @@ ip = src / 'Info.plist'
 t = ip.read_text()
 def add_key(t, key, xml):
     return t if f'<key>{key}</key>' in t else t.replace('</dict>\n</plist>', f'\t<key>{key}</key>\n\t{xml}\n</dict>\n</plist>')
-t = add_key(t, 'NSMicrophoneUsageDescription', '<string>Brain Pal uses the microphone to record voice memos for your entries.</string>')
-t = add_key(t, 'NSCameraUsageDescription', '<string>Brain Pal uses the camera so you can attach photos to your entries.</string>')
-t = add_key(t, 'NSPhotoLibraryUsageDescription', '<string>Brain Pal lets you attach photos from your library to your entries.</string>')
-t = add_key(t, 'NSHealthUpdateUsageDescription', '<string>Brain Pal saves your breathing sessions to Apple Health as Mindful Minutes.</string>')
-HEALTH_SHARE = '<string>Brain Pal can read your sleep from Apple Health (for example from your Apple Watch) to show it next to your mood. It reads nothing else and never sends it anywhere.</string>'
+t = add_key(t, 'NSMicrophoneUsageDescription', '<string>Wobbi uses the microphone to record voice memos for your entries.</string>')
+t = add_key(t, 'NSCameraUsageDescription', '<string>Wobbi uses the camera so you can attach photos to your entries.</string>')
+t = add_key(t, 'NSPhotoLibraryUsageDescription', '<string>Wobbi lets you attach photos from your library to your entries.</string>')
+t = add_key(t, 'NSHealthUpdateUsageDescription', '<string>Wobbi saves your breathing sessions to Apple Health as Mindful Minutes.</string>')
+HEALTH_SHARE = '<string>Wobbi can read your sleep from Apple Health (for example from your Apple Watch) to show it next to your mood. It reads nothing else and never sends it anywhere.</string>'
 t = add_key(t, 'NSHealthShareUsageDescription', HEALTH_SHARE)
 t = re.sub(r'(<key>NSHealthShareUsageDescription</key>\s*)<string>[^<]*</string>', lambda m: m.group(1) + HEALTH_SHARE, t)   # existing projects get the honest wording too
 t = add_key(t, 'CFBundleURLTypes', '<array><dict><key>CFBundleURLName</key><string>com.brainpal.app</string><key>CFBundleURLSchemes</key><array><string>brainpal</string></array></dict></array>')

@@ -12,7 +12,7 @@ for (const c of [s1, s9, levelCard('Calming & <focus>', 3), guardCard({ challeng
   const svg = cardSvg(c)
   assert.match(svg, /^<svg [^>]*viewBox="0 0 1080 1350"/); assert.ok(svg.endsWith('</svg>'))
   assert.ok(!/<text[^>]*>[^<]*[<>][^<]*<\/text>/.test(svg.replace(/&[lg]t;/g, '')), 'text is escaped')
-  assert.match(svg, /Brain Pal/)
+  assert.match(svg, /Wobbi/)
 }
 assert.match(cardSvg(levelCard('Calming & <focus>', 3)), /CALMING &amp; &lt;FOCUS&gt;/)
 assert.match(cardSvg(guardCard({ challenges: 4, reps: 55, minutes: 40 })), />55</)

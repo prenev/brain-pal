@@ -1,6 +1,6 @@
 # Supabase (cloud sync + accounts)
 
-Brain Pal is local-first: with **no keys** it keeps everything in the browser/phone. Add a Supabase project and the same app gets
+Wobbi is local-first: with **no keys** it keeps everything in the browser/phone. Add a Supabase project and the same app gets
 **accounts, sync across devices, and private photo/voice-memo storage**.
 
 ## What's already set up in the `brain-pal` project

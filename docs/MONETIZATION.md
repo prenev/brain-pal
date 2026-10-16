@@ -1,4 +1,4 @@
-# Monetisation: Brain Pal Pro (monthly subscription, Apple devices)
+# Monetisation: Wobbi Pro (monthly subscription, Apple devices)
 
 **Decision:** one optional auto-renewing **monthly subscription** through Apple In-App Purchase (StoreKit 2), with a 7-day free trial. The app stays genuinely useful for free, works fully **offline with no account**, and the things that keep people safe or are their own data are **never** behind the paywall.
 
@@ -29,7 +29,7 @@ Rationale: Pro features are the ones with real running cost (sync/servers), real
 - Apple takes 30% (15% in year two of a subscriber's life, and 15% for everyone under the **App Store Small Business Program**: apply for it, it needs revenue under US$1M/yr).
 
 ## Paywall principles (so it is honest and App-Review-safe)
-1. Shown only when someone taps something locked, or More → Brain Pal Pro. Never at launch, never during SOS, never mid-crisis.
+1. Shown only when someone taps something locked, or More → Wobbi Pro. Never at launch, never during SOS, never mid-crisis.
 2. States price, billing period, trial, auto-renew terms and how to cancel (Apple guideline 3.1.2), with Terms, Privacy and Apple's EULA links, and a working **Restore purchases**.
 3. Says plainly what stays free. No fake urgency, no countdowns, no guilt copy.
 4. Locked features show a preview card (what it is), not a blank screen.
@@ -50,7 +50,7 @@ Rationale: Pro features are the ones with real running cost (sync/servers), real
 
 ## Owner steps (App Store Connect), in order
 1. **Business**: accept the *Paid Apps Agreement*, add bank + tax info (without this, subscriptions can't go live).
-2. **Monetization → Subscriptions**: create a group **"Brain Pal Pro"**; add **Brain Pal Pro (monthly)**, product ID **`com.brainpal.app.pro.monthly`**, duration 1 month, price $4.99 (pick your storefront prices), **Introductory offer: free, 1 week**; fill localisation (display name + description), add a review screenshot of the paywall.
+2. **Monetization → Subscriptions**: create a group **"Wobbi Pro"**; add **Wobbi Pro (monthly)**, product ID **`com.brainpal.app.pro.monthly`**, duration 1 month, price $4.99 (pick your storefront prices), **Introductory offer: free, 1 week**; fill localisation (display name + description), add a review screenshot of the paywall.
 3. Add the subscription to the version you submit ("In-App Purchases and Subscriptions" section) so review tests it.
 4. **Sandbox testers**: Users and Access → Sandbox → create one; sign into it on the iPhone (Settings → App Store → Sandbox Account); test buy, cancel, restore, expiry (sandbox months last ~5 minutes).
 5. Apply for the **Small Business Program** (15% fee).

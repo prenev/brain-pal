@@ -13,8 +13,8 @@ export default defineConfig({
       injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png}'] },
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Brain Pal',
-        short_name: 'Brain Pal',
+        name: 'Wobbi',
+        short_name: 'Wobbi',
         description: 'Thought records, box breathing, streaks.',
         theme_color: '#0b1020',
         background_color: '#0b1020',
