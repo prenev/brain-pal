@@ -1,5 +1,6 @@
 import { Check, Lock, Pause, PenLine, Play } from 'lucide-react'
 import Pal from './Pal'
+import CuteIcon from './CuteIcon'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { usePomo } from '../lib/pomoStore'
@@ -27,7 +28,7 @@ export function FocusCard({ onOpen }: { onOpen: () => void }) {
       {on && <button className="big-cta" aria-label={p.paused ? 'Resume focus' : 'Pause focus'} onClick={e => { e.stopPropagation(); p.startPause() }}>
         {p.paused ? <><Play size={14} strokeWidth={3} fill="currentColor" /> Resume</> : <><Pause size={14} strokeWidth={3} fill="currentColor" /> Pause</>}
       </button>}
-      <span className="big-art" aria-hidden="true"><Pal pose={pose} size={118} motion={on && !p.paused ? 'none' : 'bob'} /></span>
+      <span className="big-art" aria-hidden="true"><Pal pose={pose} size={118} motion="still" /></span>
       {on && <span className="big-bar" aria-hidden="true"><i style={{ width: `${Math.round(p.progress * 100)}%` }} /></span>}
     </div>
   )
@@ -45,7 +46,7 @@ export function JournalCard({ onOpen }: { onOpen: () => void }) {
       <b className="big-prompt">“{pickPrompt(today).text}”</b>
       <span className="big-sub">{n ? `${n} ${n === 1 ? 'entry' : 'entries'} this week` : 'Write or talk it out'}</span>
       <span className="big-cta"><PenLine size={14} strokeWidth={3} /> Write</span>
-      <span className="big-art" aria-hidden="true"><Pal pose="read" size={112} motion="bob" /></span>
+      <span className="big-art" aria-hidden="true"><Pal pose="read" size={112} motion="still" /></span>
     </button>
   )
 }
@@ -54,7 +55,7 @@ export function JournalCard({ onOpen }: { onOpen: () => void }) {
 export function GroundTool({ onOpen }: { onOpen: () => void }) {
   return (
     <button className="card tool" onClick={onOpen} aria-label="Ground yourself: 5-4-3-2-1">
-      <Emoji name="herb" size={30} /><b>Ground</b><small>5-4-3-2-1</small>
+      <CuteIcon name="ground" /><b>Ground</b><small>5-4-3-2-1</small>
     </button>
   )
 }
@@ -65,7 +66,7 @@ export function WorryTool({ onWorry, onPark }: { onWorry: () => void; onPark: ()
   const n = worries.filter(w => w.status === 'open').length
   return (
     <button className="card tool worry-tool" onClick={n ? onWorry : onPark} aria-label={n ? `${n} parked ${n === 1 ? 'worry' : 'worries'}` : 'Park a worry'}>
-      <Emoji name="worry" size={30} /><b>Worries</b><small>{n ? `${n} parked` : 'Park one'}</small>
+      <CuteIcon name="worry" /><b>Worries</b><small>{n ? `${n} parked` : 'Park one'}</small>
     </button>
   )
 }

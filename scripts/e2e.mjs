@@ -1108,6 +1108,8 @@ test('home: layout is mood → anchors → big Focus + Journal cards → Worries
   assert.deepEqual(order.map(c => (c === 'anchor-empty' ? 'anchors' : c === 'linkbtn' ? 'more-today' : c)), ['topbar', 'today', 'anchors', 'home-top', 'tools-row', 'entry', 'more-today'], JSON.stringify(order))
   assert.deepEqual(await p.$$eval('.home-top .big-card', els => els.map(e => e.getAttribute('aria-label'))), ['Focus', 'Journal'], 'row 1: the big Focus + Journal cards'); assert.deepEqual(await p.$$eval('.tools-row .tool b', els => els.map(e => e.textContent)), ['Worries', 'Sleep', 'Ground'], 'row 2: Worries, Sleep, Ground')
   assert.equal(await p.locator('.home-top .big-card .pal svg').count(), 2, 'the big cards are drawn with Wobbi, not an emoji icon'); assert.equal(await p.locator('.home-top .emoji').count(), 0)
+  assert.equal(await p.locator('.tools-row .cute-icon').count(), 3, 'Worries / Sleep / Ground use the drawn icons'); assert.equal(await p.locator('.tools-row .emoji').count(), 0)
+  assert.equal(await p.locator('.home-top .pal-bob, .home-top .pal-jump').count(), 0, 'no bouncing on Home, only blinking')
   assert.equal(await p.locator('text=Focus guard').count(), 0, 'Focus guard is gone from Home'); await tab(p, 'More'); assert.equal(await p.locator('.li >> text=Focus guard').count(), 0, '…and from More'); await tab(p, 'Home')
   assert.ok(await p.$$eval('.tools-row .tool b', els => els.every(e => e.getBoundingClientRect().height < 24)), 'every tool label is a single line')
   assert.equal(await p.locator('.coin-pill').count(), 1); await p.click('.coin-pill'); await p.waitForSelector('.overlay .title >> text=Rewards'); await p.click('[aria-label=Back]')
@@ -1141,6 +1143,16 @@ test('home: tapping a face opens the entry flow with that mood and "just save my
   assert.equal(await p.locator('.today').count(), 1, 'the mood card is still there after logging'); assert.equal(await p.locator('.entry').count(), 1)
   await reload(p); assert.equal(await p.locator('.entry').count(), 1)
   await done(s)
+})
+
+test('home: shows today’s entries, or the latest ones when nothing is logged today; three at most, then "All entries"', async () => {
+  const many = await open({ 'bp.thoughts': [0, 0, 0, 0, 0].map((d, i) => rec('t' + i, d, { thought: 'today ' + i })) }); let p = many.page
+  await p.waitForSelector('.entry'); assert.equal(await p.locator('.app > .entry').count(), 3, 'a few at most'); assert.match(await p.locator('.more-today').innerText(), /All entries \(5\)/)
+  assert.equal(await p.locator('.home-label').count(), 0); await done(many)
+  const old = await open({ 'bp.thoughts': [rec('a', 2, { thought: 'two days ago' }), rec('b', 5, { thought: 'five days ago' })] }); p = old.page
+  await p.waitForSelector('.home-label >> text=Latest entries'); assert.equal(await p.locator('.app > .entry').count(), 2, 'nothing today: the latest entries still show')
+  assert.match(await p.locator('.app > .entry').first().innerText(), /two days ago/, 'newest first'); assert.equal(await p.locator('.more-today').innerText(), 'All entries'); await done(old)
+  const none = await open(null); await none.page.waitForSelector('.tools-row'); assert.equal(await none.page.locator('.more-today').count(), 0, 'no entries: no link'); await done(none)
 })
 
 test('home: the Focus card shows the live clock, phase and task while a block runs; the Journal card shows today’s prompt and the week; Ground runs 5-4-3-2-1 and saves a session', async () => {

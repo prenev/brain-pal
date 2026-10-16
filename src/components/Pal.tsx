@@ -3,7 +3,8 @@ import { X } from 'lucide-react'
 import { palSvg, POSE_LABEL, type PoseName } from '../lib/pal.ts'
 import { useOutfit } from '../lib/outfitStore'
 
-export type PalMotion = 'bob' | 'wave' | 'breathe' | 'jump' | 'none'
+/** 'still': no movement, but the eyes keep blinking. 'none': fully still. */
+export type PalMotion = 'bob' | 'wave' | 'breathe' | 'jump' | 'still' | 'none'
 
 /** Pal, the mascot. The pose is data (lib/pal.ts → SVG); the motion is CSS (and switched off for "reduce motion"). Decorative unless `label` is given. */
 export default function Pal({ pose = 'idle', size = 96, motion = 'bob', label = '', className = '' }: { pose?: PoseName; size?: number; motion?: PalMotion; label?: string | true; className?: string }) {
