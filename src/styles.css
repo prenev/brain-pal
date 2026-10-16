@@ -334,3 +334,5 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .home-seg { margin: 0 0 12px; flex-wrap: nowrap; }
 .month-row { margin: 0 0 12px; }
 .sheet-label.first { border-top: 0; margin-top: 0; padding-top: 4px; }
+.anchor-empty b { display: block; }
+.anchor-empty .sub { display: block; color: var(--muted); font-size: 13px; font-weight: 700; margin-top: 2px; }
