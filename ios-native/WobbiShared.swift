@@ -186,6 +186,18 @@ struct WobbiActivityAttributes: ActivityAttributes {
         var endsAt: Date
         /// Set while paused: the clock shows this many seconds and doesn't move.
         var pausedRemaining: Double?
+        /// Pomodoro: "work" | "short" | "long" (colour and pose).
+        var phase: String?
+        /// Pomodoro: the phases that start by themselves after this one. The app is asleep when they begin, so the view
+        /// picks the one that is on the clock whenever it is drawn.
+        var next: [Segment]?
+    }
+    struct Segment: Codable, Hashable {
+        var title: String
+        var subtitle: String
+        var phase: String?
+        var startsAt: Date
+        var endsAt: Date
     }
     /// "breathe" or "focus"
     var kind: String

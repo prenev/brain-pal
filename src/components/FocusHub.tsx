@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Minus, Plus, Settings, SkipForward, RotateCcw, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, ListChecks, Minus, Plus, Settings, SkipForward, RotateCcw, Target, Trash2 } from 'lucide-react'
 import Pal from './Pal'
 import { Sheet, Toggle } from './ui'
 import { Emoji } from '../lib/emoji'
@@ -10,7 +10,8 @@ import type { PoseName } from '../lib/pal.ts'
 
 const PHASES: PomoPhase[] = ['work', 'short', 'long']
 const N = 24, RING = 112
-const CAST: Record<PomoPhase, PoseName[]> = { work: ['focus', 'hype', 'read'], short: ['coffee', 'stretch', 'chill'], long: ['nap', 'chill', 'coffee'] }
+/** One pose per phase: it stays put for the whole block and only changes when you pause or resume. */
+const POSE: Record<PomoPhase, PoseName> = { work: 'focus', short: 'coffee', long: 'nap' }
 
 /** The ring of little flowers: they fill clockwise as the clock runs. */
 function Flowers({ progress }: { progress: number }) {
@@ -31,24 +32,15 @@ function Flowers({ progress }: { progress: number }) {
   )
 }
 
-function Timer({ onSettings }: { onSettings: () => void }) {
+function Timer({ onTask }: { onTask: () => void }) {
   const p = usePomo()
   const { run, settings: s } = p
   const idle = !run.timer
-  const cast = CAST[run.phase]
-  const pose: PoseName = p.justFinished ? (run.phase === 'long' ? 'champ' : 'party') : idle ? (run.phase === 'work' ? 'holdPlay' : 'coffee') : p.paused ? 'think' : cast[Math.floor(p.now / 7000) % cast.length]
+  const pose: PoseName = p.justFinished ? (run.phase === 'long' ? 'champ' : 'party') : idle ? (run.phase === 'work' ? 'holdPlay' : 'coffee') : p.paused ? 'think' : POSE[run.phase]
   const cycle = s.every, filled = p.doneToday % cycle || (run.phase === 'long' && p.doneToday > 0 ? cycle : 0)
   const idx = PHASES.indexOf(run.phase)
   return (
-    <div className={`pomo-stage ${run.phase}`} aria-label="Pomodoro timer">
-      <div className="pomo-top">
-        <span className="pomo-chip" aria-label={`${p.stats.today.blocks} of ${s.goal} blocks today`}><i className={p.stats.today.goalMet ? 'ok' : ''} />{p.stats.today.blocks}/{s.goal} today</span>
-        <button className="pomo-gear" aria-label="Timer settings" onClick={onSettings}><Settings size={22} /></button>
-      </div>
-      <svg className="pomo-title" viewBox="0 0 300 96" role="img" aria-label="Pomodoro">
-        <path id="pomoArc" d="M14 88 Q150 -22 286 88" fill="none" />
-        <text><textPath href="#pomoArc" startOffset="50%" textAnchor="middle">POMODORO</textPath></text>
-      </svg>
+    <div className="pomo-main" aria-label="Pomodoro timer">
       <div className="pomo-orbit">
         <Flowers progress={p.progress} />
         <button className={`pomo-wobbi ${p.running ? 'run' : ''}`} onClick={p.startPause} aria-label={p.running ? 'Pause' : idle ? 'Start' : 'Resume'}>
@@ -57,7 +49,11 @@ function Timer({ onSettings }: { onSettings: () => void }) {
       </div>
       <div className="pomo-dots" aria-label={`${filled} of ${cycle} blocks before the long break`}>{Array.from({ length: cycle }, (_, i) => <i key={i} className={i < filled ? 'on' : ''} />)}</div>
       <div className="pomo-clock" role="timer" aria-label={`${PHASE_LABEL[run.phase]}, ${fmtClock(p.left)} left`}>{fmtClock(p.left)}</div>
-      <p className="pomo-line">{run.phase === 'work' ? (p.task ? <>Working on <b>{p.task.text}</b></> : 'Tap Wobbi to start. Pick a task in To-do if you like.') : run.phase === 'short' ? 'Short break: sip, stretch, look away.' : 'Long break: you earned a proper rest.'}</p>
+      {run.phase === 'work'
+        ? <button className={`pomo-task ${p.task ? 'set' : ''}`} onClick={onTask} aria-label={p.task ? `Working on ${p.task.text}. Change task` : 'Pick a task for this session'}>
+            <Target size={18} /><span>{p.task ? p.task.text : 'Pick a task for this session'}</span><ChevronDown size={18} />
+          </button>
+        : <p className="pomo-line">{run.phase === 'short' ? 'Short break: sip, stretch, look away.' : 'Long break: you earned a proper rest.'}</p>}
       <div className="pomo-phase">
         <button aria-label="Previous phase" disabled={!idle} onClick={() => p.setPhase(PHASES[(idx + 2) % 3])}><ChevronLeft size={26} /></button>
         <span><b>{PHASE_LABEL[run.phase].toUpperCase()}</b> {phaseMinutes(run.phase, s)} MIN</span>
@@ -76,8 +72,8 @@ function Todos() {
   const p = usePomo()
   const [text, setText] = useState(''), [err, setErr] = useState('')
   return (
-    <div className="card todos" aria-label="To-do">
-      <div className="row spread"><b style={{ fontSize: 18 }}>To-do</b><span className="muted small">{p.todos.filter(t => !t.done).length} open</span></div>
+    <div className="todos" aria-label="To-do">
+      <div className="row spread"><b style={{ fontSize: 20 }}>To-do</b><span className="muted small">{p.todos.filter(t => !t.done).length} open</span></div>
       <form className="todo-add" onSubmit={e => { e.preventDefault(); const r = p.add(text); setErr(r ?? ''); if (!r) setText('') }}>
         <input className="input" aria-label="New to-do" placeholder="What do you want to get done?" value={text} maxLength={100} onChange={e => { setText(e.target.value); setErr('') }} />
         <button className="btn primary" type="submit" aria-label="Add to-do"><Plus size={20} /></button>
@@ -93,7 +89,7 @@ function Todos() {
           </li>
         ))}
       </ul>
-      {p.todos.some(t => !t.done) && <p className="muted small" style={{ margin: '8px 2px 0' }}>Tap a task to work on it in the next focus block.</p>}
+      {p.todos.some(t => !t.done) && <p className="muted small" style={{ margin: '8px 2px 0' }}>Tap a task to work on it this session. Each finished block counts towards it.</p>}
     </div>
   )
 }
@@ -107,6 +103,7 @@ function Stats() {
   void now
   return (
     <div className="pomo-stats">
+      <b style={{ fontSize: 20 }}>Your focus</b>
       <div className="card">
         <div className="row spread"><b style={{ fontSize: 18 }}>Today</b><span className="muted small">goal {settings.goal} blocks</span></div>
         <div className="goal-bar" role="img" aria-label={`${st.today.blocks} of ${settings.goal} blocks`}><i style={{ width: `${Math.min(100, (st.today.blocks / settings.goal) * 100)}%` }} /></div>
@@ -148,7 +145,7 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   const locked = !!run.timer
   return (
     <Sheet onClose={onClose}>
-      <div className="sheet-scroll">
+      <div className="pomo-sheet">
         <div className="row spread"><b style={{ fontSize: 20 }}>Timer settings</b><button className="linkbtn" onClick={onClose}>Done</button></div>
         <div className="seg" role="group" aria-label="Presets" style={{ margin: '12px 0' }}>{POMO_PRESETS.map(pr => <button key={pr.id} disabled={locked} className={pr.s.work === s.work && pr.s.short === s.short && pr.s.long === s.long ? 'on' : ''} onClick={() => setSettings(pr.s)}>{pr.name}<small>{pr.blurb}</small></button>)}</div>
         <div className="steppers">
@@ -167,18 +164,26 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   )
 }
 
-/** Focus: the pomodoro stage, a to-do list to pick each block's task from, and your numbers. */
-export default function FocusHub() {
-  const [tab, setTab] = useState<'timer' | 'todo' | 'stats'>('timer')
-  const [settings, setSettings] = useState(false)
-  const tabs = useMemo(() => [['timer', 'Timer'], ['todo', 'To-do'], ['stats', 'Stats']] as const, [])
+/** Focus: a full-screen pomodoro (no scrolling). To-do, stats and settings open as sheets on top of it. */
+export default function FocusHub({ onClose }: { onClose: () => void }) {
+  const p = usePomo()
+  const [sheet, setSheet] = useState<'todo' | 'stats' | 'settings' | null>(null)
+  const close = () => setSheet(null)
   return (
-    <>
-      <div className="seg" role="tablist" aria-label="Focus sections" style={{ marginBottom: 14 }}>{tabs.map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>{label}</button>)}</div>
-      {tab === 'timer' && <Timer onSettings={() => setSettings(true)} />}
-      {tab === 'todo' && <Todos />}
-      {tab === 'stats' && <Stats />}
-      {settings && <SettingsSheet onClose={() => setSettings(false)} />}
-    </>
+    <div className={`pomo-screen ${p.run.phase}`} role="dialog" aria-modal aria-label="Focus">
+      <div className="pomo-bar">
+        <button className="glass round green" aria-label="Back" onClick={onClose}><ArrowLeft /></button>
+        <span className="pomo-chip" aria-label={`${p.stats.today.blocks} of ${p.settings.goal} blocks today`}><i className={p.stats.today.goalMet ? 'ok' : ''} />{p.stats.today.blocks}/{p.settings.goal} today</span>
+        <div className="pomo-nav">
+          <button aria-label="To-do" onClick={() => setSheet('todo')}><ListChecks size={22} /></button>
+          <button aria-label="Stats" onClick={() => setSheet('stats')}><BarChart3 size={22} /></button>
+          <button aria-label="Timer settings" onClick={() => setSheet('settings')}><Settings size={22} /></button>
+        </div>
+      </div>
+      <Timer onTask={() => setSheet('todo')} />
+      {sheet === 'todo' && <Sheet onClose={close}><div className="pomo-sheet"><Todos /><button className="btn primary" onClick={close}>Done</button></div></Sheet>}
+      {sheet === 'stats' && <Sheet onClose={close}><div className="pomo-sheet"><Stats /><button className="btn" style={{ width: '100%', marginTop: 12 }} onClick={close}>Close</button></div></Sheet>}
+      {sheet === 'settings' && <SettingsSheet onClose={close} />}
+    </div>
   )
 }

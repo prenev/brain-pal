@@ -43,3 +43,31 @@ assert.deepEqual(st.tasks, [{ task: 'Report', blocks: 3 }, { task: 'Email', bloc
 assert.equal(pomoStats([blk(16), blk(16), blk(16), blk(16)], now2, 4).today.goalMet, true)
 assert.equal(pomoStats([blk(15), blk(14)], now2, 4).streak, 2, 'nothing yet today: yesterday still counts'); assert.equal(pomoStats([blk(13)], now2, 4).streak, 0); assert.equal(pomoStats([], now2, 4).best, null)
 console.log('pomodoro ok')
+
+// the clock keeps going while the app is closed
+{
+  const { catchUp, plan } = await import('../src/lib/pomodoro.ts')
+  const { startTimer, pauseTimer } = await import('../src/lib/focus.ts')
+  const t0 = Date.parse('2026-10-16T12:00:00Z'), m = 60_000, S = DEFAULT_POMO
+  const work = { phase: 'work', taskId: 'x', timer: startTimer(25, t0) }
+  assert.deepEqual(catchUp(work, S, 0, t0 + 10 * m), { run: work, finished: [] }, 'still running: nothing to do')
+  let c = catchUp(work, S, 0, t0 + 27 * m)
+  assert.equal(c.finished.length, 1); assert.equal(c.finished[0].end, t0 + 25 * m, 'finished when it really ended'); assert.equal(c.finished[0].taskId, 'x')
+  assert.equal(c.run.phase, 'short'); assert.equal(c.run.timer.startedAt, t0 + 25 * m, 'the break started at the end of the block, not when the app woke up')
+  c = catchUp(work, S, 0, t0 + 40 * m)
+  assert.equal(c.finished.length, 2); assert.equal(c.run.phase, 'work'); assert.equal(c.run.timer, null, 'after the break the next block waits (autoFocus off)')
+  c = catchUp(work, { ...S, autoFocus: true }, 0, t0 + 57 * m)
+  assert.deepEqual(c.finished.map(f => f.phase), ['work', 'short', 'work']); assert.equal(c.run.phase, 'short', 'two blocks and a break later, in the second break'); assert.equal(c.run.timer.startedAt, t0 + 55 * m)
+  c = catchUp(work, { ...S, autoFocus: true }, 3, t0 + 26 * m); assert.equal(c.run.phase, 'long', 'the 4th block of the day earns the long break')
+  assert.equal(catchUp(work, { ...S, autoBreak: false }, 0, t0 + 90 * m).run.timer, null, 'no auto break: stops after the block')
+  const paused = { ...work, timer: pauseTimer(work.timer, t0 + 5 * m) }; assert.equal(catchUp(paused, S, 0, t0 + 999 * m).finished.length, 0, 'a paused clock never runs out')
+  assert.equal(catchUp({ ...work, timer: startTimer(25, t0) }, { ...S, autoFocus: true, work: 1, short: 1 }, 0, t0 + 1e9).finished.length, 200, 'bounded')
+  // plan
+  let pl = plan(work, S, 0, t0 + 5 * m)
+  assert.deepEqual(pl.map(x => [x.phase, (x.start - t0) / m, (x.end - t0) / m]), [['work', 0, 25], ['short', 25, 30]], 'block, then the auto break, then it waits')
+  pl = plan(work, { ...S, autoFocus: true }, 2, t0)
+  assert.deepEqual(pl.slice(0, 5).map(x => x.phase), ['work', 'short', 'work', 'long', 'work']); assert.equal(pl.length, 8)
+  assert.deepEqual(plan(paused, S, 0, t0), []); assert.deepEqual(plan(IDLE_RUN, S, 0, t0), [])
+  assert.deepEqual(plan(work, { ...S, autoBreak: false }, 0, t0).length, 1)
+}
+console.log('pomodoro background ok')
