@@ -54,8 +54,9 @@ const f = (n: number) => Math.round(n * 10) / 10
 
 // silhouette: a chubby brain seen from the front: two hemispheres made of soft round lobes, a notch at the top and bottom
 type Blob = readonly [number, number, number]
-const bump = (deg: number, side: 1 | -1): Blob => { const a = (deg * Math.PI) / 180; return [f(100 + side * 43 * Math.cos(a)), f(76 + 38 * Math.sin(a)), 19] }
-const BLOBS: Blob[] = [...[-64, -22, 24, 66].flatMap(d => [bump(d, 1), bump(d, -1)]), [100, 76, 40]]
+// two big hemispheres (notch where they meet), a few small bumps on the top and sides, smooth underneath
+const HALF: Blob[] = [[82, 72, 36], [67, 46, 15], [58, 94, 14]]
+const BLOBS: Blob[] = [...HALF, ...HALF.map(([x, y, r]): Blob => [200 - x, y, r]), [100, 96, 26]]
 const circles = (extra: number) => BLOBS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${f(r + extra)}"/>`).join('')
 
 function limb(x0: number, y0: number, angle: number, len: number, side: -1 | 1, name: string) {
@@ -127,12 +128,11 @@ export function poseSpec(name: PoseName): PoseSpec { return { ...BASE, ...(POSES
 export function palBody(name: PoseName): string {
   const p = poseSpec(name)
   const shoulderY = 98
-  const arms = limb(44, shoulderY, p.armL, 32, -1, 'arm armL') + limb(156, shoulderY, p.armR, 32, 1, 'arm armR')
+  const arms = limb(48, shoulderY, p.armL, 32, -1, 'arm armL') + limb(152, shoulderY, p.armR, 32, 1, 'arm armR')
   const body = `<g fill="${C.edge}">${circles(2.4)}</g><g fill="${C.body}">${circles(0)}</g>
-    <g fill="${C.hi}" opacity=".75"><ellipse cx="76" cy="41" rx="11" ry="5.5" transform="rotate(-28 76 41)"/></g>
-    <g fill="none" stroke="${C.fold}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M100 31v26"/>
-      <path d="M121 47q10 5 8 16"/><path d="M79 47q-10 5 -8 16"/>
+    <g fill="${C.hi}" opacity=".75"><ellipse cx="68" cy="44" rx="8" ry="4" transform="rotate(-35 68 44)"/></g>
+    <g fill="none" stroke="${C.fold}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M70 62q10 -3 14 6q3 6 -1 12"/><path d="M130 62q-10 -3 -14 6q-3 6 1 12"/>
     </g>`
   const face = `<ellipse cx="71" cy="90" rx="7.5" ry="4.8" fill="${C.cheek}" opacity=".7"/><ellipse cx="129" cy="90" rx="7.5" ry="4.8" fill="${C.cheek}" opacity=".7"/>${brows(p.brows)}<g class="eyes">${eyes(p.eyes)}</g>${mouth(p.mouth)}`
   const cx = 100, cy = 100
