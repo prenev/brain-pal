@@ -77,15 +77,6 @@ function Insights() {
   const tod = timeOfDay(thoughts)
   const todMax = Math.max(1, ...tod.map(x => x.count))
 
-  const badges = [
-    { em: 'fire', label: '3-day streak', ok: streak.longest >= 3 },
-    { em: 'star', label: '7-day streak', ok: streak.longest >= 7 },
-    { em: 'trophy', label: '30-day streak', ok: streak.longest >= 30 },
-    { em: 'memo', label: '10 entries', ok: thoughts.length >= 10 },
-    { em: 'bulb', label: '5 reframes', ok: thoughts.filter(t => t.alternateThought).length >= 5 },
-    { em: 'bubbles', label: '30 min breathing', ok: sessions.reduce((a, s) => a + s.durationSec, 0) >= 1800 },
-  ]
-
   return (
     <>
       <div className="topbar flat">
@@ -169,10 +160,6 @@ function Insights() {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-head"><h3>Achievements</h3></div>
-        <div className="badges">{badges.map(b => <div key={b.label} className={`badge ${b.ok ? '' : 'locked'}`}><div className="em"><Emoji name={b.em} size={40} /></div>{b.label}</div>)}</div>
-      </div>
     </>
   )
 }
