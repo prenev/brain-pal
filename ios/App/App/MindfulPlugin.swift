@@ -7,6 +7,7 @@ import CryptoKit
 import SwiftUI
 import FamilyControls
 import ManagedSettings
+import StoreKit
 
 /// Saves breathing / grounding sessions to Apple Health as "Mindful Minutes" (HKCategoryType .mindfulSession).
 /// JS name: "Mindful"  (see src/lib/native.ts). Write-only: we never read your health data.
@@ -32,7 +33,11 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "screenTimePickApps", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "screenTimeLock", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "screenTimeUnlock", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "screenTimeClear", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "screenTimeClear", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "proProducts", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "proPurchase", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "proRestore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "proStatus", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -273,6 +278,84 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         guard #available(iOS 16.0, *) else { call.resolve(); return }
         ScreenTimeGuard.shared.clear()
         call.resolve()
+    }
+
+    // MARK: Brain Pal Pro (StoreKit 2, auto-renewing monthly subscription)
+    // Apple verifies every transaction; we never see card details. Product id must equal PRODUCT_ID in src/lib/pro.ts.
+    private static let proId = "com.brainpal.app.pro.monthly"
+
+    public override func load() {
+        // Finish transactions that complete outside the app (renewals, Ask to Buy approvals, purchases on another device).
+        Task.detached {
+            for await update in Transaction.updates {
+                if case .verified(let tx) = update { await tx.finish() }
+            }
+        }
+    }
+
+    private func proEntitlementEnd() async -> Date? {
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let tx) = result, tx.productID == MindfulPlugin.proId, tx.revocationDate == nil {
+                if let end = tx.expirationDate, end > Date() { return end }
+            }
+        }
+        return nil
+    }
+    private func proStatusDict() async -> [String: Any] {
+        if let end = await proEntitlementEnd() { return ["active": true, "until": end.timeIntervalSince1970 * 1000] }
+        return ["active": false]
+    }
+
+    @objc func proProducts(_ call: CAPPluginCall) {
+        Task {
+            do {
+                let products = try await Product.products(for: [MindfulPlugin.proId])
+                var out: [[String: Any]] = []
+                for p in products {
+                    var item: [String: Any] = ["id": p.id, "price": p.displayPrice]
+                    if let offer = p.subscription?.introductoryOffer, offer.paymentMode == .freeTrial {
+                        let unit = offer.period.unit
+                        let days = unit == .day ? offer.period.value : unit == .week ? offer.period.value * 7 : unit == .month ? offer.period.value * 30 : 0
+                        if days > 0 { item["trialDays"] = days }
+                    }
+                    out.append(item)
+                }
+                call.resolve(["products": out])
+            } catch {
+                call.resolve(["products": [], "error": error.localizedDescription])
+            }
+        }
+    }
+
+    @objc func proPurchase(_ call: CAPPluginCall) {
+        Task {
+            do {
+                guard let product = try await Product.products(for: [MindfulPlugin.proId]).first else { call.resolve(["status": "unavailable"]); return }
+                switch try await product.purchase() {
+                case .success(let verification):
+                    if case .verified(let tx) = verification {
+                        await tx.finish()
+                        var out = await self.proStatusDict(); out["status"] = "purchased"; call.resolve(out)
+                    } else { call.resolve(["status": "unverified"]) }
+                case .pending: call.resolve(["status": "pending"])
+                case .userCancelled: call.resolve(["status": "cancelled"])
+                @unknown default: call.resolve(["status": "unknown"])
+                }
+            } catch {
+                call.resolve(["status": "failed", "error": error.localizedDescription])
+            }
+        }
+    }
+
+    @objc func proRestore(_ call: CAPPluginCall) {
+        Task {
+            do { try await AppStore.sync() } catch { /* the entitlement check below still reports what Apple knows */ }
+            call.resolve(await self.proStatusDict())
+        }
+    }
+
+    @objc func proStatus(_ call: CAPPluginCall) {
+        Task { call.resolve(await self.proStatusDict()) }
     }
 
     @objc func webAuth(_ call: CAPPluginCall) {

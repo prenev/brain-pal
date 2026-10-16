@@ -60,12 +60,12 @@ async function mockGemini(ctx) {
   })
 }
 
-async function session(base, seed, fn, { native = false, onboarding = false } = {}) {
+async function session(base, seed, fn, { native = false, onboarding = false, pro = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications', 'microphone'] })
   await mockGemini(ctx)
   await ctx.route('http://127.0.0.1:9/auth/v1/settings', r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ external: { email: true, google: true, apple: true } }) }))
-  if (native) await ctx.addInitScript(nativeStub)
-  if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1') } catch { /* ignore */ } })
+  if (native) { await ctx.addInitScript(nativeStub); if (pro) await ctx.addInitScript(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.proStatus': { active: true, until: 4102444800000 } } }) }
+  if (!onboarding) await ctx.addInitScript(p => { try { localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1'); if (p) localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: 4102444800000, checkedAt: Date.now() })) } catch { /* ignore */ } }, pro)
   if (seed) await ctx.addInitScript(([t, s, w]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)) } }, [thoughts, sessions, worries])
   const p = await ctx.newPage()
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && !/Failed to load resource|ERR_/.test(m.text()) && errors.push(m.text()))
@@ -212,11 +212,15 @@ await session('http://localhost:4173', true, async (p, snap) => {
 }, { native: true })
 
 await session('http://localhost:4174', false, async (p, snap) => {
-  await p.waitForSelector('button:has-text("Continue with Apple")')
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Sync across devices'); await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')
   await p.click('text=Create an account'); await snap('login-signup')
   await p.click('text=Back to sign in'); await p.click('text=Forgot password?'); await snap('login-forgot')
 })
+
+await session('http://localhost:4173', true, async (p, snap) => {   // not Pro: the lock card and the paywall
+  await p.click('.tool >> text=Focus guard'); await snap('pro-locked'); await p.click('.pro-lock button'); await p.waitForSelector('[aria-label="Brain Pal Pro"]'); await snap('paywall')
+}, { native: true, pro: false })
 
 await local.close(); await cloud.close(); await browser.close()
 

@@ -36,6 +36,11 @@ export interface MindfulPlugin {
   /** Removes the shields for `minutes`; `until` is ms since 1970. */
   screenTimeUnlock(opts: { minutes: number }): Promise<{ until: number }>
   screenTimeClear(): Promise<void>
+  /** Brain Pal Pro (StoreKit 2). `until` is ms since 1970. */
+  proProducts(): Promise<{ products: { id: string; price: string; trialDays?: number }[]; error?: string }>
+  proPurchase(): Promise<{ status: 'purchased' | 'pending' | 'cancelled' | 'unverified' | 'unavailable' | 'failed' | 'unknown'; active?: boolean; until?: number; error?: string }>
+  proRestore(): Promise<{ active: boolean; until?: number }>
+  proStatus(): Promise<{ active: boolean; until?: number }>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
 }

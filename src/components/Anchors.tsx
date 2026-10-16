@@ -1,3 +1,6 @@
+import { ProGate } from './Pro'
+import { usePro } from '../lib/proStore'
+import { FREE_ANCHORS } from '../lib/pro.ts'
 import { useState } from 'react'
 import { ArrowDown, ArrowUp, X } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
@@ -58,6 +61,7 @@ export function AnchorsManager() {
   const [emoji, setEmoji] = useState(ANCHOR_EMOJI[0])
   const [link, setLink] = useState<AnchorLink | ''>('')
   const full = !canAdd(anchors)
+  const { pro } = usePro()
   const left = STARTERS.filter(s => !list.some(a => a.label.toLowerCase() === s.label.toLowerCase()))
 
   return (
@@ -82,7 +86,7 @@ export function AnchorsManager() {
         </ul>
       </div>}
 
-      {full ? <p className="card muted" role="status">You have {MAX_ANCHORS} anchors — that’s the maximum, on purpose. Remove one to add another.</p> : <>
+      {!pro && list.length >= FREE_ANCHORS && !full ? <ProGate feature="anchors" compact>{null}</ProGate> : full ? <p className="card muted" role="status">You have {MAX_ANCHORS} anchors — that’s the maximum, on purpose. Remove one to add another.</p> : <>
         <div className="card">
           <b>Ideas</b>
           <div className="chips" style={{ marginTop: 10 }}>

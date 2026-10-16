@@ -150,6 +150,10 @@ Migrations (new files, plain SQL, **no `DO` blocks**; apply via the connector, t
 ## Phase 13 — Reflection
 Weekly review screen (and optional Sunday-evening ritual): mood trend, best/worst day, what helped (tools used, anchors hit), sleep average, 1 prompt. Optional Gemini "reflect with me" (opt-in, same privacy rules, crisis-safe). Theme picker (uses Phase 11 unlocks). Goals ("breathe 5×/week") as a *view over anchors*, not a new system.
 
+## Phase 19 — Offline first + Brain Pal Pro (monthly subscription)
+Done: no account needed (the app starts straight on Home; sign-in is an optional Pro step that moves on-device data into the account), Pro subscription via StoreKit 2 (7-day trial, restore, disclosure, paywall) with gates on Focus guard, Sleep, week/month Summary, Progress proof, 4th/5th anchor and Sync; safety and data export are never gated; What's new dialog after updates; SOS first in Pal's coach; scroll bars hidden. Plan, competitor notes, pricing and owner steps: `docs/MONETIZATION.md`.
+Next: annual plan, server notifications (only if needed), offer codes, Family Sharing. Not verified: real purchases on a device.
+
 ## Phase 18 — Pal & Focus guard
 Pal the mascot (soft lavender cloud-brain: 16 poses, 6 animation strips, CSS motion, `npm run sprites` art kit, new app icon), used in onboarding (Pal explains the app in 6 skippable screens), Today, empty states, celebrations, breathing, login. Notch fix on Stats. **Focus guard** (iOS Screen Time): pick apps, they stay paused until you earn time with push-ups/squats/plank/walk/breathing/a journal line — see `docs/SCREENTIME.md`. Not verified on a device; needs Apple's Family Controls entitlement for distribution.
 

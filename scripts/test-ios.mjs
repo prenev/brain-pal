@@ -52,6 +52,12 @@ assert.match(swift, /FamilyActivityPicker/); assert.match(swift, /ManagedSetting
 assert.doesNotMatch(swift, /DeviceActivityReport|DeviceActivityCenter|AppUsage/, 'we never read what you use: only shield the apps you chose')
 assert.doesNotMatch(read('ios-native/App.entitlements'), /family-controls/, 'the Family Controls entitlement is added by `npm run ios:screentime`, not committed (distribution needs Apple approval)')
 
+/* 4e. Pro subscription: StoreKit 2, one product, same id as the JS side; we only act on verified transactions */
+const proJs = read('src/lib/pro.ts').match(/PRODUCT_ID = '([^']+)'/)[1]
+assert.ok(swift.includes(`proId = "${proJs}"`), 'Swift product id must equal PRODUCT_ID in src/lib/pro.ts')
+assert.match(swift, /Transaction\.currentEntitlements/); assert.match(swift, /Transaction\.updates/); assert.match(swift, /case \.verified\(let tx\)/)
+assert.doesNotMatch(swift, /\.unverified/, 'unverified transactions are never trusted')
+
 /* 5. the only health data we ever READ is sleep analysis (privacy promise in the UI and docs) */
 assert.equal((swift.match(/HKSampleQuery\(/g) ?? []).length, 1, 'exactly one read query')
 assert.match(swift, /HKSampleQuery\(sampleType: sleep,/, 'the one query reads the sleep type'); assert.match(swift, /\.sleepAnalysis/)

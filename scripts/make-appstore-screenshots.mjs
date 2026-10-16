@@ -44,8 +44,9 @@ const mascot = 'data:image/svg+xml;base64,' + readFileSync(join(root, 'public/ic
 async function capture(fn) {
   const ctx = await browser.newContext({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, permissions: ['notifications', 'microphone'] })
   await ctx.addInitScript(nativeStub)
+  await ctx.addInitScript(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.proStatus': { active: true, until: 4102444800000 } } })
   await ctx.addInitScript(([t, s, w, j, a]) => {
-    localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1'); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, smallsteps: 9 }))
+    localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1'); localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: 4102444800000, checkedAt: Date.now() })); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, smallsteps: 9 }))
     if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)); localStorage.setItem('bp.journal', JSON.stringify(j)); localStorage.setItem('bp.anchors', JSON.stringify(a)) }
   }, [thoughts, sessions, worries, journal, anchors])
   const p = await ctx.newPage()

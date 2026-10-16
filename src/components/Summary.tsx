@@ -1,4 +1,6 @@
 import { PalTip } from './Pal'
+import { ProGate } from './Pro'
+import { usePro } from '../lib/proStore'
 import { useMemo, useState } from 'react'
 import { Share2 } from 'lucide-react'
 import { useStore } from '../lib/store'
@@ -14,7 +16,8 @@ const RANGES = [
 /** Plain-language recap of today / the last 7 / the last 30 days, written from templates (no AI, works offline). */
 export default function Summary() {
   const { thoughts, sessions, worries, anchorHistory, journal, focusSessions, sleepNights } = useStore()
-  const [range, setRange] = useState<(typeof RANGES)[number]['id']>('week')
+  const { pro } = usePro()
+  const [range, setRange] = useState<(typeof RANGES)[number]['id']>('day')
   const [msg, setMsg] = useState('')
   const r = RANGES.find(x => x.id === range)!
   const sum = useMemo(() => summarize({ thoughts, sessions, worries, journal, focus: focusSessions, sleep: sleepNights, anchorDays: anchorHistory }, dayKey(new Date()), r.days), [thoughts, sessions, worries, journal, focusSessions, sleepNights, anchorHistory, r.days])
@@ -34,11 +37,11 @@ export default function Summary() {
       <div className="seg" role="tablist" aria-label="Summary range" style={{ marginBottom: 14 }}>
         {RANGES.map(x => <button key={x.id} role="tab" aria-selected={range === x.id} className={range === x.id ? 'on' : ''} onClick={() => { setRange(x.id); setMsg('') }}>{x.label}</button>)}
       </div>
-      <div className="card summary" aria-label={`${r.label} summary`}>
+      {range !== 'day' && !pro ? <ProGate feature="summary" compact>{null}</ProGate> : <div className="card summary" aria-label={`${r.label} summary`}>
         <ul>{lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
         <button className="btn" onClick={share}><Share2 size={18} style={{ display: 'inline', verticalAlign: -3 }} /> Share</button>
         {msg && <p className="small" role="status" style={{ marginBottom: 0 }}>{msg}</p>}
-      </div>
+      </div>}
       <p className="muted small">Self-help summary of what you logged, not medical advice. It stays on this device unless you share it.</p>
     </>
   )

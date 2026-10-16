@@ -1,0 +1,32 @@
+{
+  "identifier" : "BA1A0001",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : { "_failTransactionsEnabled" : false, "_locale" : "en_US", "_storefront" : "USA", "_askToBuyEnabled" : false },
+  "subscriptionGroups" : [
+    {
+      "id" : "21400001",
+      "localizations" : [],
+      "name" : "Brain Pal Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6740000001",
+          "introductoryOffer" : { "internalID" : "6740000002", "numberOfPeriods" : 1, "paymentMode" : "free", "subscriptionPeriod" : "P1W" },
+          "localizations" : [ { "description" : "Sync, Focus guard, sleep insights, summaries and proof of progress", "displayName" : "Brain Pal Pro (monthly)", "locale" : "en_US" } ],
+          "productID" : "com.brainpal.app.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Brain Pal Pro monthly",
+          "subscriptionGroupID" : "21400001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : []
+        }
+      ]
+    }
+  ],
+  "version" : { "major" : 3, "minor" : 0 }
+}

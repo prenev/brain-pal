@@ -434,3 +434,17 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .coach .bubble { position: relative; background: var(--card); border: 2px solid var(--accent); border-radius: 18px; padding: 12px 14px; font-weight: 700; line-height: 1.35; box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: rise .3s cubic-bezier(.2,.9,.3,1); }
 .coach .bubble::after { content: ''; position: absolute; right: -9px; bottom: 22px; width: 14px; height: 14px; background: var(--card); border-right: 2px solid var(--accent); border-top: 2px solid var(--accent); transform: rotate(45deg); }
 .coach .row { margin-top: 10px; justify-content: space-between; }
+
+/* an app, not a website: no scroll bars anywhere */
+html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* ---- Pro / paywall ---- */
+.pro-lock { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 20px 16px; border-style: dashed; }
+.pro-lock p { margin: 4px 0 0; color: var(--muted); font-weight: 700; }
+.pro-lock.compact { grid-template-columns: 1fr; padding: 14px; }
+.pro-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 6px; }
+.pro-row + .pro-row { border-top: 2px solid var(--edge); }
+.pro-row.on { background: rgba(53,208,127,.1); border-radius: 12px; }
+.free-box ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-weight: 700; }
+.paywall .inner a { color: var(--accent); }

@@ -7,6 +7,8 @@ Where to find things:
 
 Health data: HealthKit is used only to (1) save breathing sessions as Mindful Minutes and (2) read sleep analysis if the user opts in. Health data is never uploaded or used for advertising. Privacy policy: https://prenev.github.io/brain-pal/privacy.html
 
+In-app purchase: Brain Pal Pro, an auto-renewing monthly subscription (product com.brainpal.app.pro.monthly, StoreKit 2). To test: Settings of the sandbox account, then More → Brain Pal Pro (or tap any locked feature, e.g. Home → Focus guard). Restore purchases is on the paywall. The SOS siren, breathing, crisis support and data export are never locked.
+
 Native features beyond a web view: native tab bar, Taptic Engine haptics, on-device scheduled notifications, HealthKit, Sign in with Apple, system web authentication.
 
 Safety: text that looks like self-harm is never sent to an AI and the app shows crisis support options (More → Get support). The app makes no medical claims.
