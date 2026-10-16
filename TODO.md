@@ -45,3 +45,10 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Replace the marketing screenshots with real-device ones if you prefer (same captions), then submit for review
 
 - [ ] **iPhone: check the native Liquid Glass tab bar** (docs/IOS.md → "Native tab bar"): glass look on iOS 26, taps switch tabs, hides behind sheets, nothing cut off at the bottom, + button position. Tell me if it should be the floating capsule (needs a UITabBarController shell).
+
+## Marketing (docs/MARKETING.md §16)
+- [ ] Decide the budget level (§12) and who is the face of the brand (you on camera? Pal only?)
+- [ ] Buy the domain + reserve @handles (TikTok, Instagram, YouTube, X) once the name check passes
+- [ ] Open Apple Search Ads and App Store Connect analytics access; create offer codes for creators/therapists
+- [ ] Recruit one licensed clinical advisor for a "reviewed by" line
+- [ ] Build the creator list (200 micro-creators) and approve the claims fact sheet (§11)
