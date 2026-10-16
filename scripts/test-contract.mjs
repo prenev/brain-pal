@@ -10,7 +10,8 @@ const schema = {}
 for (const [, t, body] of sql.matchAll(/create table if not exists public\.(\w+) \(([\s\S]*?)\n\);/g))
   schema[t] = new Set(body.split('\n').map(l => l.trim().match(/^(\w+) /)?.[1]).filter(Boolean))
 for (const [, t, c] of sql.matchAll(/alter table public\.(\w+) add column if not exists (\w+)/g)) schema[t].add(c)
-assert.deepEqual(Object.keys(schema).sort(), ['breath_sessions', 'push_subscriptions', 'thoughts', 'user_docs', 'worries'])
+// waitlist_signups is written by the website (brainpal-landing-, wobbi.app), not by this app
+assert.deepEqual(Object.keys(schema).sort(), ['breath_sessions', 'push_subscriptions', 'thoughts', 'user_docs', 'waitlist_signups', 'worries'])
 
 const files = { 'src/lib/repo.ts': ['thoughts', 'breath_sessions', 'worries'], 'src/lib/push.ts': ['push_subscriptions'], 'src/lib/cloudDocs.ts': ['user_docs'], 'supabase/functions/send-reminders/index.ts': ['push_subscriptions', 'thoughts', 'breath_sessions'] }
 const everyColumn = new Set(Object.values(schema).flatMap(s => [...s]))

@@ -23,6 +23,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- **P20 Growth** 🗄 website waitlist table `waitlist_signups` (insert-only for `anon`, RLS, column checks, tested) live in `brain-pal`; the wobbi.app site posts sign-ups to it. Email notification to the owner still open.
 - P19 Offline first + Pro monthly subscription (StoreKit 2 + paywall + gates), What's new, SOS-first coach, no scroll bars, streak box removed — verified with the simulated bridge; real purchases need a device + App Store Connect setup
 - SOS is a siren in the Home/Breathe action bar (cards + menu entry removed), no daily-goals card, tools strip starts level with the cards, Wobbi's corner coach replaces the swipe tip
 - Home tools strip scrolls (Thoughts leads; Sleep/Progress/Summary/Coins no longer buried), Wobbi tips per section, splash screen, Wobbi v3 (no centre line), fix: "+N coins" toast could stay forever (its timer was cancelled by later coin changes; e2e fails without the fix)

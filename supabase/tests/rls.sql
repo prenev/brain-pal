@@ -167,8 +167,31 @@ select t.eq((select count(*) from public.user_docs where user_id = 'aaaaaaaa-000
 select t.eq((select count(*) from public.user_docs where user_id = 'bbbbbbbb-0000-0000-0000-000000000002'), 1::bigint, 'B docs untouched');
 select t.eq((select count(*) from public.thoughts where user_id = 'bbbbbbbb-0000-0000-0000-000000000002'), 3::bigint, 'B rows untouched');
 
+-- ---------------------------------------------------------------- waitlist (landing page): anon can only ADD a row
+select t.as_anon();
+insert into public.waitlist_signups (email, name, interests, device, notes, consent) values ('fan@x.test', 'Fan', '{Journal,Sleep}', 'Android', 'hi', true);
+select t.fails($$insert into public.waitlist_signups (email, device, consent) values ('fan@x.test', 'iPhone', true)$$, '23505', 'the same email twice is a unique violation (the site treats it as success)');
+select t.fails($$select * from public.waitlist_signups$$, '42501', 'anon cannot read the waitlist');
+select t.fails($$update public.waitlist_signups set name = 'x'$$, '42501', 'anon cannot update the waitlist');
+select t.fails($$delete from public.waitlist_signups$$, '42501', 'anon cannot delete from the waitlist');
+select t.fails($$insert into public.waitlist_signups (email, consent) values ('no-consent@x.test', false)$$, null, 'consent is required');
+select t.fails($$insert into public.waitlist_signups (email, consent) values ('Upper@X.test', true)$$, '23514', 'email must be lower case');
+select t.fails($$insert into public.waitlist_signups (email, consent) values ('not-an-email', true)$$, '23514', 'email must look like an email');
+select t.fails($$insert into public.waitlist_signups (email, consent) values ('a b@x.test', true)$$, '23514', 'no spaces in email');
+select t.fails($$insert into public.waitlist_signups (email, device, consent) values ('dev@x.test', 'Palm', true)$$, '23514', 'device must be one of the options');
+select t.fails($$insert into public.waitlist_signups (email, notes, consent) values ('notes@x.test', repeat('a', 501), true)$$, '23514', 'notes are capped');
+select t.fails($$insert into public.waitlist_signups (email, interests, consent) values ('int@x.test', '{a,b,c,d,e,f,g}', true)$$, '23514', 'at most 6 interests');
+select t.fails($$insert into public.waitlist_signups (email, source, consent) values ('src@x.test', 'other', true)$$, null, 'source is fixed');
+select t.as_user('bbbbbbbb-0000-0000-0000-000000000002');
+select t.fails($$select * from public.waitlist_signups$$, '42501', 'signed-in users cannot read the waitlist');
+select t.fails($$insert into public.waitlist_signups (email, consent) values ('user@x.test', true)$$, '42501', 'only anon (the website) adds rows');
+select t.as_admin();
+select t.eq((select count(*) from public.waitlist_signups), 1::bigint, 'exactly one waitlist row (duplicate and bad rows rejected)');
+select t.eq((select interests from public.waitlist_signups where email = 'fan@x.test'), '{Journal,Sleep}'::text[], 'interests stored');
+
 -- ---------------------------------------------------------------- structural guarantees
 select t.eq((select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity), 0::bigint, 'RLS enabled on every public table');
-select t.eq((select count(*) from pg_policies where schemaname = 'public' and (roles = '{public}' or 'anon' = any(roles))), 0::bigint, 'no policy applies to public/anon');
+select t.eq((select count(*) from pg_policies where schemaname = 'public' and (roles = '{public}' or 'anon' = any(roles)) and policyname <> 'waitlist_signups_anon_insert'), 0::bigint, 'no policy applies to public/anon (except the waitlist insert)');
+select t.eq((select cmd from pg_policies where schemaname = 'public' and policyname = 'waitlist_signups_anon_insert'), 'INSERT', 'the waitlist policy is insert-only');
 rollback;
 select 'rls: all checks passed' as result;

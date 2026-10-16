@@ -3,6 +3,7 @@
 Short and honest. Tick them off; delete when done. The agent adds to this list whenever a task needs your account, keys, a Mac or a phone.
 
 ## Right now
+- [ ] **Waitlist (wobbi.app):** (1) delete the one test row `claude-live-check@wobbi.app` in Supabase → Table editor → `waitlist_signups`; (2) decide how you want to be notified of new sign-ups (email via Resend/other, or Slack/Discord webhook) and give the agent the key/URL to set as an Edge-Function secret; (3) mention the waitlist (email + chosen interests, stored in Supabase, used only for launch email) in the website privacy text.
 - [ ] **Supabase → Auth → URL Configuration:** Redirect URLs contain exactly `brainpal://auth` (not `brainpan`); Site URL = `brainpal://auth` while iPhone-only.
 - [ ] **Confirm your account:** request a new confirmation/magic-link email after fixing the URL (or ask the agent to confirm it in the DB, or turn "Confirm email" off temporarily).
 - [ ] **Google provider:** Google Cloud → OAuth client type **Web application**, redirect `https://dncodogkvsjzvptquqnn.supabase.co/auth/v1/callback`; paste ID + secret into Supabase → Providers → Google.
