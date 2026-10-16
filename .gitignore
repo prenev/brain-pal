@@ -1,5 +1,6 @@
 node_modules
 dist
+site
 .env
 .env.local
 *.local
@@ -7,3 +8,9 @@ dev-dist
 screenshots/*.png
 test-results
 ios/App/build/
+fastlane/screenshots
+fastlane/report.xml
+build
+*.p8
+.bundle
+vendor/bundle

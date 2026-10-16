@@ -1,7 +1,7 @@
 {
   "name": "brain-pal",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -15,7 +15,10 @@
     "ios:apple": "python3 scripts/ios-patch.py --apple-signin",
     "ios:open": "npx cap open ios",
     "check:supabase": "node scripts/check-supabase.mjs",
-    "test:db": "node scripts/test-db.mjs"
+    "test:db": "node scripts/test-db.mjs",
+    "site": "node scripts/make-site.mjs",
+    "store:screens": "node scripts/make-appstore-screenshots.mjs",
+    "store:check": "node scripts/check-store.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

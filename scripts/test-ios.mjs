@@ -7,7 +7,7 @@ const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 /* 1. the copies inside ios/ are exactly what ios-native/ says (CI caught this drifting once) */
 // (the optional `ios-patch.py --apple-signin` entitlement is the only allowed difference)
 const stripApple = t => t.replace(/\s*<key>com\.apple\.developer\.applesignin<\/key>\s*<array>.*?<\/array>/s, '')
-for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements'])
+for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy'])
   assert.equal(stripApple(read(`ios/App/App/${f}`)), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
 
 /* 2. every method the JS calls on the Mindful plugin exists in Swift, and vice versa */

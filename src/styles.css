@@ -340,3 +340,6 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 /* iPhone app: the tab bar is the real UIKit one (Liquid Glass), drawn above the web view, so we just leave room for it */
 .native-tabs .app { padding-bottom: calc(var(--native-tab-h, 0px) + 24px); }
 .native-tabs .fab { bottom: calc(var(--native-tab-h, 0px) + 12px); }
+.card.legal h3 { margin: 18px 0 4px; font-size: 17px; }
+.card.legal p, .card.legal li { line-height: 1.5; font-size: 15px; }
+.card.legal ul { padding-left: 20px; margin: 6px 0; }

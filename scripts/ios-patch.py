@@ -12,7 +12,7 @@ pbx = app / 'App.xcodeproj' / 'project.pbxproj'
 if not pbx.exists():
     sys.exit('ios/ not found - run `npx cap add ios` first')
 
-for f in ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements']:
+for f in ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy']:
     shutil.copy(root / 'ios-native' / f, src / f)
 
 # ---- project.pbxproj: file refs, build files, group, sources phase, entitlements setting
@@ -39,6 +39,17 @@ if 'CODE_SIGN_ENTITLEMENTS' not in p:
     p = p.replace('\t\t\t\tCODE_SIGN_STYLE = Automatic;\n', '\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tCODE_SIGN_STYLE = Automatic;\n')
 pbx.write_text(p)
 
+# ---- App Store hygiene: privacy manifest as a bundled resource, iPhone-only, version 1.0.0
+PRIV = {'ref': 'B1A0000000000000000A0006', 'bf': 'B1A0000000000000000A0007'}
+p = pbx.read_text()
+if PRIV['ref'] not in p:
+    p = p.replace('/* End PBXBuildFile section */', f"\t\t{PRIV['bf']} /* PrivacyInfo.xcprivacy in Resources */ = {{isa = PBXBuildFile; fileRef = {PRIV['ref']} /* PrivacyInfo.xcprivacy */; }};\n/* End PBXBuildFile section */")
+    p = p.replace('/* End PBXFileReference section */', f"\t\t{PRIV['ref']} /* PrivacyInfo.xcprivacy */ = {{isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = \"<group>\"; }};\n/* End PBXFileReference section */")
+    p = re.sub(r'(\t\t\t\t[0-9A-F]{24} /\* SceneDelegate\.swift \*/,\n)', r'\1' + f"\t\t\t\t{PRIV['ref']} /* PrivacyInfo.xcprivacy */,\n", p, count=1)
+    p = re.sub(r'(isa = PBXResourcesBuildPhase;.*?files = \(\n)', r'\1' + f"\t\t\t\t{PRIV['bf']} /* PrivacyInfo.xcprivacy in Resources */,\n", p, count=1, flags=re.S)
+p = p.replace('TARGETED_DEVICE_FAMILY = "1,2";', 'TARGETED_DEVICE_FAMILY = 1;').replace('MARKETING_VERSION = 1.0;', 'MARKETING_VERSION = 1.0.0;')
+pbx.write_text(p)
+
 # ---- SceneDelegate: use our view controller
 sd = src / 'SceneDelegate.swift'
 t = sd.read_text()
@@ -60,6 +71,10 @@ t = add_key(t, 'CFBundleURLTypes', '<array><dict><key>CFBundleURLName</key><stri
 # iPhone: portrait only (the UI is designed for it); iPad keeps all orientations
 t = re.sub(r'(<key>UISupportedInterfaceOrientations</key>\s*<array>)(.*?)(</array>)',
            r'\1\n\t\t<string>UIInterfaceOrientationPortrait</string>\n\t\3', t, count=1, flags=re.S)
+# App Store: no non-exempt encryption (only OS-provided HTTPS), 64-bit devices, the app is dark-themed
+t = add_key(t, 'ITSAppUsesNonExemptEncryption', '<false/>')
+t = add_key(t, 'UIUserInterfaceStyle', '<string>Dark</string>')
+t = t.replace('<string>armv7</string>', '<string>arm64</string>')
 ip.write_text(t)
 # ---- optional: Sign in with Apple capability (needs a paid Apple Developer account; free Personal Teams reject it)
 if '--apple-signin' in sys.argv:

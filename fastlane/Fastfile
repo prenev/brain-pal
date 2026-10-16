@@ -1,0 +1,44 @@
+# Release automation. Needs an App Store Connect API key (App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys, role "App Manager" or "Admin").
+#   export ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_P8="$(cat AuthKey_XXXX.p8)" APPLE_TEAM_ID=…
+#   bundle install
+#   bundle exec fastlane ios beta          # build + upload to TestFlight
+#   bundle exec fastlane ios metadata      # push the listing text (from scripts/store-metadata.mjs) + age rating
+#   bundle exec fastlane ios screenshots   # push store/screenshots
+# NOT run by CI on every commit and NOT verified from the Linux sandbox that wrote it: see docs/APPSTORE.md.
+default_platform(:ios)
+
+platform :ios do
+  def asc_key
+    app_store_connect_api_key(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"), key_content: ENV.fetch("ASC_KEY_P8"), is_key_content_base64: false, in_house: false)
+  end
+
+  desc "Build the app and upload it to TestFlight"
+  lane :beta do
+    key = asc_key
+    build = (ENV["BUILD_NUMBER"] || Time.now.utc.strftime("%y%m%d%H%M")).to_s    # must grow with every upload
+    key_file = File.expand_path("AuthKey.p8", Dir.pwd)
+    File.write(key_file, ENV.fetch("ASC_KEY_P8"))
+    build_app(
+      project: "ios/App/App.xcodeproj", scheme: "App", configuration: "Release", export_method: "app-store", output_directory: "build",
+      xcargs: "-allowProvisioningUpdates -authenticationKeyPath #{key_file} -authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')} DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} CURRENT_PROJECT_VERSION=#{build}",
+      export_options: { method: "app-store", signingStyle: "automatic", teamID: ENV.fetch("APPLE_TEAM_ID") }
+    )
+    upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
+    File.delete(key_file) if File.exist?(key_file)
+  end
+
+  desc "Upload listing text, review notes and age rating (no binary, no screenshots, does not submit)"
+  lane :metadata do
+    deliver(api_key: asc_key, skip_binary_upload: true, skip_screenshots: true, force: true, submit_for_review: false,
+            metadata_path: "fastlane/metadata", app_rating_config_path: "fastlane/age_rating.json", precheck_include_in_app_purchases: false)
+  end
+
+  desc "Upload App Store screenshots (6.9-inch and 6.5-inch sets from store/screenshots)"
+  lane :screenshots do
+    dir = File.expand_path("screenshots/en-US", Dir.pwd)
+    FileUtils.rm_rf(File.expand_path("screenshots", Dir.pwd)); FileUtils.mkdir_p(dir)
+    Dir.glob(File.expand_path("../store/screenshots/*/*.png", Dir.pwd)).sort.each { |f| FileUtils.cp(f, File.join(dir, "#{File.basename(File.dirname(f)).sub('-inch', '')}_#{File.basename(f)}")) }
+    deliver(api_key: asc_key, skip_binary_upload: true, skip_metadata: true, force: true, submit_for_review: false, overwrite_screenshots: true, screenshots_path: "fastlane/screenshots")
+    FileUtils.rm_rf(File.expand_path("screenshots", Dir.pwd))
+  end
+end

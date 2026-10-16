@@ -1,0 +1,24 @@
+name: TestFlight upload
+# Manual: Actions → "TestFlight upload" → Run workflow. Needs these repository secrets (docs/APPSTORE.md, step 4):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (the full text of the .p8 file), APPLE_TEAM_ID
+on: workflow_dispatch
+jobs:
+  beta:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run ios:sync
+      - run: npm run ios:apple          # Sign in with Apple entitlement (re-applied after every sync)
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.3', bundler-cache: true }
+      - name: Build + upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: bundle exec fastlane ios beta

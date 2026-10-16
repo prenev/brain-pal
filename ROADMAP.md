@@ -150,6 +150,10 @@ Migrations (new files, plain SQL, **no `DO` blocks**; apply via the connector, t
 ## Phase 13 — Reflection
 Weekly review screen (and optional Sunday-evening ritual): mood trend, best/worst day, what helped (tools used, anchors hit), sleep average, 1 prompt. Optional Gemini "reflect with me" (opt-in, same privacy rules, crisis-safe). Theme picker (uses Phase 11 unlocks). Goals ("breathe 5×/week") as a *view over anchors*, not a new system.
 
+## Phase 17 — App Store launch pack
+Done: mascot icon + launch image + PWA icons (`npm run icons`), App Store screenshots at 6.9″/6.5″ (`npm run store:screens`), listing text/review notes/age-rating/privacy-label as tested data (`scripts/store-metadata.mjs` → fastlane), Privacy Policy / Terms / Support / open-source notices (in-app + static site via GitHub Pages), privacy manifest, export-compliance flag, iPhone-only 1.0.0, fastlane + TestFlight workflow, `npm run store:check`. Guide: `docs/APPSTORE.md`.
+Not verified: the fastlane lanes and the TestFlight workflow have never run (need your Apple API key); the native tab bar and everything on-device (checklist §8); legal text is not lawyer-reviewed.
+
 ## Idea backlog (not committed — vote with issues)
 - **Wind-down routine:** 3-step evening flow (dim screen tip → journal one line → slow breathing) as a single tap.
 - **Body check-in:** tap where you feel it (chest/stomach/shoulders) — builds interoception.

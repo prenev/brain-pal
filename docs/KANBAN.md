@@ -13,7 +13,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **Native tab bar** 📱 real UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback — e2e with simulated bridge; Swift compile on macOS CI; device check pending
+- **P17 App Store pack** 📄 mascot icon, screenshots, listing, legal pages (in-app + site), privacy manifest, fastlane/TestFlight, docs/APPSTORE.md — verify + CI, then owner steps in TODO.md
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -21,6 +21,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- Native UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback (device check pending)
 - UX pass: Home tab (Today / Entries / Journal), grouped + menu, uniform tab icons, calendar fix
 - Fix: CI flake — anchors e2e crossed midnight UTC (clock pinned)
 - Fix: calendar today cell was squashed (`.today` CSS collided with the Today card)

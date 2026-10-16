@@ -29,6 +29,7 @@ Read `ROADMAP.md` (phases + status), `README.md` (features, limits) and `docs/IO
 | `npm run test:e2e` | ~20 headless-Chromium flows: fake mic, mocked Gemini, simulated iOS bridge (`scripts/native-stub.mjs`) |
 | `npm run screens` | builds + screenshots every screen into `screenshots/` (git-ignored) |
 | `npm run ios:sync` / `ios:open` | build web → `cap sync ios` → re-apply our native patch / open Xcode (Mac only) |
+| `npm run icons` / `store:screens` / `store:meta` / `site` / `store:check` | mascot → icons; App Store screenshots; fastlane listing files; legal static site; what the owner still has to fill in (see `docs/APPSTORE.md`) |
 | `node scripts/extract-emoji.mjs` | regenerate `src/lib/emojiData.ts` (Fluent Emoji, MIT) after adding names to the script |
 | `python3 scripts/ios-patch.py` | copy `ios-native/*` into `ios/` and wire project/plist/entitlements (idempotent) |
 
@@ -38,7 +39,7 @@ The sandbox's browser is auto-detected by `scripts/chromium.mjs` (never hardcode
 
 - `src/pages/` screens · `src/components/` UI pieces (`Sos`, `WorryTime`, `VoiceRecorder`, `AiSettings`, `Celebrate`, …) · `src/lib/` logic.
 - **Data:** `lib/repo.ts` (one `Repo` interface; `localRepo` = localStorage + IndexedDB blobs via `blobstore.ts`, `cloudRepo` = Supabase), `lib/store.tsx` (React context). Schema: `supabase/migrations/` — every table/column change is a **new** migration file (see *Supabase* below); update `lib/repo.ts` and the app↔schema contract test together with it.
-- **Pure, unit-tested logic** (no DOM imports on purpose): `aiCore.ts` (Gemini client), `audio.ts`, `insights.ts`, `worries.ts`, `dates.ts`, `nativeCore.ts`, `anchors.ts`, `journal.ts`, `focus.ts`, `rituals.ts`, `sleep.ts`, `rewards.ts`, `levels.ts`, `proof.ts`, `summaries.ts`, `today.ts`, `theme.ts`, `sync.ts` + `syncItems.ts` (account sync: newest edit wins, tombstones), `supabase/functions/_shared/reminder.ts`. Local-only extras are stored by `extras.ts`; `cloudDocs.ts` is the only network code for them.
+- **Pure, unit-tested logic** (no DOM imports on purpose): `aiCore.ts` (Gemini client), `audio.ts`, `insights.ts`, `worries.ts`, `dates.ts`, `nativeCore.ts`, `anchors.ts`, `journal.ts`, `focus.ts`, `rituals.ts`, `sleep.ts`, `rewards.ts`, `levels.ts`, `proof.ts`, `summaries.ts`, `today.ts`, `theme.ts`, `sync.ts` + `syncItems.ts` (account sync: newest edit wins, tombstones), `legal.ts` (privacy/terms text, also rendered in-app and as the static site), `supabase/functions/_shared/reminder.ts`. Local-only extras are stored by `extras.ts`; `cloudDocs.ts` is the only network code for them.
 - **iPhone:** `native.ts` (Capacitor facade + our `Mindful` plugin interface), `health.ts`, `nativeReminders.ts`, `nativeInit.ts`, `haptics.ts`. Swift lives in `ios-native/` (source of truth) and is copied into `ios/` by `ios-patch.py`.
 - **Supabase:** schema = `supabase/migrations/*.sql` (mirrors the live project's history exactly), config = `supabase/config.toml`, functions in `supabase/functions/`, DB tests in `supabase/tests/` (+ `scripts/test-db.mjs`), live check = `npm run check:supabase`. Details: `docs/SUPABASE.md`.
 - Design: `src/styles.css` — chunky Duolingo-style dark theme (3D buttons, thick-bordered cards, Nunito, Fluent emoji). Reuse the existing classes (`.card`, `.btn`, `.chip`, `.ig`, `.bar`, `.sheet`, `.overlay`) rather than inventing new styling.
@@ -62,6 +63,7 @@ If the Supabase MCP tools are available, they act on the **user's real project**
 - **Gemini model names churn.** Never hardcode a model; `aiCore.createClient` discovers one from the user's key.
 - **iOS native code:** edit `ios-native/*.swift`, then run `python3 scripts/ios-patch.py` and commit the `ios/` result. `scripts/test-ios.mjs` fails if the copies drift or JS/Swift method names disagree. You cannot compile Swift in this Linux sandbox — rely on the macOS CI job, and tell the user what is unverified on a real device.
 - **Tests must not be racy.** Wait on the specific element/state you mean (not text that also appears elsewhere); beware selectors whose text changes while busy (e.g. "Transcribe" → "Transcribing…"). Don't loosen an assertion to make it pass — find the cause. If a test is flaky, reproduce it (`--grep`, repeat runs), fix the root cause.
+- **App Store listing** lives in `scripts/store-metadata.mjs` (generated into `fastlane/`); no other app's name in it (tested). Privacy policy text in `lib/legal.ts` must match what the app really does — change both together; `test-store.mjs` also keeps the privacy manifest, label, version numbers and dependency notices consistent.
 - **Don't commit** secrets, `.env`, `node_modules`, `dist`, `screenshots/*.png`, `test-results/`.
 - Match the surrounding code style: small modules, comments only where the *why* isn't obvious, TypeScript strict (`noUnusedLocals`).
 

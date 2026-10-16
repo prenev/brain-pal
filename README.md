@@ -107,3 +107,6 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 1. Push sender edge function + cron
 2. Capacitor iOS shell: native haptics, HealthKit mindful minutes
 3. Insights: emotion trends, before/after intensity
+
+## Publishing to the App Store
+Everything needed is prepared: icon, screenshots, listing text, privacy policy/terms/support pages, privacy manifest and release automation. Start with [`docs/APPSTORE.md`](docs/APPSTORE.md) and run `npm run store:check` to see what only you can fill in.

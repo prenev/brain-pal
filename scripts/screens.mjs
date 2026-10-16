@@ -111,6 +111,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('text=Reminders'); await p.click('[role=switch]'); await p.waitForTimeout(500); await snap('reminders'); await p.click('[aria-label=Back]')
   await p.click('.li >> text=Apple Health'); await snap('apple-health'); await p.click('[aria-label=Back]')
   await p.click('.li >> text=Get support'); await snap('support'); await p.click('[aria-label=Back]')
+  await p.click('.li >> text=About & legal'); await snap('about-legal'); await p.click('.li >> text=Privacy Policy'); await snap('legal-privacy'); await p.click('[aria-label=Back]')
   await p.click('.tab >> text=Home'); await p.click('.home-seg >> text=Today'); await p.click('.fab'); await snap('new-entry-menu')
   await p.click('.sheet-item >> text=Park a worry'); await p.fill('textarea', 'What if I forget my notes?'); await snap('park-worry'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
   await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await snap('mood-picker')

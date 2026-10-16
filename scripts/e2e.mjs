@@ -984,6 +984,19 @@ test('iPhone app: the real native tab bar takes over (Liquid Glass on iOS 26); w
   await done(f)
 })
 
+test('About & legal: version, privacy policy, terms, support and open-source notices are readable offline inside the app', async () => {
+  const s = await open(); const p = s.page
+  await tab(p, 'More'); await p.click('.li >> text=About & legal'); await p.waitForSelector('text=Version 1.0.0')
+  assert.deepEqual(await p.$$eval('.list .li', els => els.map(e => e.textContent)), ['Privacy Policy', 'Terms of Service', 'Support', 'Open-source notices'])
+  await p.click('.li >> text=Privacy Policy'); await p.waitForSelector('article.legal h3 >> text=Apple Health')
+  assert.ok(await p.locator('article.legal').innerText().then(t => /never used for advertising/.test(t) && /Delete account/.test(t)), 'says what the app really does')
+  await p.click('text=All documents'); await p.click('.li >> text=Open-source notices'); await p.waitForSelector('article.legal h3 >> text=Fluent Emoji')
+  await p.click('text=All documents'); await p.click('.li >> text=Support'); await p.waitForSelector('text=988')
+  await p.click('[aria-label=Back]'); await p.waitForSelector('.li >> text=About & legal')
+  assert.ok(await p.evaluate(() => document.body.innerText.includes('Brain Pal 1.0.0')), 'More shows the real version')
+  await done(s)
+})
+
 test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {
   const s = await open({ 'bp.thoughts': [rec('c1', 1), rec('c2', 0, { mood: 2 })] }, { native: true }); const p = s.page
   await tab(p, 'Calendar'); await p.waitForSelector('.cal .cell')

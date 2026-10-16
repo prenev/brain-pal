@@ -50,7 +50,7 @@ Email + password works as-is. For magic-link / password-reset emails to open the
 - `ios-native/` – our Swift: `MindfulPlugin.swift` (HealthKit + keep-awake), `MainViewController.swift` (registers it), `App.entitlements`.
 - `scripts/ios-patch.py` – idempotent script that wires those files, the permission strings (`Info.plist`), the `brainpal://` URL scheme and portrait-only into the project. `npm run ios:sync` runs it for you; if you ever delete `ios/` and run `npx cap add ios`, run it again.
 - JS side: `src/lib/native.ts`, `nativeCore.ts` (pure, unit-tested), `health.ts`, `nativeReminders.ts`, `haptics.ts`.
-- App icon / splash: `npm run` … see `scripts/make-store-assets.mjs`; then `npx @capacitor/assets generate --ios`.
+- App icon / splash: `npm run icons` (renders the mascot in `public/icon.svg` into the PWA icons, the 1024 App Store icon and the launch image).
 
 ## Honest status
 - **Verified:** the JavaScript, 8 unit suites, 5 browser tests that simulate the iOS bridge, and a JS↔Swift contract test. On every iOS-related push, the **`iOS build` GitHub Action compiles the whole app (Capacitor + our Swift HealthKit plugin) for the iOS Simulator on a macOS runner — it passes** (unsigned build).
