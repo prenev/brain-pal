@@ -1,3 +1,4 @@
+import { outfitLayers, type Outfit } from './outfits.ts'
 // "Wobbi", the mascot: a soft lavender cloud-brain with stubby arms and legs. Every pose is plain data rendered to SVG,
 // so the app (inline SVG, CSS-animated), the sprite-sheet PNG and the app icon all come from the same drawing.
 // Pure (no imports): unit-tested by scripts/test-pal.mjs.
@@ -152,7 +153,7 @@ function extra(kind: Extra) {
 export function poseSpec(name: PoseName): PoseSpec { return { ...BASE, ...(POSES[name] as Partial<PoseSpec>) } }
 
 /** The mascot as an SVG fragment in a 200×200 box (no <svg> wrapper): for building scenes. */
-export function palBody(name: PoseName): string {
+export function palBody(name: PoseName, outfit?: Outfit): string {
   const p = poseSpec(name)
   const shoulderY = 98
   const arms = limb(44, shoulderY, p.armL, 32, -1, 'arm armL') + limb(156, shoulderY, p.armR, 32, 1, 'arm armR')
@@ -164,14 +165,15 @@ export function palBody(name: PoseName): string {
   const face = `<ellipse cx="71" cy="90" rx="7.5" ry="4.8" fill="${C.cheek}" opacity=".7"/><ellipse cx="129" cy="90" rx="7.5" ry="4.8" fill="${C.cheek}" opacity=".7"/>${brows(p.brows)}<g class="eyes">${eyes(p.eyes)}</g>${mouth(p.mouth)}`
   const cx = 100, cy = 100
   const t = `translate(0 ${p.dy}) translate(${cx} ${cy + 20}) rotate(${p.tilt}) scale(${p.scale}) translate(${-cx} ${-(cy + 20)})`
-  return `<g class="pal-fig" transform="${t}">${legs(p.legs)}${arms}${body}${face}</g>${p.extras.map(extra).join('')}`
+  const worn = outfitLayers(outfit, p.extras)
+  return `<g class="pal-fig" transform="${t}">${worn.back}${legs(p.legs)}${arms}${body}${face}${worn.front}</g>${p.extras.map(extra).join('')}`
 }
 
 /** A complete <svg> for one pose. `size` in px; omit for 100%. */
-export function palSvg(name: PoseName, opts: { size?: number; label?: string; className?: string } = {}): string {
+export function palSvg(name: PoseName, opts: { size?: number; label?: string; className?: string; outfit?: Outfit } = {}): string {
   const dim = opts.size ? ` width="${opts.size}" height="${opts.size}"` : ''
   const aria = opts.label === '' ? ' aria-hidden="true"' : ` role="img" aria-label="${(opts.label ?? POSE_LABEL[name]).replace(/"/g, '&quot;')}"`
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"${dim}${aria} class="${opts.className ?? 'pal-svg'}">${palBody(name)}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"${dim}${aria} class="${opts.className ?? 'pal-svg'}">${palBody(name, opts.outfit)}</svg>`
 }
 
 /** The app icon: Wobbi on a dark rounded-square-ready background (iOS rounds the corners itself, so it is a full-bleed square). 512×512. */

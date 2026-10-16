@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Share2 } from 'lucide-react'
 import { Sheet } from './ui'
 import { cardSvg, inviteMessage, stickerSvg, type ShareCard } from '../lib/share.ts'
+import { lookFromEquip } from '../lib/cards.ts'
+import { useStore } from '../lib/store'
 import { POSE_NAMES, POSE_LABEL, palSvg, type PoseName } from '../lib/pal.ts'
 import { shareImage, shareText, type ShareResult } from '../lib/shareImage'
 
@@ -9,11 +11,12 @@ const note = (r: ShareResult | null) => r === 'saved' ? 'Saved. Check your downl
 
 /** Preview of a share card (numbers only, nothing you wrote) with one Share button. */
 export function ShareCardSheet({ card, onClose }: { card: ShareCard; onClose: () => void }) {
-  const svg = useMemo(() => cardSvg(card), [card])
+  const { equip } = useStore()
+  const svg = useMemo(() => cardSvg(card, lookFromEquip(equip)), [card, equip])
   const [res, setRes] = useState<ShareResult | null>(null)
   return (
     <Sheet onClose={onClose}>
-      <h2 style={{ margin: '0 0 8px' }}>Share your win</h2>
+      <h2 style={{ margin: '0 0 8px' }}>{card.achievement ? card.achievement.title : 'Share your win'}</h2>
       <div className="share-preview" dangerouslySetInnerHTML={{ __html: svg.replace(' width="1080" height="1350"', '') }} />
       <p className="muted small">Only this picture is shared: no entries, no moods, nothing you wrote.</p>
       <button className="btn primary block" onClick={async () => setRes(await shareImage(svg, 1080, 1350, `brain-pal-${card.kind}`, 'Wobbi'))}><Share2 size={18} style={{ display: 'inline', verticalAlign: -3 }} /> Share</button>

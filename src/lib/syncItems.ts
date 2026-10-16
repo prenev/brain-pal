@@ -1,7 +1,7 @@
 import type { Anchor } from './anchors.ts'
 import type { FocusSession } from './focus.ts'
 import type { JournalEntry } from './journal.ts'
-import type { Purchase } from './rewards.ts'
+import { equipIsEmpty, normalizeEquip, type Equip, type Purchase } from './shop.ts'
 import { normalizeRituals, type Ritual } from './rituals.ts'
 import type { Night } from './sleep.ts'
 import { keyOf, stableHash, type Doc, type Item, type Meta } from './sync.ts'
@@ -10,6 +10,8 @@ import { keyOf, stableHash, type Doc, type Item, type Meta } from './sync.ts'
 export interface Extras {
   journal: JournalEntry[]; anchors: Anchor[]; checks: Set<string>; focus: FocusSession[]
   manualNights: Night[]; purchases: Purchase[]; rituals: Ritual[]; themeId: string | null
+  /** worn outfit, card style, title, saving-for goal: travels in the same document as the colour theme */
+  equip?: Equip
 }
 
 export const ID_RITUALS = 'all', ID_THEME = 'theme'
@@ -23,7 +25,7 @@ export function collectItems(x: Extras): Item[] {
     ...x.manualNights.map(d => ({ kind: 'manual_night' as const, id: d.date, data: d })),
     ...x.purchases.map(d => ({ kind: 'purchase' as const, id: d.id, data: d })),
     { kind: 'rituals' as const, id: ID_RITUALS, data: x.rituals },
-    ...(x.themeId ? [{ kind: 'theme' as const, id: ID_THEME, data: { id: x.themeId } }] : []),
+    ...(x.themeId || (x.equip && !equipIsEmpty(x.equip)) ? [{ kind: 'theme' as const, id: ID_THEME, data: { id: x.themeId, ...(x.equip && !equipIsEmpty(x.equip) && { equip: x.equip }) } }] : []),
   ]
 }
 
@@ -56,15 +58,20 @@ export function applyDocs(cur: Extras, docs: Doc[]): Extras {
   for (const d of by('anchor_check')) { if (d.deleted) checks.delete(d.id); else if (str(d.id) && d.id.includes('|')) checks.add(d.id) }
   let rituals = cur.rituals
   const r = by('rituals').filter(d => !d.deleted).at(-1); if (r) rituals = normalizeRituals(r.data)
-  let themeId = cur.themeId
-  const t = by('theme').at(-1); if (t) themeId = t.deleted ? null : obj(t.data) && str(t.data.id) ? t.data.id : themeId
+  let themeId = cur.themeId, rawEquip: unknown = cur.equip
+  const t = by('theme').at(-1)
+  if (t) {
+    if (t.deleted) { themeId = null; rawEquip = null }
+    else if (obj(t.data)) { if (str(t.data.id)) themeId = t.data.id as string; else if (t.data.id === null) themeId = null; rawEquip = t.data.equip ?? null }
+  }
+  const purchases = merge(cur.purchases, p => p.id, by('purchase'), VALID.purchase)
   return {
     journal: merge(cur.journal, e => e.id, by('journal'), VALID.journal),
     anchors: merge(cur.anchors, a => a.id, by('anchor'), VALID.anchor),
     checks,
     focus: merge(cur.focus, f => f.id, by('focus'), VALID.focus),
     manualNights: merge(cur.manualNights, n => n.date, by('manual_night'), VALID.manual_night),
-    purchases: merge(cur.purchases, p => p.id, by('purchase'), VALID.purchase),
-    rituals, themeId,
+    purchases,
+    rituals, themeId, equip: normalizeEquip(rawEquip, purchases),
   }
 }

@@ -84,6 +84,14 @@ export const savePurchases = (p: Purchase[]) => write(K_PURCHASES, p)
 export const loadTheme = (): string | null => { const t = read<unknown>(K_THEME, null); return typeof t === 'string' ? t : null }
 export const saveTheme = (t: string | null) => { try { t === null ? localStorage.removeItem(K_THEME) : localStorage.setItem(K_THEME, JSON.stringify(t)) } catch { /* ignore */ } }
 
+import { normalizeEquip, type Equip } from './shop.ts'
+const K_EQUIP = 'bp.equip', K_ACH_SEEN = 'bp.ach.seen'
+export const loadEquip = (purchases: Purchase[]): Equip => normalizeEquip(read<unknown>(K_EQUIP, null), purchases)
+export const saveEquip = (e: Equip) => write(K_EQUIP, e)
+/** Achievements you have already been congratulated for; null on a brand-new install (then nothing old is announced). */
+export const loadAchSeen = (): string[] | null => { const r = read<unknown>(K_ACH_SEEN, null); return Array.isArray(r) ? r.filter((x): x is string => typeof x === 'string') : null }
+export const saveAchSeen = (ids: string[]) => write(K_ACH_SEEN, ids)
+
 // Focus guard: device-only (the app selection is a device-specific token and never leaves the phone)
 import { normalizeGuard, normalizeEvents, type GuardConfig, type GuardEvent } from './guard.ts'
 const K_GUARD = 'bp.guard', K_GUARD_EVENTS = 'bp.guard.events'

@@ -40,8 +40,8 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 }
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
-  const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard' | 'stickers' | 'feedback'>(initial)
+  const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, achievements, sync, syncNow } = useStore()
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'achievements' | 'legal' | 'guard' | 'stickers' | 'feedback'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -109,7 +109,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers', feedback: 'Sounds & haptics' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Rewards', achievements: 'Rewards', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers', feedback: 'Sounds & haptics' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -126,6 +126,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       </div>}
       {view === 'anchors' && <AnchorsManager />}
       {view === 'coins' && <Wallet />}
+      {view === 'achievements' && <Wallet initial="achievements" />}
       {view === 'journal' && <JournalList onOpen={onJournal} onWrite={() => onJournal()} />}
       {view === 'support' && <Support />}
       {view === 'legal' && <Legal />}
@@ -193,7 +194,8 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Wobbi Pro" value={pro ? 'Active' : 'Upgrade'} onClick={() => openPaywall()} />
         {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
         {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value="Off" onClick={() => openLogin()} />}
-        <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
+        <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins & shop" value={String(coins)} onClick={() => setView('coins')} />
+        <Row icon={<Emoji name="trophy" size={30} />} color="var(--card2)" label="Achievements" value={`${achievements.filter(a => a.unlocked).length}`} onClick={() => setView('achievements')} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />
         <Row icon={<Emoji name="shield" size={30} />} color="var(--card2)" label="Focus guard" value={loadGuard().enabled ? 'On' : 'Off'} onClick={() => setView('guard')} />

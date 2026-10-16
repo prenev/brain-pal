@@ -7,6 +7,8 @@ import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { nativeStub } from './native-stub.mjs'
+import { FAMILIES } from '../src/lib/achievements.ts'
+const ALL_ACH = FAMILIES.flatMap(f => f.tiers.map(t => `${f.id}-${t.at}`))
 
 const root = new URL('..', import.meta.url).pathname
 // The local-mode suite needs a build without Supabase keys; a developer's .env would otherwise put the app behind the login screen.
@@ -34,6 +36,7 @@ const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filt
 async function open(seed, { native = false, time = null, onboarding = false, reply = null, coach = false, pro = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
   if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })   // the first-run screens have their own test
+  await ctx.addInitScript(ids => { try { if (!localStorage.getItem('bp.ach.seen')) localStorage.setItem('bp.ach.seen', JSON.stringify(ids)) } catch { /* ignore */ } }, ALL_ACH)   // achievement cards have their own tests; elsewhere they must not interrupt
   if (!coach) await ctx.addInitScript(() => { try { localStorage.setItem('bp.coach.done', '1') } catch { /* ignore */ } })   // Wobbi's corner coach has its own test
   if (time) await ctx.clock.install({ time })      // for tests whose outcome depends on the time of day: pin it so they don't flake near midnight
   const gemini = { calls: [], mode: 'ok' }
@@ -614,805 +617,128 @@ const seenAll = { 'bp.levels.seen': { calming: 99, reframing: 99, worry: 99, con
 const noon = n => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(12, 0, 0, 0); return d.toISOString() }
 const entriesOn = (day, count) => Array.from({ length: count }, (_, i) => rec(`c${day}-${i}`, 0, { createdAt: new Date(new Date(noon(day)).getTime() + i * 60_000).toISOString() }))
 
-test('coins: derived from your own activity with daily caps, shown in More and the wallet', async () => {
-  const s = await open({ 'bp.thoughts': [...entriesOn(0, 4), ...entriesOn(1, 3), ...entriesOn(2, 3)], ...seenAll }); const p = s.page   // 4 today (cap 3), 3 yesterday, 3 the day before
-  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Coins") >> text=55')   // 3 days x 15 (cap) + 10 for the 3-day streak
-  await p.click('.li >> text=Coins'); await p.waitForSelector('[aria-label="55 coins"]')
-  await p.waitForSelector('text=+25 earned today.'); assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Today: .*Check-ins/)
-  assert.match(await p.locator('.card:has-text("Recently")').innerText(), /3-day streak/)
+const manyDays = (from, to, n) => Array.from({ length: to - from + 1 }, (_, i) => entriesOn(from + i, n)).flat()
+const coinsPage = async p => { await tab(p, 'More'); await p.click('.li >> text=Coins & shop'); await p.waitForSelector('.shop-head') }
+const shopTab = (p, name) => p.click(`.shop-cats .chip:has-text("${name}")`)
+const getIt = async (p, name, label) => { await p.click(`.shop-card:has-text("${name}") button.primary`); await p.waitForSelector('.confirm-buy'); await p.click(`.confirm-buy button.primary:has-text("${label}")`) }
+
+test('coins: derived from your own activity with daily caps, shown in More and the shop', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 4), ...entriesOn(1, 3), ...entriesOn(2, 3)] }); const p = s.page   // 4 today (cap 2), 3 yesterday, 3 the day before
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Coins & shop") >> text=58')   // 3 days x 6 (cap) + 10 first check-in + 20 ten check-ins + 10 three-day streak
+  await p.click('.li >> text=Coins & shop'); await p.waitForSelector('[aria-label="58 coins"]')
+  await p.waitForSelector('text=+36 earned today.'); assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Today: .*Check-ins/)
+  assert.match(await p.locator('.card:has-text("Recently")').innerText(), /Warming up/, 'achievement coins are listed by name')
   assert.equal(await p.locator('.card:has-text("How you earn them")').count(), 1)
   await done(s)
-  const fresh = await open({ 'bp.purchases': 'garbage', 'bp.theme': 7, ...seenAll }); await tab(fresh.page, 'More'); await fresh.page.waitForSelector('.li:has-text("Coins") >> text=0'); await done(fresh)
+  const fresh = await open({ 'bp.purchases': 'garbage', 'bp.theme': 7, 'bp.equip': 'x' }); await tab(fresh.page, 'More'); await fresh.page.waitForSelector('.li:has-text("Coins & shop") >> text=0'); await done(fresh)
 })
 
-test('coins: unlock a theme, it applies and persists, you can switch back; what you can’t afford says why', async () => {
-  const s = await open({ 'bp.thoughts': [...entriesOn(0, 3), ...entriesOn(1, 3), ...entriesOn(2, 3)], ...seenAll }); const p = s.page
+test('shop: buy a colour (confirm first), it applies and persists, switch back for free; what you can’t afford says how far away it is', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(1, 11, 2)] }); const p = s.page      // 142 coins
   const accent = () => p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase())
   assert.equal(await accent(), '#35d07f')
-  await tab(p, 'More'); await p.click('.li >> text=Coins')
-  assert.equal(await p.locator('.shop-item:has-text("Sunset") button.primary').isDisabled(), false); await p.click('.shop-item:has-text("Ocean") button.primary')
-  await p.waitForSelector('text=Ocean unlocked and switched on.'); await p.waitForSelector('[aria-label="15 coins"]'); assert.equal(await accent(), '#4aa8ff')
-  await p.waitForSelector('.shop-item:has-text("Ocean") >> text=In use — tap to switch back')
-  assert.equal(await p.locator('.shop-item:has-text("Sunset") button.primary').isDisabled(), true); await p.waitForSelector('.shop-item:has-text("Sunset") >> text=You need 25 more coins.')
-  assert.equal(await p.locator('.shop-item:has-text("My treat") button.primary').isDisabled(), true)
-  await reload(p); assert.equal(await accent(), '#4aa8ff', 'the theme persists')
-  await tab(p, 'More'); await p.click('.li >> text=Coins'); await p.click('.shop-item:has-text("Ocean") button:has-text("In use")'); assert.equal(await accent(), '#35d07f')
-  await p.waitForSelector('.shop-item:has-text("Ocean") >> text=Use this colour'); await p.click('.shop-item:has-text("Ocean") button:has-text("Use this colour")'); assert.equal(await accent(), '#4aa8ff', 'owned, so switching back and forth is free')
-  assert.equal(await p.locator('[aria-label="15 coins"]').count(), 1)
+  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]'); await shopTab(p, 'Colours')
+  assert.equal(await p.locator('.shop-card').count(), 8, 'eight colours')
+  await p.click('.shop-card:has-text("Ocean") button.primary'); await p.waitForSelector('.confirm-buy >> text=142 coins now · 60 for this · 82 left'); await p.click('.confirm-buy >> text=Not now')
+  assert.equal(await accent(), '#35d07f', 'cancelling buys nothing'); await p.waitForSelector('[aria-label="142 coins"]')
+  await getIt(p, 'Ocean', 'Get it · 60 coins')
+  await p.waitForSelector('text=Ocean is yours and switched on.'); await p.waitForSelector('[aria-label="92 coins"]'); assert.equal(await accent(), '#4aa8ff')   // 142 - 60, +10 for the first-find achievement
+  await p.waitForSelector('.shop-card:has-text("Ocean") button:has-text("In use")')
+  await shopTab(p, 'Card styles'); await p.waitForSelector('.shop-card:has-text("Galaxy") button.primary >> text=308 more'); await p.click('.shop-card:has-text("Galaxy") button.primary')
+  await p.waitForSelector('.confirm-buy >> text=You need 308 more coins.'); assert.equal(await p.locator('.confirm-buy button.primary').isDisabled(), true); await p.click('.confirm-buy >> text=Not now')
+  await reload(p); assert.equal(await accent(), '#4aa8ff', 'the colour persists')
+  await coinsPage(p); await shopTab(p, 'Colours'); await p.click('.shop-card:has-text("Ocean") button:has-text("In use")'); assert.equal(await accent(), '#35d07f')
+  await p.click('.shop-card:has-text("Ocean") button:has-text("Use")'); assert.equal(await accent(), '#4aa8ff', 'owned, so switching back and forth is free')
+  assert.equal(await p.locator('[aria-label="92 coins"]').count(), 1)
   await done(s)
-  // a theme id in storage that you never bought does nothing
-  const t = await open({ 'bp.theme': 'theme-berry', ...seenAll }); assert.equal(await t.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase()), '#35d07f'); await done(t)
+  // a colour in storage that you never bought does nothing
+  const t = await open({ 'bp.theme': 'theme-berry' }); assert.equal(await t.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase()), '#35d07f'); await done(t)
+  // colours bought in an older version (cheaper then) are still yours
+  const old = await open({ 'bp.purchases': [{ id: 'o1', itemId: 'theme-sunset', at: '2026-09-01T10:00:00.000Z', cost: 40 }], 'bp.theme': 'theme-sunset' }); assert.equal(await old.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase()), '#ffa63d'); await done(old)
 })
 
-test('coins: a rest day covers a missed day so your streak keeps going (bought in the shop)', async () => {
-  const s = await open({ 'bp.thoughts': [...entriesOn(0, 3), ...entriesOn(2, 3), ...entriesOn(3, 3)], ...seenAll }); const p = s.page      // nothing yesterday
+test('shop: Wobbi’s wardrobe — try an outfit on, buy it, it is worn everywhere, take it off, it persists; unowned or wrong-slot pieces in storage are ignored', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(1, 11, 2)] }); const p = s.page      // 142 coins
+  const worn = () => p.locator('.pal svg .acc').count()
+  assert.equal(await worn(), 0, 'nothing worn at first')
+  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]')
+  assert.equal(await p.locator('.shop-card').count(), 17, 'seventeen outfit pieces')
+  assert.equal((await p.locator('.shop-card .rarity').allInnerTexts()).filter(t => /^legendary$/i.test(t)).length, 2)
+  await p.click('.shop-card:has-text("Cosy beanie") >> text=Try on'); await p.waitForSelector('.tryon >> text=Trying on Cosy beanie'); await p.waitForSelector('.shop-head .acc-beanie')
+  assert.equal(await p.locator('.shop-card:has-text("Cosy beanie") .acc-beanie').count(), 1, 'the card shows the piece on Wobbi')
+  await p.click('[aria-label="Stop trying on"]'); assert.equal(await p.locator('.shop-head .acc-beanie').count(), 0, 'trying on costs nothing and stops')
+  await getIt(p, 'Cosy beanie', 'Get it · 60 coins'); await p.waitForSelector('[aria-label="92 coins"]'); await p.waitForSelector('.shop-head .acc-beanie')
+  await p.click('.shop-card:has-text("Cosy beanie") button:has-text("Take off")'); assert.equal(await p.locator('.shop-head .acc-beanie').count(), 0)
+  await p.click('.shop-card:has-text("Cosy beanie") button:has-text("Wear")'); await p.waitForSelector('.shop-head .acc-beanie')
+  await getIt(p, 'Sporty cap', 'Get it · 60 coins'); await p.waitForSelector('.shop-head .acc-beanie')   // the hat slot is taken, so the second hat is owned but not put on
+  assert.equal(await p.locator('.shop-head .acc-cap').count(), 0); await p.click('.shop-card:has-text("Sporty cap") button:has-text("Wear")'); await p.waitForSelector('.shop-head .acc-cap'); assert.equal(await p.locator('.shop-head .acc-beanie').count(), 0, 'one hat at a time')
+  await p.click('[aria-label=Back]'); await tab(p, 'Home'); await p.waitForSelector('.today')
+  assert.ok(await p.locator('.pal svg .acc-cap').count() > 0, 'Wobbi wears it on Home too')
+  await reload(p); assert.ok(await p.locator('.pal svg .acc-cap').count() > 0, 'and after a restart')
+  await done(s)
+  const junk = await open({ 'bp.equip': { outfit: { head: 'crown', face: 'crown' }, card: 'card-galaxy', title: 'title-master' } }); assert.equal(await junk.page.locator('.pal svg .acc').count(), 0, 'not owned: not worn'); await done(junk)
+})
+
+test('shop: save up for something (a goal with progress), the title and card style go on share cards', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(1, 20, 2)], 'bp.ach.seen': ALL_ACH }); const p = s.page
+  await coinsPage(p); await shopTab(p, 'Titles')
+  await p.click('.shop-card:has-text("Zen Master") >> text=Save up'); await p.waitForSelector('.goal >> text=Saving for Zen Master'); await p.waitForSelector('.goal >> text=/\\d+ more coins to go\\./')
+  await reload(p); await coinsPage(p); await p.waitForSelector('.goal >> text=Saving for Zen Master')
+  await shopTab(p, 'Titles'); await getIt(p, 'Calm Captain', 'Get it · 60 coins'); await p.waitForSelector('.shop-card:has-text("Calm Captain") button:has-text("In use")')
+  await shopTab(p, 'Card styles'); await getIt(p, 'Aurora', 'Get it · 160 coins'); await p.waitForSelector('.shop-card:has-text("Aurora") button:has-text("In use")')
+  await p.click('.seg [role=tab]:has-text("Achievements")'); await p.click('.ach-medal[aria-label^="First check-in"]'); await p.waitForSelector('.share-preview svg')
+  const svg = await p.locator('.share-preview').innerHTML(); assert.ok(svg.includes('Calm Captain'), 'the equipped title is on the card'); assert.ok(svg.includes('#123a3a'), 'and the bought card style')
+  await done(s)
+})
+
+test('achievements: a new one pops up as a shareable card with its coins, once; the Achievements list shows earned and locked ones', async () => {
+  const s = await open({ 'bp.ach.seen': [] }); const p = s.page
+  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate >> text=Entry saved!'); await p.click('.celebrate .btn.primary')
+  await p.waitForSelector('.celebrate >> text=Achievement unlocked!'); await p.waitForSelector('.cel-card svg'); assert.match(await p.locator('.cel-card').innerHTML(), /First check-in/); assert.match(await p.locator('.cel-card').innerHTML(), /BRONZE/)
+  await p.waitForSelector('.celebrate >> text=+10 coins')
+  await p.click('.celebrate .btn:has-text("Share")'); await p.waitForSelector('.share-preview svg'); assert.equal(await p.locator('.share-preview svg').getAttribute('viewBox'), '0 0 1080 1350'); await p.click('.sheet >> text=Close')
+  await p.click('.celebrate .btn.primary'); await p.waitForSelector('.celebrate', { state: 'detached' })
+  await reload(p); await p.waitForTimeout(500); assert.equal(await p.locator('.celebrate').count(), 0, 'congratulated once')
+  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Achievements") >> text=1'); await p.click('.li >> text=Achievements'); await p.waitForSelector('.ach-sum')
+  assert.match(await p.locator('.ach-sum').innerText(), /1\s*\/\s*\d+/); assert.equal(await p.locator('.ach-fam').count(), 12, 'twelve areas: check-ins, reframing, calming, journal, focus, worries, anchors, sleep, streak, showing up, Focus guard, collector')
+  await p.click('.ach-medal[aria-label^="First check-in"]'); await p.waitForSelector('.share-preview svg'); await p.click('.sheet >> text=Close')
+  await p.click('.ach-medal[aria-label^="Getting to know me"]'); await p.waitForSelector('.sheet >> text=1 of 10 · worth 20 coins'); await p.click('.sheet >> text=Close')
+  await done(s)
+})
+
+test('shop: a rest day covers a missed day so your streak keeps going', async () => {
+  const s = await open({ 'bp.thoughts': [...entriesOn(0, 2), ...manyDays(2, 12, 2)] }); const p = s.page      // nothing yesterday; 142 coins
   await p.waitForSelector('[aria-label="1 day streak"]')
-  await tab(p, 'More'); await p.click('.li >> text=Coins'); await p.waitForSelector('[aria-label="45 coins"]')
-  await p.selectOption('[aria-label="Day to cover"]', { label: 'Yesterday' }); await p.click('.shop-item:has-text("Rest day") button.primary')
-  await p.waitForSelector('text=Rest day added'); await p.waitForSelector('[aria-label="25 coins"]')       // -30, and +10 for the 3-day streak it creates
-  await p.waitForSelector('.shop-item:has-text("Rest day") >> text=You need 5 more coins.'); assert.equal(await p.locator('.shop-item:has-text("Rest day") button.primary').isDisabled(), true, 'not enough coins left for another')
-  await tab(p, 'Home'); await p.waitForSelector('[aria-label="4 day streak"]')
-  await reload(p); await p.waitForSelector('[aria-label="4 day streak"]')
+  await coinsPage(p); await p.waitForSelector('[aria-label="142 coins"]'); await shopTab(p, 'Boosts')
+  await p.click('.shop-card:has-text("Rest day") button.primary'); await p.waitForSelector('.confirm-buy'); await p.selectOption('[aria-label="Day to cover"]', { label: 'Yesterday' }); await p.click('.confirm-buy button.primary:has-text("Get it · 40 coins")')
+  await p.waitForSelector('text=Rest day added'); await p.waitForSelector('[aria-label="102 coins"]')
+  await tab(p, 'Home'); await p.waitForSelector('[aria-label="13 day streak"]')
+  await reload(p); await p.waitForSelector('[aria-label="13 day streak"]')
   await done(s)
 })
 
-test('coins: a treat you name yourself, and a quiet +N when you earn', async () => {
-  const s = await open({ 'bp.thoughts': [...entriesOn(1, 3), ...entriesOn(2, 3), ...entriesOn(3, 3)], ...seenAll }); const p = s.page  // 45 + 10 (3-day streak) = 55
-  await tab(p, 'More'); await p.click('.li >> text=Coins')
-  assert.equal(await p.locator('.shop-item:has-text("My treat") button.primary').isDisabled(), true); await p.waitForSelector('.shop-item:has-text("My treat") >> text=Name your treat first.')
-  await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.shop-item:has-text("My treat") button.primary')
-  await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="30 coins"]')
+test('shop: a treat you name yourself, and a quiet +N when you earn', async () => {
+  const s = await open({ 'bp.thoughts': [...manyDays(1, 3, 3), ...manyDays(4, 12, 2)] }); const p = s.page      // 142 coins
+  await coinsPage(p); await shopTab(p, 'Boosts'); await p.waitForSelector('[aria-label="142 coins"]')
+  await p.click('.shop-card:has-text("My treat") button.primary'); await p.waitForSelector('.confirm-buy'); assert.equal(await p.locator('.confirm-buy button.primary').isDisabled(), true); await p.waitForSelector('.confirm-buy >> text=Name your treat first.')
+  await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.confirm-buy button.primary:has-text("Get it · 30 coins")')
+  await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="112 coins"]')
   assert.equal(await p.locator('.coin-toast').count(), 0, 'spending never pops a toast')
-  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+5 coins')
+  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+3 coins')
   await done(s)
-  const f = await open(seenAll); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
-})
-
-
-const until = async (fn, ms = 12000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return; await new Promise(r => setTimeout(r, 100)) } throw new Error(`timed out waiting for: ${fn}`) }
-const hasDoc = (acct, kind) => [...acct.rows.keys()].some(k => k.startsWith(kind + '|'))
-const bodyOf = (acct, kind) => [...acct.rows.values()].find(r => r.kind === kind && !r.deleted)?.data?.body
-const moreRoot = async p => { await tab(p, 'More'); if (await p.locator('.topbar [aria-label=Back]').count()) await p.click('.topbar [aria-label=Back]') }
-const syncNowUi = async p => { await moreRoot(p); await p.click('.li >> text=Account'); await p.click('button:has-text("Sync now")'); await p.waitForSelector('[aria-label="Sync status"] >> text=/Everything is saved|Couldn’t reach/') }
-const openJournalList = async p => { await moreRoot(p); await p.click('.li >> text=Journal') }
-
-test('cloud sync: what you write on one device appears on another; edits and deletes follow', async () => {
-  const account = fakeAccount()
-  const A = await openCloud({ signedIn: true, account, seed: seenAll }); const a = A.page
-  await openJournal(a); await a.fill('[aria-label=Title]', 'From my phone'); await a.fill('[aria-label="Journal entry"]', 'Written on device A'); await saveJournalEntry(a)
-  await a.click('text=Choose your daily anchors'); await a.click('.sheet .chip >> text=Drink water'); await a.click('button:has-text("Done")')
-  await until(() => hasDoc(account, 'journal') && hasDoc(account, 'anchor'))
-  assert.ok(account.rows.has('rituals|all'), 'settings sync too')
-  for (const r of account.rows.values()) assert.equal(r.deleted, r.data === null, 'the shape the real table accepts')
-
-  const B = await openCloud({ signedIn: true, account, seed: seenAll }); const b = B.page      // a second device, empty
-  await tab(b, 'More'); await b.waitForSelector('.li:has-text("Journal") >> text=1')
-  await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("Written on device A")'); await b.click('[aria-label=Back]')
-  await tab(b, 'Home'); await b.waitForSelector('[role=checkbox][aria-label="Drink water"]')
-
-  await openJournalList(a); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'Edited on device A'); await a.click('button:has-text("Save")')
-  await until(() => bodyOf(account, 'journal') === 'Edited on device A')
-  await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("Edited on device A")')
-  assert.equal(await b.locator('.jentry').count(), 1, 'edited, not duplicated')
-
-  a.once('dialog', d => d.accept()); await a.click('.jentry'); await a.click('[aria-label="Delete entry"]')
-  await until(() => [...account.rows.values()].some(r => r.kind === 'journal' && r.deleted))
-  await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('text=Nothing here yet')
-  await done(A); await done(B)
-})
-
-test('cloud sync: offline changes wait safely and sync later; the later edit wins a conflict', async () => {
-  const account = fakeAccount()
-  const A = await openCloud({ signedIn: true, account, seed: seenAll }), B = await openCloud({ signedIn: true, account, seed: seenAll }); const a = A.page, b = B.page
-  await openJournal(a); await a.fill('[aria-label="Journal entry"]', 'first draft'); await saveJournalEntry(a)
-  await until(() => bodyOf(account, 'journal') === 'first draft')
-  await syncNowUi(b); await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("first draft")')
-
-  account.down = true                                                                  // device A loses its connection
-  await openJournalList(a); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'A edit while offline'); await a.click('button:has-text("Save")')
-  await moreRoot(a); await a.click('.li >> text=Account')
-  await a.waitForSelector('[aria-label="Sync status"] >> text=/safe on this device/', { timeout: 15000 })
-  assert.equal(bodyOf(account, 'journal'), 'first draft', 'nothing reached the server')
-  await a.click('[aria-label=Back]'); await a.click('.li >> text=Journal'); await a.waitForSelector('.jentry:has-text("A edit while offline")')   // still there, still works
-  account.down = false; await syncNowUi(a)
-  await until(() => bodyOf(account, 'journal') === 'A edit while offline')
-
-  await b.waitForTimeout(30)                                                           // B edits later, from its older copy
-  await b.click('[aria-label=Back]'); await b.click('.li >> text=Journal'); await b.click('.jentry'); await b.fill('[aria-label="Journal entry"]', 'B edit, made later'); await b.click('button:has-text("Save")')
-  await syncNowUi(b); await until(() => bodyOf(account, 'journal') === 'B edit, made later')
-  await syncNowUi(a); await a.click('[aria-label=Back]'); await a.click('.li >> text=Journal'); await a.waitForSelector('.jentry:has-text("B edit, made later")')
-  assert.equal(await a.locator('.jentry').count(), 1, 'one entry on both, the later edit won')
-  await done(A); await done(B)
-})
-
-test('cloud sync: an edit made while a sync is already running is not forgotten (it is retried, not left waiting for the next change)', async () => {
-  const account = fakeAccount()
-  const A = await openCloud({ signedIn: true, account, seed: { ...seenAll, 'bp.journal': [{ id: 'j1', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'A note', body: 'before', mood: null, tags: [], prompt: null }] } }); const a = A.page
-  await until(() => hasDoc(account, 'journal'))
-  account.down = true; account.delay = 1000                                              // offline AND slow: a run hangs for a few seconds, then fails
-  await moreRoot(a); await a.click('.li >> text=Account'); await a.click('button:has-text("Sync now")'); await a.waitForSelector('text=Syncing your journal')
-  await a.click('[aria-label=Back]'); await a.click('.li >> text=Journal'); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'edited mid-sync'); await a.click('button:has-text("Save")')   // the run above is still in flight
-  await moreRoot(a); await a.click('.li >> text=Account')
-  await a.waitForSelector('[aria-label="Sync status"] >> text=/1 change is safe on this device/', { timeout: 40000 })
-  account.down = false; account.delay = 0; await a.click('button:has-text("Sync now")')
-  await until(() => account.rows.get('journal|j1')?.data?.body === 'edited mid-sync')
-  await done(A)
-})
-
-test('cloud sync: data that predates sync is pushed on first sign-in; sign-out clears this device (and warns about unsynced changes)', async () => {
-  const account = fakeAccount()
-  const entry = { id: 'old-j', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Older entry', body: 'written before sync existed', mood: null, tags: [], prompt: null }
-  const A = await openCloud({ signedIn: true, account, seed: { ...seenAll, 'bp.journal': [entry], 'bp.purchases': [{ id: 'p-old', itemId: 'treat', at: new Date().toISOString(), cost: 25, note: 'tea' }] } }); const a = A.page
-  await until(() => hasDoc(account, 'journal') && hasDoc(account, 'purchase')); assert.equal(account.rows.get('journal|old-j').data.title, 'Older entry')
-
-  account.down = true; await openJournal(a); await a.fill('[aria-label="Journal entry"]', 'not synced yet'); await saveJournalEntry(a)
-  await moreRoot(a); await a.click('.li >> text=Account'); await a.waitForSelector('[aria-label="Sync status"] >> text=/safe on this device/', { timeout: 15000 })
-  let message = ''; a.once('dialog', d => { message = d.message(); d.dismiss() }); await a.click('button:has-text("Sign out")')
-  await until(() => message !== ''); assert.match(message, /haven’t been saved|hasn’t been saved/); await a.waitForSelector('.topbar')
-  assert.ok(await a.evaluate(() => (JSON.parse(localStorage.getItem('bp.journal') ?? '[]')).length) >= 2, 'declining keeps your data on the device')
-
-  account.down = false; await a.click('[aria-label="Sync status"] >> button:has-text("Sync now")'); await a.waitForSelector('[aria-label="Sync status"] >> text=Everything is saved')
-  await a.click('button:has-text("Sign out")'); await a.waitForSelector('.li >> text=Sync across devices')   // back to offline mode, nothing on this device
-  for (const k of ['bp.journal', 'bp.purchases', 'bp.sync.meta', 'bp.anchors', 'bp.rituals']) assert.equal(await a.evaluate(key => localStorage.getItem(key), k), null, `${k} is cleared on sign-out`)
-  assert.equal(await a.evaluate(() => document.documentElement.style.getPropertyValue('--accent')), '', 'theme reset')
-  await done(A)
-})
-
-
-test('first run: Wobbi explains the app in skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
-  const s = await open(null, { onboarding: true }); const p = s.page
-  await p.waitForSelector('[aria-label="Welcome to Wobbi"]'); await p.waitForSelector('text=Hi, I’m Wobbi!'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
-  assert.ok(await p.locator('.onboarding .pal svg').count() >= 1, 'Wobbi explains it')
-  for (const t of ['Check in with one tap', 'Calm down, together', 'Grow a little each day', 'Your data stays yours']) { await p.click('button:has-text("Next")'); await p.waitForSelector(`.onboarding h1:has-text("${t}")`) }
-  assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
-  await p.click('button:has-text("Next")'); await p.waitForSelector('text=Pick up to three daily anchors')
-  for (const l of ['Slow breathing', 'Walk 10 minutes', 'Get some sunlight', 'Write one line']) await p.click(`.onboarding .chip:has-text("${l}")`)
-  assert.equal(await p.locator('.onboarding .chip.on').count(), 3, 'at most three')
-  await p.click('button:has-text("Start")'); await p.waitForSelector('.topbar'); await p.waitForSelector('[role=checkbox][aria-label="Slow breathing"]')
-  assert.equal(await p.locator('[role=checkbox]').count(), 3); assert.equal(await p.evaluate(() => !!localStorage.getItem('bp.onboarded')), true)
-  await reload(p); assert.equal(await p.locator('.onboarding').count(), 0, 'shown once')
-  await done(s)
-  const skip = await open(null, { onboarding: true }); await skip.page.waitForSelector('.onboarding'); await skip.page.click('button:has-text("Skip")'); await skip.page.waitForSelector('.topbar')
-  assert.equal(await skip.page.locator('[role=checkbox]').count(), 0, 'skipping adds nothing'); await done(skip)
-  const existing = await open({ 'bp.thoughts': [rec('t', 1)] }, { onboarding: true }); await existing.page.waitForSelector('.topbar'); assert.equal(await existing.page.locator('.onboarding').count(), 0, 'people with data never see it')
-  assert.equal(await existing.page.evaluate(() => !!localStorage.getItem('bp.onboarded')), true); await done(existing)
-})
-
-test('reduced motion: no entrance animations or long transitions', async () => {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' }); const page = await ctx.newPage()
-  await ctx.addInitScript(() => localStorage.setItem('bp.onboarded', '1')); await page.goto(URL_); await page.waitForSelector('.topbar')
-  await tab(page, 'Calendar'); await page.click('.fab'); await page.waitForSelector('.sheet')
-  const ms = await page.evaluate(() => { const cs = getComputedStyle(document.querySelector('.sheet')); return [parseFloat(cs.animationDuration) * (cs.animationDuration.endsWith('ms') ? 1 : 1000), parseFloat(getComputedStyle(document.querySelector('.fab')).transitionDuration) * 1000] })
-  assert.ok(ms[0] < 5 && ms[1] < 5, `animations/transitions are effectively off: ${ms}`)
-  await ctx.close()
-  const normal = await browser.newContext({ viewport: { width: 390, height: 844 } }); const q = await normal.newPage()
-  await normal.addInitScript(() => localStorage.setItem('bp.onboarded', '1')); await q.goto(URL_); await q.waitForSelector('.topbar'); await tab(q, 'Calendar'); await q.click('.fab'); await q.waitForSelector('.sheet')
-  assert.ok(await q.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.sheet')).animationDuration) > 0.1), 'still animated by default'); await normal.close()
-})
-
-
-test('tap targets: every control is big enough to hit (>= 24 px, primary controls >= 44 px)', async () => {
-  const s = await open({ 'bp.thoughts': [rec('t', 0)], 'bp.worries': [plan('w1', 'Email the landlord')] }); const p = s.page
-  const small = []
-  const scan = async label => small.push(...await p.evaluate(label => [...document.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea, [role=checkbox], [role=switch], [role=tab], [role=radio]')].filter(el => {
-    const r = el.getBoundingClientRect(), st = getComputedStyle(el); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && r.bottom > 0 && r.top < innerHeight
-  }).map(el => {
-    const r = el.getBoundingClientRect(), primary = el.matches('.btn, .tab, .fab, .quickmood button, .arow, .li, [role=tab], [role=switch]')
-    const min = primary ? 44 : 24, w = Math.round(r.width), h = Math.round(r.height)
-    return (el.matches('[role=switch]') ? h < 28 : (primary ? h < min : Math.min(w, h) < min)) || (!el.matches('[role=switch], input, textarea, select, .chip, .linkbtn') && Math.max(w, h) < 24) ? `${label}: ${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]} "${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24)}" ${w}x${h}` : null
-  }).filter(Boolean), label))
-  await scan('Home'); for (const t of ['Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(120); await scan(t) }
-  await fabMenu(p); await p.waitForSelector('.sheet'); await scan('menu'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
-  await newEntry(p, { mood: 3 }); await scan('editor')
-  if (small.length) console.log('    too small:\n      ' + [...new Set(small)].join('\n      '))
-  assert.deepEqual([...new Set(small)], [], 'controls that are too small to tap comfortably')
-  await done(s)
-})
-
-
-test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
-  const s = await open(); const p = s.page
-  // support options are one tap away from the very first SOS screen, and don't disturb the flow
-  await p.click('[aria-label^="Anxious right now"]'); await p.click('text=Need more support right now?'); await p.waitForSelector('text=You don’t have to do this alone'); await p.waitForSelector('a[href="tel:988"]')
-  await p.click('text=Hide support options'); await p.click('[aria-label=Close]')
-  await p.click('[aria-label^="Anxious right now"]'); await p.fill('input[type=range]', '8'); await p.click('text=Continue'); await p.click('.tool >> text=Slow breathing')
-  await p.waitForTimeout(11000); await p.click('text=End session')
-  await p.fill('input[type=range]', '3'); await p.click('button:has-text("Save")'); await p.waitForSelector('text=Down 5 points')
-  await p.click('button:has-text("One small step")'); await p.waitForSelector('text=What’s the tiniest next step?'); await p.click('[aria-label="One small step"] [aria-label=Close]'); await p.waitForSelector('text=Down 5 points')   // offered after relief, result kept
-  await p.click('button:has-text("Done")'); await tab(p, 'Stats')
-  await p.waitForSelector('text=/−5/'); await reload(p)
-  await done(s)
-})
-
-test('photos attach, persist and show in the gallery', async () => {
-  const s = await open(); const p = s.page
-  await newEntry(p, { mood: 4 }); await toStep(p, 3)
-  await p.setInputFiles('label:has-text("From gallery") input', { name: 'a.png', mimeType: 'image/png', buffer: PNG })
-  await p.waitForSelector('.photos img'); await save(p)
-  await reload(p); await tab(p, 'More'); await p.click('.li >> text=Photo Gallery'); await p.waitForSelector('.gallery img')
-  assert.ok(await p.evaluate(async () => (await (await fetch(document.querySelector('.gallery img').src)).blob()).size) > 0)
-  await done(s)
-})
-
-test('export downloads valid JSON without media blobs', async () => {
-  const s = await open(); const p = s.page
-  await newEntry(p, { mood: 3, thought: 'export me' }); await save(p)
-  await tab(p, 'More'); const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.li >> text=Export data')])
-  const data = JSON.parse(readFileSync(await dl.path(), 'utf8'))
-  assert.equal(data.thoughts.length, 1); assert.equal(data.thoughts[0].thought, 'export me'); assert.ok(!('photos' in data.thoughts[0])); assert.ok(Array.isArray(data.worries))
-  await done(s)
-})
-
-test('iPhone app mode: boots without a service worker, styles the status bar, never crashes on missing plugins', async () => {
-  const s = await open(null, { native: true }); const p = s.page
-  assert.equal(await p.evaluate(() => window.Capacitor.getPlatform()), 'ios')
-  assert.equal((await p.evaluate(() => navigator.serviceWorker.getRegistrations())).length, 0, 'no service worker inside the app')
-  await p.waitForFunction(() => window.__native.some(c => c.plugin === 'StatusBar' && c.method === 'setStyle'))
-  assert.equal((await calls(p, 'StatusBar', 'setStyle'))[0].options.style, 'DARK')
-  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) await tab(p, t)
-  await done(s)
-})
-
-test('feedback: buttons and chips tick on the Taptic Engine and sliders tick as you drag (silently), and both switches work in More → Sounds & haptics', async () => {
-  const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
-  await reload(p)
-  const impacts = () => calls(p, 'Haptics', 'impact')
-  const n0 = (await impacts()).length
-  await tab(p, 'Calendar'); await p.waitForSelector('.cal'); const n00 = (await impacts()).length
-  await p.click('.fab'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n00)
-  assert.equal((await impacts()).at(-1).options.style, 'MEDIUM', 'the + button is a firm tap'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
-  await tab(p, 'Home'); await p.click('[aria-label="Log mood: meh"]'); await p.waitForSelector('.wiz-body')
-  const n1 = (await impacts()).length; await p.click('.ig >> text=anxious'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n1)
-  assert.equal((await impacts()).at(-1).options.style, 'LIGHT', 'choosing a feeling is a light tick')
-  const n2 = (await impacts()).length; await p.locator('input[type=range]').first().fill('20'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n2)   // a slider tick
-  assert.equal(await p.evaluate(() => window.__osc), 0, 'taps are silent: sound is only for celebrations')
-  await p.click('[aria-label=Close]')
-  await tab(p, 'More'); await p.click('.li >> text=Sounds & haptics'); await p.waitForSelector('[role=switch][aria-label="Sound effects"]')
-  assert.equal(await p.locator('[role=switch][aria-checked=true]').count(), 2, 'both on by default')
-  await p.click('[role=switch][aria-label="Sound effects"]'); await p.click('[role=switch][aria-label="Haptic feedback"]')
-  assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem('bp.fx'))), { sound: false, haptics: false })
-  const o = await p.evaluate(() => window.__osc), h = (await impacts()).length
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await p.click('[aria-label=Back]')
-  assert.equal(await p.evaluate(() => window.__osc), o, 'no sound when off'); assert.equal((await impacts()).length, h, 'no taps when off')
-  await done(s)
-})
-
-test('feedback: a celebration plays the fanfare (a bigger one for a level-up)', async () => {
-  const seed = { 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 } }
-  const s = await open(seed, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
-  await p.evaluate(() => localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 0, reframing: 1, worry: 0, consistency: 1 }))); await reload(p)   // the level-up has not been seen yet
-  await p.waitForSelector('.celebrate >> text=Reframing → Level 2')
-  assert.ok(await p.evaluate(() => window.__osc) >= 7, 'the level-up fanfare plays its notes')
-  await done(s)
-})
-
-test('iPhone app mode: breathing uses the Taptic Engine and keeps the screen awake', async () => {
-  const s = await open(null, { native: true }); const p = s.page
-  await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6')
-  const taps = (await calls(p, 'Haptics', 'impact')).length; await p.click('button:has-text("Start")')   // our own button taps are separate from the breathing pattern
-  await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= n + 5, taps, { timeout: 8000 })
-  const raw = (await calls(p, 'Haptics', 'impact')).slice(taps + 1), t0 = raw[0].at
-  const impacts = raw.slice(0, 4).map(c => c.options.style)
-  assert.deepEqual(impacts, ['LIGHT', 'MEDIUM', 'MEDIUM', 'HEAVY'], 'inhale swells light → heavy; calls: ' + JSON.stringify(raw.map(c => [c.options.style, c.at - t0])))
-  assert.equal((await calls(p, 'Mindful', 'keepAwake'))[0].options.enabled, true)
-  await p.click('button:has-text("End session")')
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'keepAwake').at(-1)?.options.enabled === false)
-  await done(s)
-})
-
-test('iPhone app mode: Apple Health saves mindful minutes (only when connected, never twice)', async () => {
-  const s = await open(null, { native: true }); const p = s.page
-  await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /Off/)
-  await p.click('.li >> text=Apple Health'); await p.waitForSelector('text=Mindful Minutes')
-  // a session before connecting is NOT written
-  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
-  await p.waitForSelector('text=Nice work'); assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 0)
-  // connect
-  await tab(p, 'More'); await p.click('.li >> text=Apple Health'); await p.click('[role=switch]'); await p.waitForSelector('text=Connected.')
-  assert.equal((await calls(p, 'Mindful', 'requestAuthorization')).length, 1)
-  // backfill saves the earlier session once, then reports nothing left
-  await p.click('text=Save past sessions'); await p.waitForSelector('text=Saved 1 past session')
-  const first = (await calls(p, 'Mindful', 'saveSession'))[0].options
-  assert.ok(first.end > first.start && Math.abs((first.end - first.start) / 1000 - 10) < 3, 'start/end span the session')
-  await p.click('text=Save past sessions'); await p.waitForSelector('text=Everything is already saved'); assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 1)
-  // a new session is written automatically
-  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'saveSession').length === 2)
-  // switch off: later sessions are not written
-  await tab(p, 'More'); await p.click('.li >> text=Apple Health'); await p.click('[role=switch]')
-  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")'); await p.waitForTimeout(500)
-  assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 2)
-  await reload(p); await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /Off/)
-  await done(s)
-})
-
-const scheduled = p => p.evaluate(() => {
-  const last = window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'schedule').at(-1)
-  return last ? last.options.notifications.map(n => ({ id: n.id, h: new Date(n.schedule.at).getHours(), m: new Date(n.schedule.at).getMinutes(), dow: new Date(n.schedule.at).getDay(), route: n.extra && n.extra.route, title: n.title, day: new Date(n.schedule.at).toDateString() })) : null
-})
-// notifications still to come from one daily ritual at h:m, from the browser's own clock
-const remainingToday = (p, h, m) => p.evaluate(([h, m]) => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() < h * 60 + m ? 1 : 0 }, [h, m])
-
-test('iPhone app: rituals — breathe at 07:00 and at night are scheduled on-device, adjustable, and quiet once done', async () => {
-  const s = await open(null, { native: true }); const p = s.page
-  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Reminders") >> text=Off'); await p.click('.li >> text=Reminders')
-  for (const l of ['Morning breathe', 'Evening breathe', 'Daily check-in', 'Anchors nudge']) await p.waitForSelector(`[role=switch][aria-label="${l}"]`)
-  assert.equal(await p.locator('input[type=time]').count(), 0, 'times only show for rituals you turn on')
-
-  await p.click('[role=switch][aria-label="Morning breathe"]')
-  assert.equal((await calls(p, 'LocalNotifications', 'requestPermissions')).length, 1)
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule'))
-  const todayMorning = await remainingToday(p, 7, 0)
-  let batch = await scheduled(p)
-  assert.equal(batch.length, 13 + todayMorning); assert.ok(batch.every(n => n.h === 7 && n.m === 0 && n.route === 'breathe' && n.title === 'A slow minute'))
-  assert.ok(batch.every(n => n.id >= 8000 && n.id < 8020), 'morning ritual ids live in their own block'); assert.equal(new Set(batch.map(n => n.id)).size, batch.length)
-
-  await p.click('[role=switch][aria-label="Evening breathe"]'); await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 2)
-  const todayEvening = await remainingToday(p, 21, 30)
-  batch = await scheduled(p)
-  assert.equal(batch.length, 13 + todayMorning + 13 + todayEvening); assert.ok(batch.some(n => n.h === 21 && n.m === 30))
-  assert.deepEqual(batch.map(n => n.id).filter(id => id >= 8020 && id < 8040).length, 13 + todayEvening)
-
-  await p.fill('input[aria-label="Morning breathe time"]', '07:45'); await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 3)
-  batch = await scheduled(p); assert.ok(batch.filter(n => n.id < 8020).every(n => n.h === 7 && n.m === 45)); assert.ok(batch.filter(n => n.id >= 8020).every(n => n.h === 21 && n.m === 30), 'other rituals are untouched')
-  await p.click('[role=group][aria-label="Morning breathe days"] >> [aria-label=Saturday]'); await p.click('[role=group][aria-label="Morning breathe days"] >> [aria-label=Sunday]')
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'schedule').length >= 5)
-  batch = await scheduled(p); assert.ok(batch.filter(n => n.id < 8020).every(n => ![0, 6].includes(n.dow)), 'weekdays only now')
-  // can't switch every day off
-  for (const d of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) await p.click(`[role=group][aria-label="Morning breathe days"] >> [aria-label=${d}]`)
-  assert.equal(await p.locator('[role=group][aria-label="Morning breathe days"] [aria-pressed=true]').count(), 1, 'at least one day stays on')
-
-  await reload(p); await tab(p, 'More'); await p.waitForSelector('.li:has-text("Reminders") >> text=2 on')      // persisted
-  await p.click('.li >> text=Reminders'); assert.equal(await p.inputValue('input[aria-label="Morning breathe time"]'), '07:45')
-  await p.click('[role=switch][aria-label="Morning breathe"]'); await p.click('[role=switch][aria-label="Evening breathe"]')
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'cancel').length >= 3)
-  await done(s)
-})
-
-test('iPhone app: a ritual is skipped for today once you have done it (check-in, evening breathe) — but not the others', async () => {
-  const afternoon = new Date(); afternoon.setHours(14, 0, 0, 0)                       // an afternoon session today -> the evening ritual is redundant, the morning one is not
-  const every = [0, 1, 2, 3, 4, 5, 6]
-  const s = await open({ 'bp.thoughts': [rec('t', 0)], 'bp.sessions': [{ ...calm('s', 0, 6, 3), createdAt: afternoon.toISOString() }],
-    'bp.rituals': [{ id: 'anchors', hour: 23, minute: 56, days: every, enabled: true }, { id: 'evening-breathe', hour: 23, minute: 58, days: every, enabled: true }, { id: 'checkin', hour: 23, minute: 59, days: every, enabled: true }] }, { native: true, time: (() => { const t = new Date(); t.setHours(10, 0, 0, 0); return t })() }); const p = s.page
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule'))
-  const batch = await scheduled(p), slot = i => batch.filter(n => n.id >= 8000 + i * 20 && n.id < 8020 + i * 20)
-  // slots follow the default order: morning 0, evening 1, check-in 2, anchors 3
-  assert.equal(slot(3).length, 14, 'anchors nudge: the anchors aren’t all done, so tonight’s still stands')
-  assert.equal(slot(1).length, 13, 'evening breathe: you already breathed this afternoon, today is skipped'); assert.equal(slot(2).length, 13, 'check-in: you already checked in, today is skipped')
-  assert.notEqual(slot(1)[0].day, slot(3)[0].day, 'the skipped ritual starts tomorrow')
-  await done(s)
-})
-
-test('iPhone app: tapping a reminder opens the matching tool; unknown targets are ignored', async () => {
-  const s = await open(null, { native: true }); const p = s.page
-  const fire = route => p.evaluate(r => window.__fire('LocalNotifications', 'localNotificationActionPerformed', { notification: { extra: { route: r } } }), route)
-  await fire('breathe'); await p.waitForSelector('.tab[aria-current=true]:has-text("Breathe")')
-  await fire('checkin'); await p.waitForSelector('.tab[aria-current=true]:has-text("Home")')
-  await fire('journal'); await p.waitForSelector('[aria-label="Journal entry"]'); await p.click('[aria-label=Back]')
-  await fire('https://evil.example'); await fire('<script>'); await p.waitForTimeout(300)
-  assert.equal(await p.locator('[aria-label="Journal entry"]').count(), 0); assert.equal(await p.locator('.tab[aria-current=true]:has-text("Home")').count(), 1, 'unknown routes do nothing')
-  await done(s)
-})
-
-test('iPhone app: an existing daily reminder carries over as the check-in ritual', async () => {
-  const s = await open({ 'bp.reminder': { enabled: true, hour: 9 } }, { native: true }); const p = s.page
-  await tab(p, 'More'); await p.waitForSelector('.li:has-text("Reminders") >> text=1 on'); await p.click('.li >> text=Reminders')
-  assert.equal(await p.getAttribute('[role=switch][aria-label="Daily check-in"]', 'aria-checked'), 'true'); assert.equal(await p.inputValue('input[aria-label="Daily check-in time"]'), '09:00')
-  assert.equal(await p.getAttribute('[role=switch][aria-label="Morning breathe"]', 'aria-checked'), 'false')
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'schedule')); const batch = await scheduled(p)
-  assert.ok(batch.every(n => n.h === 9 && n.route === 'checkin'))
-  await done(s)
-})
-
-test('in a normal browser nothing talks to native code and Apple Health explains itself', async () => {
-  const s = await open(); const p = s.page
-  assert.equal(await p.evaluate(() => window.__native), undefined)
-  await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /iPhone app/)
-  await p.click('.li >> text=Apple Health'); await p.waitForSelector('text=part of the iPhone app'); assert.equal(await p.locator('[role=switch]').count(), 0)
-  await done(s)
-})
-
-test('works offline after first load (PWA)', async () => {
-  const s = await open(); const p = s.page
-  await p.evaluate(() => navigator.serviceWorker.ready); await p.waitForTimeout(1500); await reload(p)
-  await s.ctx.setOffline(true); await reload(p); await p.waitForSelector('.topbar')
-  await newEntry(p, { mood: 3, thought: 'written offline' }); await save(p); await p.waitForSelector('.entry >> text=written offline')
-  await s.ctx.setOffline(false); await done(s)
-})
-
-test('every interactive control has an accessible name', async () => {
-  const s = await open(); const p = s.page; const bad = []
-  const scan = async label => bad.push(...(await p.evaluate(l => [...document.querySelectorAll('button, a[href], input, select, textarea')].filter(el => {
-    if (el.hidden || el.type === 'hidden' || el.closest('[hidden]')) return false
-    const n = el.getAttribute('aria-label') || el.innerText || el.title || el.labels?.[0]?.innerText || el.placeholder || ''
-    return !n.trim()
-  }).map(el => `${l}: ${el.outerHTML.slice(0, 90)}`), label)))
-  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(100); await scan(t) }
-  await tab(p, 'Home'); await newEntry(p, { mood: 3 }); await scan('editor')
-  assert.deepEqual(bad, [], 'controls without an accessible name')
-  await done(s)
-})
-
-test('home: layout is mood → anchors → Focus guard + Journal → Worries / Sleep / Focus → today’s entries; no + button, no title, coins in the app bar', async () => {
-  const s = await open({ 'bp.thoughts': [rec('t1', 0, { thought: 'today thought' }), rec('t2', 0, { thought: 'second today' }), rec('t3', 3, { thought: 'older thought' })] }); const p = s.page
-  await p.waitForSelector('.tools-row')
-  assert.equal(await p.locator('.tab[aria-current=true]').innerText(), 'Home')
-  assert.equal(await p.locator('.topbar .title').count(), 0, 'no "Home" title in the app bar')
-  assert.equal(await p.locator('.fab').count(), 0, 'no + button on Home')
-  assert.ok(await p.evaluate(() => document.querySelector('.topbar').nextElementSibling.matches('.today')), 'the mood card is first, even after logging today')
-  const order = await p.evaluate(() => [...document.querySelector('.app').children].map(e => e.className.split(' ').find(c => ['topbar', 'today', 'anchors', 'anchor-empty', 'home-top', 'tools-row', 'entry'].includes(c)) ?? e.className.split(' ')[0]).filter((c, i, a) => c !== a[i - 1]))
-  assert.deepEqual(order.map(c => (c === 'anchor-empty' ? 'anchors' : c === 'linkbtn' ? 'more-today' : c)), ['topbar', 'today', 'anchors', 'home-top', 'tools-row', 'entry', 'more-today'], JSON.stringify(order))
-  assert.deepEqual(await p.$$eval('.home-top b', els => els.map(e => e.textContent)), ['Focus guard', 'Journal'], 'row 1: Focus guard + Journal'); assert.deepEqual(await p.$$eval('.tools-row .tool b', els => els.map(e => e.textContent)), ['Worries', 'Sleep', 'Focus'], 'row 2: Worries, Sleep, Focus')
-  assert.ok(await p.$$eval('.tools-row .tool b', els => els.every(e => e.getBoundingClientRect().height < 24)), 'every tool label is a single line')
-  assert.equal(await p.locator('.coin-pill').count(), 1); await p.click('.coin-pill'); await p.waitForSelector('.overlay .title >> text=Coins'); await p.click('[aria-label=Back]')
-  assert.equal(await p.locator('.entry').count(), 2, 'Home lists every entry from today, not just the latest')
-  assert.equal(await p.locator('text=rough patch').count(), 0, 'no rough-patch card')
-  await p.click('.tool >> text=Journal'); await p.waitForSelector('[aria-label="New journal entry"]'); assert.equal(await p.locator('text=Write something').count(), 0, 'the Write button became the + button'); await p.click('[aria-label=Back]')
-  await p.click('.guard-tile'); await p.waitForSelector('.overlay .title >> text=Focus guard'); await p.click('[aria-label=Back]')
-  await p.click('.worry-tool'); await p.waitForSelector('.sheet textarea'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })         // nothing parked yet: the tile invites you to park one
-  await p.click('.tool >> text=Sleep'); await p.waitForSelector('.overlay .title >> text=Sleep'); await p.click('[aria-label=Back]')
-  await p.click('.more-today'); await p.waitForFunction(() => document.querySelectorAll('.overlay .entry').length === 3); await p.click('[aria-label=Back]')    // "All entries"
-  await tab(p, 'Calendar'); await p.click('.fab')
-  const labels = await p.$$eval('.sheet .sheet-label', els => els.map(e => e.textContent))
-  assert.deepEqual(labels, ['Write', 'Calm & focus', 'Entry for another day'])
-  await p.click('.sheet-item >> text=Journal entry'); await p.waitForSelector('[aria-label="Journal entry"]')
-  await p.fill('[aria-label="Journal entry"]', 'from the menu'); await saveJournalEntry(p)
-  await tab(p, 'Home'); await p.click('.tool >> text=Journal'); await p.waitForSelector('.jentry >> text=from the menu'); await p.click('[aria-label=Back]')
-  await tab(p, 'More'); assert.equal(await p.locator('.fab').count(), 0, 'no + button on More')
-  await done(s)
-})
-
-test('home: tapping a face opens the entry flow with that mood and "just save my mood" logs it; the worry tile shows what is parked; Sleep shows last night', async () => {
-  const night = (asleepMin) => ({ date: new Date().toISOString().slice(0, 10), start: 0, end: 1, asleepMin, inBedMin: asleepMin + 20, awakeMin: 20, deepMin: 60, remMin: 80, coreMin: asleepMin - 140, unspecifiedMin: 0, efficiency: 90, source: 'manual', quality: null })
-  const w = (id, text) => ({ id, createdAt: new Date().toISOString(), text, status: 'open', action: null, reviewedAt: null })
-  const s = await open({ 'bp.sleep.manual': [night(250)], 'bp.worries': [w('w1', 'the deadline'), w('w2', 'rent is due'), w('w3', 'my friend seems upset')] }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.waitForSelector('.worry-tool >> text=3 parked')
-  assert.match(await p.locator('.tool:has-text("Sleep") small').innerText(), /4h 10m/, 'last night under Sleep')
-  await p.click('.worry-tool'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
-  await p.click('[aria-label="Log mood: bad"]'); await p.waitForSelector('.wiz-body'); assert.match(await p.locator('.wiz-face').getAttribute('aria-label'), /Change mood/)
-  await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
-  assert.equal(await p.locator('.today').count(), 1, 'the mood card is still there after logging'); assert.equal(await p.locator('.entry').count(), 1)
-  await reload(p); assert.equal(await p.locator('.entry').count(), 1)
-  await done(s)
-})
-
-test('home: the Focus-guard tile shows what is blocked (or invites you to add apps) and opens Focus guard', async () => {
-  const web = await open(null); await web.page.waitForSelector('.guard-tile.web'); assert.match(await web.page.locator('.guard-tile').innerText(), /iPhone app/); await done(web)
-  const none = await open(null, { native: true, reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 0 } } }); const n = none.page
-  await n.waitForSelector('.guard-tile.empty'); assert.match(await n.locator('.guard-tile').innerText(), /Add apps/); await n.click('.guard-tile'); await n.waitForSelector('.overlay .title >> text=Focus guard'); await done(none)
-  const on = await open({ 'bp.guard': { enabled: true, challenges: ['pushups'], unlockMinutes: 10, appCount: 3 } }, { native: true, reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 3, unlockedUntil: null } } }); const o = on.page
-  await o.waitForSelector('.guard-tile.locked'); assert.match(await o.locator('.guard-tile').innerText(), /3 apps blocked/); await done(on)
-  const open1 = await open({ 'bp.guard': { enabled: true, challenges: ['pushups'], unlockMinutes: 10, appCount: 1 } }, { native: true, reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 1, unlockedUntil: Date.now() + 8 * 60_000 } } })
-  await open1.page.waitForSelector('.guard-tile.open'); assert.match(await open1.page.locator('.guard-tile').innerText(), /1 app open for [78] more min/); await done(open1)
-})
-
-const seenLevels = { 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 } }     // (finishing blocks would otherwise open the level-up moment)
-const openFocus = async (p, sheet = null) => { await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-screen'); if (sheet) { await p.click(`.pomo-nav [aria-label="${sheet}"]`); await p.waitForSelector('.pomo-sheet') } }
-const closeSheet = async p => { await p.click('.pomo-sheet button:has-text("Done"), .pomo-sheet button:has-text("Close")'); await p.waitForSelector('.pomo-sheet', { state: 'detached' }) }
-const palPose = p => p.locator('.pomo-wobbi .pal').innerHTML()
-const clockText = p => p.locator('.pomo-clock').innerText()
-
-test('Focus: full screen, no scrolling; tap Wobbi to start; Wobbi keeps one pose until you pause/resume; focus → short break (by itself) → focus; a long break after four; pausing freezes; blocks are counted', async () => {
-  const s = await open(seenLevels, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await openFocus(p)
-  assert.equal(await clockText(p), '25:00'); assert.equal(await p.locator('.pomo-title').count(), 0, 'no arched title above Wobbi'); assert.equal(await p.locator('.pomo-flowers .flower').count(), 24, 'a ring of flowers')
-  assert.ok(await p.locator('.pomo-screen').evaluate(el => el.scrollHeight <= el.clientHeight + 1 && getComputedStyle(el).overflowY === 'hidden'), 'the timer fits the screen and does not scroll')
-  const box = await p.locator('.pomo-screen').boundingBox(), vp = p.viewportSize(); assert.ok(box.height >= vp.height - 1 && box.width >= vp.width - 1, 'full screen')
-  assert.equal(await p.locator('[role=tab]').count(), 0, 'no tabs: To-do and Stats are reached from the top bar')
-  assert.match(await p.locator('.pomo-phase').innerText(), /FOCUS\s*25 MIN/)
-  await p.click('.pomo-wobbi'); await p.waitForSelector('.pomo-ctl .go >> text=Pause'); const runPose = await palPose(p)
-  await p.clock.fastForward(10 * 60_000); assert.match(await clockText(p), /^1[45]:/, 'ten minutes in'); assert.equal(await p.locator('.pomo-flowers .flower.on').count(), 10, '10 of 25 minutes ≈ 10 of 24 flowers')
-  assert.equal(await palPose(p), runPose, 'Wobbi keeps the same pose while the block runs')
-  await p.click('.pomo-ctl .go'); await p.waitForSelector('.pomo-ctl .go >> text=Resume'); const frozen = await clockText(p); assert.notEqual(await palPose(p), runPose, 'pausing changes the pose'); await p.clock.fastForward(5 * 60_000); assert.equal(await clockText(p), frozen, 'pausing freezes the clock')
-  await p.click('.pomo-ctl .go'); assert.equal(await palPose(p), runPose, 'resuming brings the running pose back'); await p.clock.fastForward(16 * 60_000)
-  await p.waitForSelector('.pomo-screen.short'); assert.match(await p.locator('.pomo-phase').innerText(), /SHORT BREAK 5 MIN/); assert.match(await clockText(p), /^0[45]:/, 'the break started by itself')
-  assert.equal(await p.locator('.pomo-dots i.on').count(), 1)
-  await p.clock.fastForward(6 * 60_000); await p.waitForSelector('.pomo-screen.work'); assert.equal(await p.locator('.pomo-wobbi.run').count(), 0, 'after a break the next focus block waits for you (default)')
-  for (let i = 0; i < 3; i++) { await p.click('.pomo-ctl .go'); await p.clock.fastForward(26 * 60_000); if (i < 2) await p.clock.fastForward(6 * 60_000) }
-  await p.waitForSelector('.pomo-screen.long'); assert.match(await p.locator('.pomo-phase').innerText(), /LONG BREAK 15 MIN/); assert.equal(await p.locator('.pomo-dots i.on').count(), 4)
-  assert.equal((await p.evaluate(() => JSON.parse(localStorage.getItem('bp.focus')).filter(f => f.completed && f.step.startsWith('Pomodoro')).length)), 4, 'finished blocks count as focus sessions (coins, levels)')
-  await done(s)
-})
-
-test('Focus: the clock keeps going when you leave the screen, reload or close the app; coming back lands in the right phase with the right time left', async () => {
-  const s = await open(seenLevels, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await openFocus(p); await p.click('.pomo-wobbi'); await p.clock.fastForward(5 * 60_000)
-  await p.click('[aria-label=Back]'); await p.clock.fastForward(5 * 60_000)                           // off the Focus screen for five more minutes
-  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-screen'); assert.match(await clockText(p), /^1[45]:/, 'ten minutes have passed')
-  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.pomo.run'))); assert.equal(saved.timer.status, 'running'); assert.equal(saved.phase, 'work')
-  await done(s)
-  const t0 = new Date('2026-10-16T12:00:00').getTime()
-  const away = async mins => {   // the app was closed `mins` minutes into a block
-    const o = await open({ ...seenLevels, 'bp.pomo.run': { phase: 'work', taskId: null, timer: { status: 'running', totalMs: 25 * 60_000, accumulatedMs: 0, startedAt: t0 - mins * 60_000 } } }, { time: new Date(t0) })
-    await o.page.waitForFunction(() => JSON.parse(localStorage.getItem('bp.focus') ?? '[]').some(f => f.step.startsWith('Pomodoro') && f.completed))
-    const blocks = await o.page.evaluate(() => JSON.parse(localStorage.getItem('bp.focus')).filter(f => f.step.startsWith('Pomodoro')))
-    assert.equal(blocks.length, 1); assert.equal(blocks[0].createdAt, new Date(t0 - (mins - 25) * 60_000).toISOString(), 'saved at the moment it really ended')
-    await openFocus(o.page); return o
-  }
-  const inBreak = await away(27); await inBreak.page.waitForSelector('.pomo-screen.short'); assert.match(await clockText(inBreak.page), /^0[23]:/, 'the break began when the block ended: 3 of 5 minutes left'); await done(inBreak)
-  const after = await away(40); await after.page.waitForSelector('.pomo-screen.work'); assert.equal(await clockText(after.page), '25:00', 'block and break both over: the next block waits'); await done(after)
-})
-
-test('Focus: the iPhone app schedules notifications for every phase change, hands the run of phases to the lock screen / Dynamic Island, and cancels when you pause', async () => {
-  const s = await open(seenLevels, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'LocalNotifications.checkPermissions': { display: 'granted' } } }); const p = s.page
-  await openFocus(p); await p.click('.pomo-wobbi')
-  await p.waitForFunction(() => window.__native.some(c => c.plugin === 'LocalNotifications' && c.method === 'schedule' && c.options.notifications?.[0]?.id === 7301))
-  const all = (await p.evaluate(() => window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'schedule').pop().options.notifications)), mins = n => Math.round((new Date(n.schedule.at).getTime() - new Date('2026-10-16T12:00:00').getTime()) / 60000)
-  assert.equal(all.length, 2, 'one for the end of the block, one for the end of the break that starts by itself'); assert.match(all[0].title, /Focus block done/); assert.match(all[0].body, /Short break: 5 min/); assert.equal(mins(all[0]), 25); assert.match(all[1].title, /Break over/); assert.equal(mins(all[1]), 30)
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityStart' && c.options.kind === 'focus' && c.options.title === 'Focus'))
-  const la = (await p.evaluate(() => window.__native.find(c => c.method === 'liveActivityStart').options)); assert.equal(la.phase, 'work'); assert.deepEqual(la.next.map(x => [x.title, x.phase, Math.round((x.endsAt - x.startsAt) / 60000)]), [['Short break', 'short', 5]], 'the lock screen / Dynamic Island gets the break too, so it moves on while the app sleeps')
-  const n = await p.evaluate(() => window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'cancel').length)
-  await p.click('.pomo-ctl .go'); await p.waitForFunction(k => window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'cancel').length > k, n)
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityUpdate' && typeof c.options.remainingSec === 'number'))
-  await done(s)
-})
-
-test('Focus: settings change the lengths and automatic starts; presets; the goal; the to-do list picks the task; stats show today, the week, streak and top tasks', async () => {
-  const s = await open(seenLevels, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await openFocus(p, 'To-do')
-  await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("Write what you want to get done")')
-  await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Call the dentist'); await p.click('[aria-label="Add to-do"]')
-  await p.fill('[aria-label="New to-do"]', 'call the dentist'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("already on the list")'); assert.equal(await p.locator('.todos li').count(), 2)
-  await p.click('.todo-text >> text=Write the report'); await closeSheet(p)
-  await p.waitForSelector('.pomo-task.set >> text=Write the report')
-  await p.click('.pomo-task'); await p.waitForSelector('.pomo-sheet .todos'); await p.click('.todo-text >> text=Call the dentist'); await closeSheet(p); await p.waitForSelector('.pomo-task.set >> text=Call the dentist')
-  await p.click('.pomo-task'); await p.click('.todo-text >> text=Write the report'); await closeSheet(p); await p.waitForSelector('.pomo-task.set >> text=Write the report')
-  await p.click('[aria-label="Timer settings"]'); await p.waitForSelector('[aria-label="Presets"]')
-  await p.click('[aria-label="Presets"] >> text=Deep'); assert.equal(await p.locator('.stepper[aria-label="Focus"] b').innerText(), '50 min'); await p.click('[aria-label="More focus"]'); assert.equal(await p.locator('.stepper[aria-label="Focus"] b').innerText(), '55 min')
-  await p.click('[aria-label="Less daily goal"]'); await p.click('[role=switch][aria-label="Start focus automatically after a break"]')
-  assert.deepEqual(await p.evaluate(() => { const v = JSON.parse(localStorage.getItem('bp.pomo')); return [v.work, v.short, v.long, v.every, v.goal, v.autoFocus, v.autoBreak, v.bell] }), [55, 10, 20, 3, 2, true, true, true])
-  await p.click('button:has-text("Done")'); await p.waitForSelector('.pomo-clock >> text=55:00'); assert.match(await p.locator('.pomo-chip').innerText(), /0\/2 today/)
-  await p.click('[aria-label="Next phase"]'); await p.waitForSelector('.pomo-screen.short'); assert.match(await p.locator('.pomo-phase').innerText(), /SHORT BREAK 10 MIN/); await p.click('[aria-label="Next phase"]'); await p.click('[aria-label="Next phase"]'); await p.waitForSelector('.pomo-screen.work')
-  // stats
-  // the page's clock, not this machine's
-  const now = await p.evaluate(() => Date.now()), blk = (daysAgo, task) => ({ id: 'b' + daysAgo + task, createdAt: new Date(now - daysAgo * 864e5).toISOString(), minutes: 25, actualSec: 1500, completed: true, worryId: null, step: task ? `Pomodoro · ${task}` : 'Pomodoro' })
-  await p.evaluate(b => localStorage.setItem('bp.focus', JSON.stringify(b)), [blk(0, 'Write the report'), blk(0, 'Write the report'), blk(1, 'Email'), blk(2), blk(4, 'Write the report')])
-  await reload(p); await openFocus(p, 'Stats')
-  await p.waitForSelector('.pomo-stats'); assert.match(await p.locator('.pomo-stats').innerText(), /2 blocks · 50 min focused · goal met!/); assert.equal(await p.locator('.week-bars > div').count(), 7)
-  assert.equal(await p.locator('.stat-tiles .card').first().innerText().then(t => t.split('\n')[0]), '3', 'streak: today, yesterday and 2 days ago'); assert.match(await p.locator('.stat-tiles').innerText(), /5\s*blocks/); assert.match(await p.locator('.stat-tiles').innerText(), /2h 5m/)
-  assert.match(await p.locator('.pomo-stats').innerText(), /Most-worked tasks[\s\S]*Write the report\s*3/)
-  await closeSheet(p); await p.click('.pomo-nav [aria-label="To-do"]'); await p.click('[aria-label="Done: Write the report"]'); await p.waitForSelector('.todos li.done')
-  await reload(p); await openFocus(p, 'To-do'); assert.equal(await p.locator('.todos li').count(), 2); assert.equal(await p.locator('.todos li.done').count(), 1)
-  p.once('dialog', d => d.accept()); await p.click('[aria-label="Remove Call the dentist"]'); assert.equal(await p.locator('.todos li').count(), 1)
-  await done(s)
-})
-
-test('iPhone app: the real native tab bar takes over (Liquid Glass on iOS 26); web bar steps aside; overlays hide it; failure keeps the web bar', async () => {
-  const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
-  await p.waitForSelector('html.native-tabs'); assert.equal(await p.locator('.tabbar').count(), 0, 'the web tab bar is gone')
-  const calls = () => p.evaluate(() => window.__native.filter(c => c.plugin === 'Mindful' && /Tab/.test(c.method)).map(c => ({ m: c.method, o: c.options })))
-  const first = (await calls()).find(c => c.m === 'setTabs')
-  assert.deepEqual(first.o.items.map(i => [i.id, i.label, i.symbol]), [['entries', 'Home', 'house'], ['stats', 'Stats', 'chart.bar'], ['calendar', 'Calendar', 'calendar'], ['breathe', 'Breathe', 'wind'], ['more', 'More', 'ellipsis.circle']])
-  assert.equal(first.o.selected, 'entries')
-  assert.equal(await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--native-tab-h').trim()), '83px', 'web content leaves room for the bar')
-  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'calendar' })); await p.waitForSelector('.cal')
-  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'more' })); await p.waitForSelector('.li >> text=Reminders')
-  assert.ok((await calls()).some(c => c.m === 'selectTab' && c.o.id === 'more'), 'the native highlight follows')
-  await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'calendar' })); await p.waitForSelector('.cal')
-  await p.click('.fab'); await p.waitForSelector('.sheet')
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === true)
-  await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
-  await done(s)
-  const f = await open(null, { native: true, reply: { 'Mindful.setTabs': { __reject: 'UNIMPLEMENTED', message: 'old shell' } } })   // an older app build without the native bar
-  await f.page.waitForSelector('.tools-row'); await f.page.waitForTimeout(300)
-  assert.equal(await f.page.locator('.tabbar').count(), 1, 'the web tab bar stays when native fails'); assert.equal(await f.page.locator('html.native-tabs').count(), 0)
-  await done(f)
-})
-
-test('About & legal: version, privacy policy, terms, support and open-source notices are readable offline inside the app', async () => {
-  const s = await open(); const p = s.page
-  await tab(p, 'More'); await p.click('.li >> text=About & legal'); await p.waitForSelector('text=Version 1.0.0')
-  assert.deepEqual(await p.$$eval('.list .li', els => els.map(e => e.textContent)), ['Privacy Policy', 'Terms of Service', 'Support', 'Open-source notices'])
-  await p.click('.li >> text=Privacy Policy'); await p.waitForSelector('article.legal h3 >> text=Apple Health')
-  assert.ok(await p.locator('article.legal').innerText().then(t => /never used for advertising/.test(t) && /Delete account/.test(t)), 'says what the app really does')
-  await p.click('text=All documents'); await p.click('.li >> text=Open-source notices'); await p.waitForSelector('article.legal h3 >> text=Fluent Emoji')
-  await p.click('text=All documents'); await p.click('.li >> text=Support'); await p.waitForSelector('text=988')
-  await p.click('[aria-label=Back]'); await p.waitForSelector('.li >> text=About & legal')
-  assert.ok(await p.evaluate(() => document.body.innerText.includes('Wobbi 1.0.0')), 'More shows the real version')
-  await done(s)
-})
-
-test('notch / status bar: the first thing on every tab clears the safe area, even after scrolling', async () => {
-  const s = await open({ 'bp.thoughts': Array.from({ length: 12 }, (_, i) => rec('n' + i, i)) }); const p = s.page
-  await p.evaluate(() => document.documentElement.style.setProperty('--safe-t', '47px'))      // what an iPhone with a notch reports
-  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) {
-    await tab(p, t); await p.waitForTimeout(150)
-    for (const y of [0, 600]) {
-      await p.evaluate(y => window.scrollTo(0, y), y)
-      const tops = await p.$$eval('.topbar:not(.flat), .stats-head', els => els.map(e => e.firstElementChild?.getBoundingClientRect().top ?? 99))
-      assert.ok(tops.length >= 1, `${t}: has a sticky header`)
-      assert.ok(tops.every(top => top >= 46.5), `${t} (scrolled ${y}): header content starts at ${tops} but must be below the 47px notch area`)
-    }
-  }
-  await done(s)
-})
-
-test('Wobbi the mascot: shows up on Home, in empty states, in the celebration and the About page, and respects reduced motion', async () => {
-  const s = await open(); const p = s.page
-  assert.ok(await p.locator('.today .pal svg').count(), 'Wobbi waves on the Today card')
-  await p.click('.more-today'); assert.ok(await p.locator('.pal-empty .pal').count(), 'empty state has Pal'); assert.match(await p.locator('.pal-empty').innerText(), /No entries this month/); await p.click('[aria-label=Back]')
-  await p.click('.tool >> text=Journal'); assert.ok(await p.locator('.pal-empty .pal').count()); await p.click('[aria-label=Back]')
-  await tab(p, 'More'); await p.click('.li >> text=About & legal'); assert.ok(await p.locator('.pal svg').count(), 'About shows Wobbi')
-  const anim = async page => page.$eval('.pal', el => parseFloat(getComputedStyle(el).animationDuration) * 1000)
-  assert.ok(await anim(p) > 1000, 'Wobbi bobs normally')
-  const pm = await open(); await pm.page.emulateMedia({ reducedMotion: 'reduce' })
-  assert.ok(await anim(pm.page) < 1, 'reduced motion stops Wobbi’s bobbing')
-  await done(pm); await done(s)
-})
-
-const guardStatus = (p, v) => p.evaluate(v => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.screenTimeStatus': v } }, v)
-const nativeCalls = (p, m) => p.evaluate(m => window.__native.filter(c => c.plugin === 'Mindful' && c.method === m).map(c => c.options ?? {}), m)
-const openGuard = async p => { await tab(p, 'More'); await p.click('.li >> text=Focus guard') }
-
-test('Focus guard (web): explains it needs the iPhone app, and you can still practise an activity with the honour-system rep counter', async () => {
-  const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await openGuard(p); await p.waitForSelector('text=Blocking apps is part of the iPhone app')
-  assert.equal(await p.locator('[role=switch]').count(), 0, 'no switch to turn on without iOS Screen Time')
-  await p.click('button:has-text("Try an activity")'); await p.click('.challenge-opt >> text=Push-ups')
-  await p.click('.rep-btn'); await p.click('.rep-btn'); await p.click('.rep-btn')          // mashing = 1 rep
-  assert.match(await p.locator('.rep-count').innerText(), /^1\s*\/\s*10/); await p.waitForSelector('text=One rep at a time')
-  for (let i = 0; i < 9; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
-  await p.waitForSelector('text=Nice one!'); await p.waitForSelector('text=That was practice, so nothing was unlocked.')
-  await p.click('button:has-text("Done")')
-  await p.waitForSelector('text=This week: 1 activity · 10 reps')
-  await done(s)
-})
-
-test('Share: the Focus guard "brain rot, beaten" counter makes a numbers-only card you can share; stickers and the invite use the share sheet', async () => {
-  const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  const stubShare = () => { window.__shared = window.__shared ?? []; navigator.canShare = () => true; navigator.share = async d => { window.__shared.push({ text: d.text ?? '', files: (d.files ?? []).map(f => ({ name: f.name, type: f.type, size: f.size })) }) } }
-  await p.addInitScript(stubShare); await p.evaluate(stubShare)
-  await openGuard(p); assert.equal(await p.locator('[aria-label="Brain rot beaten"]').count(), 0, 'no counter before anything is done')
-  await p.click('button:has-text("Try an activity")'); await p.click('.challenge-opt >> text=Push-ups')
-  await p.click('.rep-btn'); for (let i = 0; i < 9; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
-  await p.click('button:has-text("Done")')
-  await p.waitForSelector('[aria-label="Brain rot beaten"] >> text=/10 reps/')
-  await p.click('[aria-label="Brain rot beaten"] button:has-text("Share")'); await p.waitForSelector('.share-preview svg')
-  const card = await p.locator('.share-preview').innerText(); assert.match(card, /10/); assert.match(card, /Wobbi/)
-  await p.click('.sheet button:has-text("Share")')
-  await p.waitForFunction(() => window.__shared.length === 1)
-  const sent = await p.evaluate(() => window.__shared[0]); assert.equal(sent.files[0].name, 'brain-pal-guard.png'); assert.equal(sent.files[0].type, 'image/png'); assert.ok(sent.files[0].size > 2000, 'a real picture')
-  await p.click('.sheet button:has-text("Close")'); await reload(p)
-  await tab(p, 'More'); await p.click('.li >> text=Wobbi stickers'); assert.ok((await p.locator('.sticker').count()) >= 27, 'every pose is a sticker')
-  await p.click('[aria-label="Share sticker: Wobbi cheering"]').catch(async () => { await p.locator('.sticker').nth(3).click() })
-  await p.waitForFunction(() => window.__shared.length === 1); assert.match(await p.evaluate(() => window.__shared[0].files[0].name), /^pal-.*\.png$/)
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Invite a friend')
-  await p.waitForFunction(() => window.__shared.length === 2); const inv = await p.evaluate(() => window.__shared[1].text); assert.match(inv, /free, private/i); assert.match(inv, /https:\/\/prenev\.github\.io\/brain-pal/)
-  await done(s)
-})
-
-test('Share: a level-up celebration offers a level card; the rating prompt is asked only at a happy moment after a week (iPhone app); Siri links open SOS', async () => {
-  const seed = (firstSeen) => ({ 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 }, 'bp.review': { firstSeen, lastAsked: null, asks: 0 } })
-  const veteran = await open(seed(new Date('2026-10-01T09:00:00').toISOString()), { native: true, time: new Date('2026-10-16T12:00:00') }); const p = veteran.page
-  await p.waitForSelector('.celebrate >> text=Reframing → Level 2')
-  assert.equal((await nativeCalls(p, 'requestReview')).length, 0, 'not before the moment has had a second to land')
-  await p.clock.runFor(2000); await p.waitForFunction(() => window.__native.some(c => c.method === 'requestReview'))
-  assert.equal((await nativeCalls(p, 'requestReview')).length, 1)
-  await p.click('.celebrate button:has-text("Share")'); await p.waitForSelector('.share-preview svg'); assert.match(await p.locator('.share-preview').innerText(), /Level 2/)
-  await p.click('.sheet button:has-text("Close")'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar')
-  await p.evaluate(() => window.dispatchEvent(new CustomEvent('bp:route', { detail: 'sos' }))); await p.waitForSelector('[aria-label="Anxiety right now, 0 to 10"]')
-  await done(veteran)
-  const newbie = await open(seed(new Date('2026-10-14T09:00:00').toISOString()), { native: true, time: new Date('2026-10-16T12:00:00') }); const q = newbie.page
-  await q.waitForSelector('.celebrate >> text=Reframing → Level 2'); await q.clock.runFor(5000)
-  assert.equal((await nativeCalls(q, 'requestReview')).length, 0, 'never in the first week')
-  await done(newbie)
-})
-
-test('widgets (iPhone app): the app keeps the widget snapshot fresh, applies moods and anchor ticks tapped on widgets, opens the screen a control asked for, and drives the Live Activity', async () => {
-  const t = new Date('2026-10-16T12:00:00').getTime()
-  const queued = JSON.stringify([
-    { kind: 'mood', mood: 2, at: t - 60_000 },
-    { kind: 'anchor', id: 'walk', done: true, day: '2026-10-16', at: t - 30_000 },
-    { kind: 'anchor', id: 'water', done: true, day: '2026-10-15', at: t - 86_400_000 },   // yesterday's tick: ignored
-    { kind: 'mood', mood: 9, at: t },                                                    // junk: ignored
-  ])
-  const anchors = ['walk', 'water'].map((id, order) => ({ id, label: id === 'walk' ? 'Walk' : 'Water', emoji: id, link: null, order, createdAt: '2026-10-01T09:00:00.000Z', archivedAt: null }))
-  const s = await open({ 'bp.anchors': anchors }, { native: true, time: new Date(t), reply: { 'Mindful.widgetTake': { actions: queued, route: 'worry' } } }); const p = s.page
-  // the control's screen opens, the queued mood is logged at the time it was tapped, the anchor is ticked
-  await p.waitForSelector('[aria-label="Park a worry"]')
-  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]' } } })
-  await p.click('[aria-label="Back"]'); await p.waitForSelector('[aria-label="Log mood: good"]')
-  const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.thoughts') ?? '[]'))
-  assert.equal(stored.length, 1, 'one mood logged (the junk one is dropped)'); assert.equal(stored[0].mood, 2); assert.equal(stored[0].createdAt, new Date(t - 60_000).toISOString())
-  const checks = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.anchorChecks') ?? '[]'))
-  assert.equal(checks.length, 1); assert.match(checks[0], /^walk/)
-  // and the widgets are told: the latest snapshot has today's mood, the streak and the ticked anchor
-  await p.clock.runFor(1000)
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'widgetUpdate').some(c => JSON.parse(c.options.snapshot).todayMood === 2))
-  const snap = await p.evaluate(() => JSON.parse(window.__native.filter(c => c.method === 'widgetUpdate').pop().options.snapshot))
-  assert.equal(snap.day, '2026-10-16'); assert.equal(snap.activeToday, true); assert.equal(snap.streak, 1)
-  assert.deepEqual(snap.anchors.map(a => [a.id, a.done]), [['walk', true], ['water', false]])
-  assert.equal(snap.week.length, 7); assert.ok(snap.prompt.length > 5); assert.ok(snap.wobbi.text.length > 5)
-  // going to the background pushes again; coming back drains the queue again
-  const before = (await nativeCalls(p, 'widgetUpdate')).length, takes = (await nativeCalls(p, 'widgetTake')).length
-  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: false })); await p.waitForFunction(n => window.__native.filter(c => c.method === 'widgetUpdate').length > n, before)
-  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: true })); await p.waitForFunction(n => window.__native.filter(c => c.method === 'widgetTake').length > n, takes)
-  // a control asking for SOS opens SOS
-  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]', route: 'sos' } } })
-  await p.evaluate(() => window.__fire('App', 'appStateChange', { isActive: true })); await p.waitForSelector('[aria-label="Anxiety right now, 0 to 10"]')
-  await done(s)
-
-  // Live Activity: a breathing session starts one with the real end time and ends it when you leave
-  const b = await open(null, { native: true }); const q = b.page
-  await tab(q, 'Breathe'); await q.click('.tech >> text=Calm 4-6'); await q.click('button:has-text("Start")'); await q.waitForSelector('.breath-scene')
-  await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityStart'))
-  const [start] = await nativeCalls(q, 'liveActivityStart')
-  assert.equal(start.kind, 'breathe'); assert.match(start.subtitle, /^In \d/); assert.ok(start.endsAt - start.startsAt >= 30_000, 'ends when the session ends')
-  await q.click('button:has-text("End session")'); await q.waitForSelector('.breath-scene', { state: 'detached' })
-  await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityEnd'))
-  await done(b)
-})
-
-test('breathing is an immersive full-screen scene: Wobbi swells and settles with the breath, the colour follows the phase, the native tab bar steps aside, sound can be muted, leaving works', async () => {
-  const s = await open(null, { native: true, reply: { 'Mindful.setTabs': { native: true, height: 83 } } }); const p = s.page
-  await p.waitForSelector('html.native-tabs'); await p.evaluate(() => window.__fire('Mindful', 'tabSelected', { id: 'breathe' })); await p.click('.tech >> text=Box'); await p.click('button:has-text("Start")'); await p.waitForSelector('.breath-scene')
-  const vp = p.viewportSize(), box = await p.locator('.breath-scene').boundingBox()
-  assert.deepEqual([box.x, box.y, Math.round(box.width), Math.round(box.height)], [0, 0, vp.width, vp.height], 'covers the whole screen')
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === true)
-  await p.waitForSelector('.breath-scene[data-phase=inhale] .breath-say >> text=Inhale')
-  const pal = () => p.locator('.breath-pal').evaluate(e => new DOMMatrix(getComputedStyle(e).transform).a)
-  const a = await pal(); await p.waitForTimeout(2500); const b = await pal()
-  assert.ok(b > a + 0.05, `Wobbi grows while breathing in (${a} → ${b})`)
-  await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted'); await p.click('[aria-label="Turn tones on"]'); await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted')
-  assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 8/)
-  await p.waitForTimeout(8000); await p.waitForSelector('.breath-scene[data-phase=hold1]')                // box 4: 4 s in, then a hold
-  await p.click('button:has-text("End session")'); await p.waitForSelector('.breath-scene', { state: 'detached' })
-  await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
-  await done(s)
-})
-
-test('Focus guard (iPhone): allow, choose apps, switch on (locks), earn time with push-ups (unlocks), lock again, switch off — and it persists', async () => {
-  const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: false, appCount: 0 }, 'Mindful.screenTimePickApps': { count: 3 } } }); const p = s.page
-  await openGuard(p); await p.waitForSelector('button:has-text("Allow Screen Time")')
-  assert.equal(await p.locator('button:has-text("Choose apps")').isDisabled(), true, 'apps can only be chosen after access is allowed')
-  assert.equal(await p.locator('[role=switch][aria-label="Guard on"]').getAttribute('aria-checked'), 'false')
-  await guardStatus(p, { available: true, authorized: true, appCount: 0 }); await p.click('button:has-text("Allow Screen Time")'); await p.waitForSelector('text=Allowed')
-  await guardStatus(p, { available: true, authorized: true, appCount: 3 }); await p.click('button:has-text("Choose apps")'); await p.waitForSelector('text=3 chosen')
-  assert.equal((await nativeCalls(p, 'screenTimeLock')).length, 0, 'nothing is locked until you switch the guard on')
-  await p.click('[role=switch][aria-label="Guard on"]'); await p.waitForSelector('.guard-status >> text=Locked')
-  assert.equal((await nativeCalls(p, 'screenTimeLock')).length, 1)
-  await reload(p); await openGuard(p); await p.waitForSelector('.guard-status >> text=Locked')            // config survives a restart
-  await p.click('button:has-text("Unlock with an activity")')
-  assert.deepEqual(await p.$$eval('.challenge-opt b', els => els.map(e => e.textContent)), ['Push-ups', 'Slow breathing'], 'only the activities you picked')
-  await p.click('.challenge-opt >> text=Push-ups')
-  for (let i = 0; i < 10; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
-  await p.waitForSelector('text=Earned it!'); await p.waitForSelector('text=open for 10 minutes')
-  assert.deepEqual(await nativeCalls(p, 'screenTimeUnlock'), [{ minutes: 10 }], 'finishing unlocks for exactly the chosen time')
-  await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 3, unlockedUntil: Date.now() + 600000 } } })   // what iOS would now report
-  await p.click('button:has-text("Done")'); await p.waitForSelector('.guard-status >> text=/Unlocked · \\d+ min left/')
-  await p.click('button:has-text("Lock again now")'); await p.waitForSelector('.guard-status >> text=Locked')
-  p.once('dialog', d => d.accept()); await p.click('[role=switch][aria-label="Guard on"]')
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'screenTimeClear')); assert.equal(await p.locator('.guard-status').count(), 0, 'switching off removes the status card')
-  await done(s)
-})
-
-test('Focus guard: not available without the entitlement / iOS 16; journal-line activity unlocks and lands in the journal', async () => {
-  const s = await open(null, { native: true, reply: { 'Mindful.screenTimeStatus': { available: false, authorized: false, appCount: 0 } } }); const p = s.page
-  await openGuard(p); await p.waitForSelector('text=Not available in this build'); assert.equal(await p.locator('[role=switch]').count(), 0)
-  await done(s)
-  const t = await open(null, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 2 } } }); const q = t.page
-  await q.evaluate(() => localStorage.setItem('bp.guard', JSON.stringify({ enabled: true, challenges: ['journal', 'plank'], unlockMinutes: 5, appCount: 2 })))
-  await reload(q); await openGuard(q); await q.click('button:has-text("Unlock with an activity")')
-  await q.click('.challenge-opt >> text=Write a line'); assert.equal(await q.locator('button:has-text("Save to journal")').isDisabled(), true, 'a line needs a few words')
-  await q.fill('textarea[aria-label="One honest line"]', 'Feeling a bit scattered today'); await q.click('button:has-text("Save to journal")')
-  await q.waitForSelector('text=Earned it!'); assert.deepEqual(await nativeCalls(q, 'screenTimeUnlock'), [{ minutes: 5 }]); await q.click('button:has-text("Done")')
-  await tab(q, 'Home'); await q.click('.tool >> text=Journal'); await q.waitForSelector('.jentry >> text=Feeling a bit scattered today')
-  await done(t)
+  const f = await open(); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
 })
 
 test('coin toast: "+N coins" always goes away by itself, even when your coins change again while it shows', async () => {
   const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+5 coins'); await p.click('.celebrate .btn.primary')
+  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+13 coins'); await p.click('.celebrate .btn.primary')   // 3 for the check-in + 10 for the first-check-in achievement
   p.once('dialog', d => d.accept()); await p.click('.entry'); await p.click('text=Delete entry')      // the entry is deleted, so coins drop while the toast is still showing (this used to cancel its timer)
   await p.waitForFunction(() => !document.querySelector('.entry'))
   await p.clock.runFor(4000)
   assert.equal(await p.locator('.coin-toast').count(), 0, 'the toast must be gone after a few seconds')
-  // the 5 coins from the deleted entry are kept (earned coins never vanish), so the next entry only pays out once it goes beyond that
+  // the 13 coins from the deleted entry are kept (earned coins never vanish), so the next entries only pay out once they go beyond that
   for (const m of ['bad', 'meh']) { await p.click(`[aria-label="Log mood: ${m}"]`); await p.click('button:has-text("Just save my mood")'); await p.click('.celebrate .btn.primary') }
-  await p.waitForSelector('.coin-toast >> text=+5 coins'); await p.clock.runFor(4000)
+  await p.waitForSelector('.coin-toast >> text=+3 coins'); await p.clock.runFor(4000)
   assert.equal(await p.locator('.coin-toast').count(), 0, 'and the next one too')
   await done(s)
 })

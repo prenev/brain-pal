@@ -12,10 +12,13 @@ import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadPurchases, loadRituals, loadTheme, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
+import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadEquip, loadPurchases, loadRituals, loadTheme, saveEquip, loadGuardEvents, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
-import { balance as coinBalance, canBuy, earnings as computeEarnings, itemById, ownedThemes, restDays, type BuyCheck, type Earning, type Purchase } from './rewards.ts'
+import { balance as coinBalance, canBuy, earnings as computeEarnings, restDays, type BuyCheck, type Earning } from './rewards.ts'
+import { itemById, ownedThemes, collectDays, toggleOutfit, normalizeEquip, type Equip, type Purchase } from './shop.ts'
+import { achievements as computeAchievements, type Achievement } from './achievements.ts'
+import { setWornOutfit } from './outfitStore.ts'
 import { applyTheme } from './theme.ts'
 import { detectLocal, dirtyCount, keyOf, markSynced, reconcile, uniqueDocs, type Meta } from './sync.ts'
 import { applyDocs, collectItems, unchangedSince, type Extras } from './syncItems.ts'
@@ -53,6 +56,12 @@ interface Ctx {
   syncNow(): Promise<void>
   coins: number
   earned: Earning[]
+  achievements: Achievement[]
+  equip: Equip
+  wear(itemId: string): void
+  setCardStyle(id: string | null): void
+  setTitle(id: string | null): void
+  setGoal(id: string | null): void
   purchases: Purchase[]
   themeId: string | null
   buy(itemId: string, opts?: { forDay?: string; note?: string }): BuyCheck
@@ -106,6 +115,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [rituals, setRitualsState] = useState<Ritual[]>(loadRituals)
   const [purchases, setPurchases] = useState<Purchase[]>(loadPurchases)
   const [themeId, setThemeId] = useState<string | null>(loadTheme)
+  const [equip, setEquipState] = useState<Equip>(() => loadEquip(loadPurchases()))
+  const setEquip = (e: Equip) => { setEquipState(e); saveEquip(e) }
+  const [guardAt, setGuardAt] = useState<string[]>(() => loadGuardEvents().map(e => e.at))
+  useEffect(() => { const f = () => setGuardAt(loadGuardEvents().map(e => e.at)); window.addEventListener('bp:guard-events', f); return () => window.removeEventListener('bp:guard-events', f) }, [])
   const [healthNights, setHealthNights] = useState<Night[]>(loadHealthNights)
   const [manualNights, setManualNights] = useState<Night[]>(loadManualNights)
   const [sleepOn, setSleepOn] = useState(sleepConnected)
@@ -167,22 +180,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // The ref is updated immediately so several changes in the same tick (e.g. the first-run picks) build on each other instead of overwriting.
   const updateAnchors = (next: Anchor[]) => { anchorsRef.current = next; setAnchors(next); saveAnchors(next) }
 
-  const earned = useMemo(() => computeEarnings({
+  const rewardData = useMemo(() => ({
     thoughts, sessions, journal, focus: focusSessions, worries, anchorDays: anchorHistory,
-    sleepDates: sleepNights.map(n => n.date),
+    sleepDates: sleepNights.map(n => n.date), guardAt, collectDays: collectDays(purchases),
     streakDays: [...new Set([...thoughts.map(t => dayKey(t.createdAt)), ...sessions.map(s => dayKey(s.createdAt)), ...restDays(purchases)])],
-  }), [thoughts, sessions, journal, focusSessions, worries, anchorHistory, sleepNights, purchases])
+  }), [thoughts, sessions, journal, focusSessions, worries, anchorHistory, sleepNights, guardAt, purchases])
+  const earned = useMemo(() => computeEarnings(rewardData), [rewardData])
+  const achievementList = useMemo(() => computeAchievements(rewardData), [rewardData])
   const [coinHW, setCoinHW] = useState(loadCoinHighWater)
   const earnedNow = earned.reduce((a, e) => a + e.coins, 0)
   useEffect(() => { if (loaded && earnedNow > coinHW) { setCoinHW(earnedNow); saveCoinHighWater(earnedNow) } }, [loaded, earnedNow, coinHW])
   const coins = coinBalance(earned, purchases, coinHW)
   // Apply the chosen accent theme (only if you actually own it).
+  // Anything not owned any more (e.g. after a sync) is quietly taken off.
+  useEffect(() => { const n = normalizeEquip(equip, purchases); if (JSON.stringify(n) !== JSON.stringify(equip)) setEquip(n) }, [purchases])   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setWornOutfit(equip.outfit) }, [equip.outfit])
   useEffect(() => { const item = themeId && ownedThemes(purchases).includes(themeId) ? itemById(themeId) : null; applyTheme(item?.color ?? null) }, [themeId, purchases])
 
   /* ---------------- account sync for the extras (journal, anchors, focus, hand-logged sleep, purchases, rituals, theme) ---------------- */
   const [syncState, setSyncState] = useState<{ status: 'idle' | 'syncing' | 'ok' | 'error'; at: number | null; pending: number }>({ status: 'idle', at: null, pending: 0 })
   const extrasRef = useRef<Extras>(null!)
-  extrasRef.current = { journal, anchors, checks, focus: focusSessions, manualNights, purchases, rituals, themeId }
+  extrasRef.current = { journal, anchors, checks, focus: focusSessions, manualNights, purchases, rituals, themeId, equip }
   const syncing = useRef(false)
   const syncAgain = useRef(false)          // something changed (or a sync was asked for) while a run was in flight
   const syncRef = useRef<() => Promise<void>>(async () => {})
@@ -191,7 +209,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const applyExtras = (x: Extras) => {
     setJournal(x.journal); saveJournal(x.journal); setAnchors(x.anchors); saveAnchors(x.anchors); setChecks(x.checks); saveChecks(x.checks)
     setFocusSessions(x.focus); saveFocus(x.focus); setManualNights(x.manualNights); saveManualNights(x.manualNights)
-    setPurchases(x.purchases); savePurchases(x.purchases); setRitualsState(x.rituals); saveRituals(x.rituals); setThemeId(x.themeId); saveTheme(x.themeId)
+    setPurchases(x.purchases); savePurchases(x.purchases); setRitualsState(x.rituals); saveRituals(x.rituals); setThemeId(x.themeId); saveTheme(x.themeId); if (x.equip) setEquip(x.equip)
   }
   const syncNow = useCallback(async () => {
     if (!supabase || !authSession) return
@@ -218,7 +236,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!supabase || !authSession || !loaded) return
     const t = setTimeout(() => { void syncNow() }, 1200)
     return () => clearTimeout(t)
-  }, [authSession, loaded, syncNow, journal, anchors, checks, focusSessions, manualNights, purchases, rituals, themeId])
+  }, [authSession, loaded, syncNow, journal, anchors, checks, focusSessions, manualNights, purchases, rituals, themeId, equip])
   useEffect(() => {
     if (!supabase || !authSession || !loaded) return
     let last = Date.now()
@@ -280,13 +298,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
-    coins, earned, purchases, themeId,
+    coins, earned, purchases, themeId, achievements: achievementList, equip,
+    wear(itemId) { setEquip(toggleOutfit(equip, itemId)) },
+    setCardStyle(id) { if (id === null || (itemById(id)?.kind === 'card' && purchases.some(p => p.itemId === id))) setEquip({ ...equip, card: id }) },
+    setTitle(id) { if (id === null || (itemById(id)?.kind === 'title' && purchases.some(p => p.itemId === id))) setEquip({ ...equip, title: id }) },
+    setGoal(id) { if (id === null || (itemById(id) && !purchases.some(p => p.itemId === id))) setEquip({ ...equip, goal: id }) },
     buy(itemId, opts = {}) {
       const item = itemById(itemId); if (!item) return { ok: false, reason: 'Unknown item.' }
       const check = canBuy(item, coins, purchases, new Date(), opts); if (!check.ok) return check
       const p: Purchase = { id: crypto.randomUUID(), itemId, at: new Date().toISOString(), cost: item.cost, ...(opts.forDay && { forDay: opts.forDay }), ...(opts.note && { note: opts.note.trim() }) }
       const next = [...purchases, p]; setPurchases(next); savePurchases(next)
       if (item.kind === 'theme') { setThemeId(itemId); saveTheme(itemId) }
+      // the first thing you own in a category is put on straight away; the saving-for goal is reached
+      else if (item.kind === 'outfit' && item.slot && !equip.outfit[item.slot]) setEquip({ ...toggleOutfit(equip, itemId), goal: equip.goal === itemId ? null : equip.goal })
+      else if (item.kind === 'card' && !equip.card) setEquip({ ...equip, card: itemId, goal: equip.goal === itemId ? null : equip.goal })
+      else if (item.kind === 'title' && !equip.title) setEquip({ ...equip, title: itemId, goal: equip.goal === itemId ? null : equip.goal })
+      else if (equip.goal === itemId) setEquip({ ...equip, goal: null })
       return { ok: true }
     },
     setTheme(id) { if (id === null || ownedThemes(purchases).includes(id)) { setThemeId(id); saveTheme(id) } },
@@ -338,10 +365,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (pending > 0 && !force) return pending
       }
       // The account is the source of truth in cloud mode: clear this device's copies so the next person on this browser never sees them.
-      for (const k of ['bp.anchors', 'bp.anchorChecks', 'bp.journal', 'bp.journal.draft', 'bp.focus', 'bp.sleep.nights', 'bp.sleep.manual', 'bp.sleep.health', 'bp.sleep.synced', 'bp.purchases', 'bp.coins.hw', 'bp.theme', 'bp.rituals', 'bp.sync.meta', 'bp.levels.seen'])
+      for (const k of ['bp.anchors', 'bp.anchorChecks', 'bp.journal', 'bp.journal.draft', 'bp.focus', 'bp.sleep.nights', 'bp.sleep.manual', 'bp.sleep.health', 'bp.sleep.synced', 'bp.purchases', 'bp.coins.hw', 'bp.theme', 'bp.equip', 'bp.ach.seen', 'bp.rituals', 'bp.sync.meta', 'bp.levels.seen'])
         try { localStorage.removeItem(k) } catch { /* ignore */ }
       setJournal([]); setAnchors([]); setChecks(new Set()); setFocusSessions([]); setManualNights([]); setHealthNights([]); setSleepOn(false)
-      setPurchases([]); setRitualsState(normalizeRituals(DEFAULT_RITUALS)); setThemeId(null); setSyncState({ status: 'idle', at: null, pending: 0 })
+      setPurchases([]); setRitualsState(normalizeRituals(DEFAULT_RITUALS)); setThemeId(null); setEquipState(normalizeEquip(null, [])); setSyncState({ status: 'idle', at: null, pending: 0 })
       await supabase.auth.signOut()
       return 0
     },

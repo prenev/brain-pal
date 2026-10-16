@@ -7,6 +7,8 @@ import { useNativeTabs } from './lib/nativeTabs'
 import Guard, { useGuardRelock } from './components/Guard'
 import { StoreProvider, useStore } from './lib/store'
 import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
+import { newlyUnlocked } from './lib/achievements.ts'
+import { loadAchSeen, saveAchSeen } from './lib/extras'
 import Entries, { AllEntries, type HomeTool } from './pages/Entries'
 import Stats from './pages/Stats'
 import CalendarPage from './pages/CalendarPage'
@@ -50,7 +52,7 @@ const TABS: { id: Tab; label: string; icon: LucideIcon; symbol: string }[] = [  
 const NATIVE_ITEMS = TABS.map(({ id, label, symbol }) => ({ id, label, symbol }))
 
 function Shell() {
-  const { ready, loginOpen, recovery, levels, coins, thoughts, sessions, worries, journal, anchors } = useStore()
+  const { ready, loginOpen, recovery, levels, coins, thoughts, sessions, worries, journal, anchors, achievements } = useStore()
   const hasData = thoughts.length + sessions.length + worries.length + journal.length + anchors.length > 0
   const [onboarded, setOnboarded] = useState(() => { try { return !!localStorage.getItem('bp.onboarded') } catch { return true } })
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
@@ -74,7 +76,7 @@ function Shell() {
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
   useEffect(() => { noteFirstSeen() }, [])
   const [tab, setTab] = useState<Tab>('entries')
-  const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus' | null>(null)   // full-screen pages opened from Home
+  const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'achievements' | 'focus' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
@@ -97,13 +99,36 @@ function Shell() {
       else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
       else if (route === 'worry') setWorryTime(true)
       else if (route === 'park') setPark(true)
-      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins' || route === 'focus') { setTab('entries'); setScreen(route) }
+      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins' || route === 'achievements' || route === 'focus') { setTab('entries'); setScreen(route) }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
 
   // A celebration is a happy moment: the only time we may ask for a rating (rarely; see lib/review.ts).
   useEffect(() => { if (cel) askForReviewIfHappy() }, [cel])
+
+  // One celebration at a time: a level-up shown in this pass wins and the achievement waits for the next one.
+  const celLock = useRef(false)
+  useEffect(() => { if (!cel) celLock.current = false }, [cel])
+  // Achievement unlocked: remembers what you've been congratulated for (first run stays quiet), shows the best new one as a shareable card.
+  const celRef = useRef(cel); celRef.current = cel
+  useEffect(() => {
+    if (!ready || loginOpen || recovery || cel || celLock.current) return
+    const seen = loadAchSeen()
+    if (!seen) { saveAchSeen(achievements.filter(a => a.unlocked).map(a => a.id)); return }
+    if (!newlyUnlocked(achievements, seen).length) return
+    // A beat later, so the "entry saved" celebration that is about to open comes first and this one follows it.
+    const t = setTimeout(() => {
+      if (celRef.current || celLock.current) return
+      const now = loadAchSeen() ?? [], fresh = newlyUnlocked(achievements, now)
+      if (!fresh.length) return
+      saveAchSeen([...now, ...fresh.map(a => a.id)])
+      const top = fresh[0], coinsNew = fresh.reduce((n, a) => n + a.coins, 0)
+      celLock.current = true
+      setCel({ emoji: top.emoji, title: 'Achievement unlocked!', sub: `+${coinsNew} ${coinsNew === 1 ? 'coin' : 'coins'}${fresh.length > 1 ? ` · and ${fresh.length - 1} more in Rewards` : ''}`, achievement: top, sound: 'levelup' })
+    }, 500)
+    return () => clearTimeout(t)
+  }, [ready, loginOpen, recovery, cel, achievements])
 
   // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
   useEffect(() => {
@@ -119,6 +144,7 @@ function Shell() {
     if (quiet.length || up) save({ ...seen, ...Object.fromEntries(quiet.map(u => [u.skill, u.to])), ...(up ? { [up.skill]: up.to } : {}) })
     if (!up) return
     const def = SKILLS.find(s => s.id === up.skill)!
+    celLock.current = true
     setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count), card: levelCard(def.name, up.to), sound: 'levelup' })
   }, [ready, loginOpen, recovery, cel, levels])
 
@@ -191,7 +217,7 @@ function Shell() {
       {screen === 'sleep' && <Screen title="Sleep" onClose={() => setScreen(null)}><Sleep /></Screen>}
       {screen === 'progress' && <Screen title="Progress" onClose={() => setScreen(null)}><Progress /></Screen>}
       {screen === 'summary' && <Screen title="Summary" onClose={() => setScreen(null)}><Summary /></Screen>}
-      {screen === 'coins' && <Screen title="Coins" onClose={() => setScreen(null)}><Wallet /></Screen>}
+      {(screen === 'coins' || screen === 'achievements') && <Screen title="Rewards" onClose={() => setScreen(null)}><Wallet initial={screen === 'achievements' ? 'achievements' : 'shop'} /></Screen>}
       {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}

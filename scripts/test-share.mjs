@@ -48,3 +48,28 @@ assert.equal(parseRouteLink('brainpal://checkin'), 'checkin'); assert.equal(pars
 for (const r of ['anchors', 'worry', 'park', 'guard', 'sleep', 'progress', 'coins', 'grounding']) assert.equal(parseRouteLink(`brainpal://${r}`), r, 'widget link ' + r)
 for (const bad of ['brainpal://auth', 'brainpal://auth?code=1', 'brainpal://sos?x=1', 'https://sos', 'brainpal://', 'brainpal://delete']) assert.equal(parseRouteLink(bad), null, bad)
 console.log('share/review/links ok')
+
+// ---- achievement cards ----
+{
+  const { achievements } = await import('../src/lib/achievements.ts')
+  const { achievementCardSvg, lookFromEquip } = await import('../src/lib/cards.ts')
+  const { achievementShareCard, cardSvg: cs } = await import('../src/lib/share.ts')
+  const { EMPTY_EQUIP } = await import('../src/lib/shop.ts')
+  const all = achievements({ thoughts: Array.from({ length: 10 }, (_, i) => ({ createdAt: `2026-09-${String(i + 1).padStart(2, '0')}T10:00:00`, alternateThought: '' })), sessions: [], journal: [], focus: [], worries: [], anchorDays: [], sleepDates: [], guardAt: [], collectDays: [], streakDays: [] })
+  const a = all.find(x => x.id === 'checkin-10')
+  const svg = achievementCardSvg(a)
+  assert.ok(svg.startsWith('<svg') && svg.includes('viewBox="0 0 1080 1350"') && svg.endsWith('</svg>'))
+  for (const t of ['ACHIEVEMENT UNLOCKED', 'SILVER', 'Getting to know me', 'Logged 10 check-ins', 'Sep 10, 2026']) assert.ok(svg.includes(t), t)
+  assert.equal((svg.match(/<svg/g) ?? []).length, 1, 'one svg: the emoji is inlined as a group')
+  // text is escaped (nothing a person wrote is ever on a card, but be safe), the equipped title/outfit/card style appear
+  assert.ok(!achievementCardSvg({ ...a, title: '<b>&"x' }).includes('<b>&"'))
+  const look = lookFromEquip({ ...EMPTY_EQUIP, outfit: { head: 'crown' }, card: 'card-galaxy', title: 'title-captain' })
+  const dressed = achievementCardSvg(a, look)
+  for (const t of ['Calm Captain', 'acc-crown', '#2b1f5c']) assert.ok(dressed.includes(t), t)
+  assert.ok(dressed.includes('<circle') && dressed.includes('opacity'), 'galaxy has stars')
+  assert.ok(!svg.includes('acc-crown') && svg.includes('free · private'), 'default look has no outfit and the plain footer')
+  // the share card wrapper dispatches to it; locked achievements are not shared (the UI only shares unlocked ones)
+  assert.equal(cs(achievementShareCard(a), look), dressed); assert.equal(achievementShareCard(a).kind, 'achievement')
+  // every achievement renders a card
+  for (const x of all) assert.ok(achievementCardSvg(x).includes(x.title.replace(/&/g, '&amp;')), x.id)
+}

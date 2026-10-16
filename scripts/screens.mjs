@@ -4,6 +4,8 @@ import { chromiumPath } from './chromium.mjs'
 import { preview } from 'vite'
 import { execSync } from 'node:child_process'
 import { nativeStub } from './native-stub.mjs'
+import { FAMILIES } from '../src/lib/achievements.ts'
+const ALL_ACH = FAMILIES.flatMap(f => f.tiers.map(t => `${f.id}-${t.at}`))
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -65,6 +67,7 @@ async function session(base, seed, fn, { native = false, onboarding = false, pro
   await mockGemini(ctx)
   await ctx.route('http://127.0.0.1:9/auth/v1/settings', r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ external: { email: true, google: true, apple: true } }) }))
   if (native) { await ctx.addInitScript(nativeStub); if (pro) await ctx.addInitScript(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.proStatus': { active: true, until: 4102444800000 } } }) }
+  await ctx.addInitScript(ids => { try { if (!localStorage.getItem('bp.ach.seen')) localStorage.setItem('bp.ach.seen', JSON.stringify(ids)) } catch { /* ignore */ } }, ALL_ACH)
   if (!onboarding) await ctx.addInitScript(p => { try { localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1'); if (p) localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: 4102444800000, checkedAt: Date.now() })) } catch { /* ignore */ } }, pro)
   if (seed) await ctx.addInitScript(([t, s, w]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)) } }, [thoughts, sessions, worries])
   const p = await ctx.newPage()
@@ -193,10 +196,22 @@ await session('http://localhost:4173', true, async (p, snap) => {   // sleep (Ap
   await p.locator('[aria-label="Sleep and mood"]').scrollIntoViewIfNeeded(); await snap('sleep-mood')
 }, { native: true })
 
-await session('http://localhost:4173', true, async (p, snap) => {   // coins
-  await p.click('.tab >> text=More'); await p.click('.li >> text=Coins'); await snap('coins')
-  await p.locator('h2:has-text("Shop")').scrollIntoViewIfNeeded(); await snap('coins-shop')
-  if (await p.locator('.shop-item:has-text("Ocean") button.primary:not([disabled])').count()) { await p.click('.shop-item:has-text("Ocean") button.primary'); await p.waitForSelector('text=Ocean unlocked'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('coins-theme') }
+await session('http://localhost:4173', true, async (p, snap) => {   // rewards: the shop and the achievements
+  const bought = ids => ids.map((itemId, n) => ({ id: 'p' + n, itemId, at: '2026-10-10T10:00:00.000Z', cost: 60 }))
+  await p.evaluate(b => { localStorage.setItem('bp.coins.hw', '1500'); localStorage.setItem('bp.purchases', JSON.stringify(b.purchases)); localStorage.setItem('bp.equip', JSON.stringify({ outfit: { head: 'crown', face: 'heartshades', neck: 'scarf', back: 'cape' }, card: 'card-aurora', title: 'title-captain', goal: 'outfit-halo' })) }, { purchases: bought(['outfit-crown', 'outfit-heartshades', 'outfit-scarf', 'outfit-cape', 'card-aurora', 'title-captain', 'theme-ocean']) })
+  await p.reload(); await p.click('.tab >> text=More'); await p.click('.li >> text=Coins & shop'); await p.waitForSelector('.shop-head'); await snap('shop-wardrobe')
+  await p.click('.shop-card:has-text("Wizard hat") >> text=Try on'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('shop-tryon')
+  await p.click('.shop-card:has-text("Wizard hat") button.primary'); await p.waitForSelector('.confirm-buy'); await snap('shop-confirm'); await p.click('.confirm-buy >> text=Not now'); await p.click('[aria-label="Stop trying on"]')
+  await p.locator('.shop-card:has-text("Halo")').scrollIntoViewIfNeeded(); await snap('shop-legendary')
+  await p.click('.shop-cats .chip:has-text("Colours")'); await snap('shop-colours'); await p.click('.shop-cats .chip:has-text("Card styles")'); await snap('shop-cards'); await p.click('.shop-cats .chip:has-text("Titles")'); await snap('shop-titles'); await p.click('.shop-cats .chip:has-text("Boosts")'); await snap('shop-boosts')
+  await p.click('.seg [role=tab]:has-text("Achievements")'); await snap('achievements'); await p.evaluate(() => window.scrollTo(0, 700)); await snap('achievements-scrolled')
+  await p.evaluate(() => window.scrollTo(0, 0)); await p.click('.ach-medal[aria-label^="Warming up"]'); await p.waitForSelector('.share-preview svg'); await snap('achievement-card'); await p.click('.sheet >> text=Close')
+  await p.click('.ach-medal[aria-label^="Anchor week"]'); await snap('achievement-locked')
+})
+await session('http://localhost:4173', false, async (p, snap) => {   // a brand-new achievement pops up as a card
+  await p.evaluate(() => localStorage.setItem('bp.ach.seen', '[]')); await p.reload(); await p.waitForSelector('.topbar')
+  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.click('.celebrate .btn.primary')
+  await p.waitForSelector('.cel-card svg'); await snap('achievement-unlocked')
 })
 
 await session('http://localhost:4173', false, async (p, snap) => {   // first run

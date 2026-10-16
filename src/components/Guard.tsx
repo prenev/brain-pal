@@ -22,7 +22,7 @@ function useGuardState() {
   const [config, setConfig] = useState<GuardConfig>(loadGuard)
   const [events, setEvents] = useState<GuardEvent[]>(loadGuardEvents)
   const update = useCallback((patch: Partial<GuardConfig>) => setConfig(c => { const n = { ...c, ...patch }; saveGuard(n); return n }), [])
-  const record = useCallback((e: Omit<GuardEvent, 'id' | 'at'>) => setEvents(es => { const n = [...es, { ...e, id: crypto.randomUUID(), at: new Date().toISOString() }].slice(-200); saveGuardEvents(n); return n }), [])
+  const record = useCallback((e: Omit<GuardEvent, 'id' | 'at'>) => setEvents(es => { const n = [...es, { ...e, id: crypto.randomUUID(), at: new Date().toISOString() }].slice(-200); saveGuardEvents(n); queueMicrotask(() => window.dispatchEvent(new Event('bp:guard-events'))); return n }), [])
   return { config, update, events, record }
 }
 
