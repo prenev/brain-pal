@@ -5,7 +5,7 @@ Where to find things:
 • More → Reminders (iPhone app schedules local notifications), Apple Health (writes Mindful Minutes; optionally reads sleep only, after the user turns it on under Stats → Sleep), AI helper (off by default; the user supplies their own Google Gemini key; nothing is sent unless they turn it on and tap an AI action), About & legal.
 • More → Account appears only when the optional sync backend is configured: Sign in with Apple, Google and email are offered together; Account → Delete account permanently deletes the account and its data in-app.
 
-Health data: HealthKit is used only to (1) save breathing sessions as Mindful Minutes and (2) read sleep analysis if the user opts in. Health data is never uploaded or used for advertising. Privacy policy: https://prenev.github.io/brain-pal/privacy.html
+Health data: HealthKit is used only to (1) save breathing sessions as Mindful Minutes and (2) read sleep analysis if the user opts in. Health data is never uploaded or used for advertising. Privacy policy: https://wobbi.app/privacy.html
 
 In-app purchase: Wobbi Pro, an auto-renewing monthly subscription (product com.brainpal.app.pro.monthly, StoreKit 2). To test: Settings of the sandbox account, then More → Wobbi Pro (or tap a locked feature: Home → Progress or Summary → Week). Restore purchases is on the paywall. The SOS siren, breathing, crisis support and data export are never locked.
 

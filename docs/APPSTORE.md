@@ -42,7 +42,7 @@ Everything here was prepared and checked as far as a Linux sandbox allows. **Wha
 4. **Trademark / name check** (15 min, do not skip): search "Wobbi" in the App Store, Google Play, [USPTO](https://tmsearch.uspto.gov), [EUIPO](https://euipo.europa.eu/eSearch/) and [WIPO Global Brand DB](https://branddb.wipo.int). If another mental-health/health app uses the same or a confusingly similar name, change it **now** (name lives in `scripts/store-metadata.mjs`, `Info.plist` `CFBundleDisplayName`, `src/lib/legal.ts`). Apple also rejects a name already taken by another app.
 
 ### Step 2 — Put the legal pages online (5 min)
-GitHub repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**. Then merge to `main` (or run the *Legal site (GitHub Pages)* workflow). Pages go live at **https://prenev.github.io/brain-pal/** with `privacy.html`, `terms.html`, `support.html`, `licenses.html`. Check with `npm run store:check -- --online`.
+GitHub repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**. Then merge to `main` (or run the *Legal site (GitHub Pages)* workflow). Pages go live at **https://wobbi.app/** with `privacy.html`, `terms.html`, `support.html`, `licenses.html`. Check with `npm run store:check -- --online`.
 *(If the repo is private, Pages needs a paid GitHub plan; otherwise host the `site/` folder anywhere (Netlify, Cloudflare Pages) and change `SITE_URL` in `src/lib/legal.ts` and `SITE` in `scripts/store-metadata.mjs`.)*
 
 ### Step 3 — Apple Developer portal (10 min) · developer.apple.com → Certificates, Identifiers & Profiles
@@ -86,7 +86,7 @@ Text fields are already in `fastlane/metadata/en-US/*.txt` (and §4 shows where 
 
 **Pricing and Availability** — Price **Free** (US$0) · Availability **all countries** (or untick any you don't want) · no pre-order.
 
-**App Privacy** (App Store Connect → App Privacy → Get Started) — Privacy Policy URL `https://prenev.github.io/brain-pal/privacy.html`. Then:
+**App Privacy** (App Store Connect → App Privacy → Get Started) — Privacy Policy URL `https://wobbi.app/privacy/`. Then:
 - *Do you or your third-party partners collect data from this app?* → **Yes** (only because of the optional account; most users store nothing on our servers).
 - Tick these and nothing else, then for **each**: *Linked to you* **Yes** · *Used for tracking* **No** · Purpose **App Functionality** only.
   - **Contact Info → Email Address** · **Contact Info → Name** (nickname / name Apple or Google shares)
@@ -102,8 +102,8 @@ Text fields are already in `fastlane/metadata/en-US/*.txt` (and §4 shows where 
 | Field | Answer |
 |---|---|
 | Promotional text, Description, Keywords, What's New | from `fastlane/metadata/en-US/` (paste or upload with `fastlane ios metadata`) |
-| Support URL | `https://prenev.github.io/brain-pal/support.html` |
-| Marketing URL | `https://prenev.github.io/brain-pal/` |
+| Support URL | `https://wobbi.app/support/` |
+| Marketing URL | `https://wobbi.app/` |
 | Copyright | `2026 <your name>` |
 | Build | the one you uploaded |
 | Version release | **Manually release** (you choose the day) · tick **Phased release for automatic updates** later |

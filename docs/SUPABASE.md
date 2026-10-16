@@ -8,14 +8,21 @@ Everything below is created by the SQL in `supabase/migrations/` (the exact file
 
 | | |
 |---|---|
-| Tables | `thoughts`, `breath_sessions`, `worries`, `push_subscriptions` — each row belongs to one user (`user_id`, cascades on account delete) |
-| Security | Row-level security on every table: signed-in users see **only their own rows**; the `anon` role has **no access at all** |
+| Tables | `thoughts`, `breath_sessions`, `worries`, `push_subscriptions`, `user_docs` — each row belongs to one user (`user_id`, cascades on account delete) · `waitlist_signups` (the Wobbi website waitlist, see below) |
+| Security | Row-level security on every table: signed-in users see **only their own rows**; the `anon` role has **no access at all** — except one insert-only policy on `waitlist_signups` |
 | Data checks | mood 1–5, intensities 0–100 / 0–10, worry status, hour 0–23 … enforced by the database |
 | Storage | private bucket `photos` (25 MB limit, images + audio only); a user can only read/write files under `<their user id>/` |
 | Edge function | `delete-account` (powers *More → Account → Delete account*; JWT required) |
 | Not deployed yet | `send-reminders` (only for **web**-push reminders; the iPhone app schedules reminders on the phone) |
 
 The migrations are tested against a real Postgres on every push (`npm run test:db`, see *Tests*), and the live schema was verified identical to them.
+
+## Website waitlist (`waitlist_signups`)
+The landing page (separate repo, `brainpal-landing-`, wobbi.app) posts sign-ups straight to `/rest/v1/waitlist_signups` with the publishable key:
+- `anon` can **only insert** (policy `waitlist_signups_anon_insert`, `consent = true`); it cannot select, update or delete, and signed-in users have no access either. Read the list in the dashboard (Table editor) or with the service role.
+- Every column is checked by the database: lower-case email format and length, name ≤ 80, ≤ 6 interests, device in (iPhone, Android, Both, Other), notes ≤ 500, `consent` must be true.
+- Email is unique. A repeat sign-up returns `23505`, which the website treats as success so it never reveals who is on the list (`on conflict` would need select access, so it is not used).
+- Tested in `supabase/tests/rls.sql`. There is no email notification yet; check the table, or add a Database Webhook / Edge Function with your own email provider key.
 
 ## Connect the app (2 values)
 In the Supabase dashboard open **Project Settings → API Keys** and copy:

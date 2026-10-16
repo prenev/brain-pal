@@ -95,7 +95,7 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
           </div>
           <p className="muted small" style={{ lineHeight: 1.45 }}>{DISCLOSURE(product?.price ?? null)}</p>
           <p className="small" style={{ textAlign: 'center' }}>
-            <a href={link('terms.html')} target="_blank" rel="noreferrer">Terms of Service</a> · <a href={link('privacy.html')} target="_blank" rel="noreferrer">Privacy Policy</a> · <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noreferrer">Apple’s standard EULA</a>
+            <a href={link('terms/')} target="_blank" rel="noreferrer">Terms of Service</a> · <a href={link('privacy/')} target="_blank" rel="noreferrer">Privacy Policy</a> · <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noreferrer">Apple’s standard EULA</a>
           </p>
         </> : <div className="card" style={{ textAlign: 'center' }}>
           <b>Pro is part of the iPhone app</b>
