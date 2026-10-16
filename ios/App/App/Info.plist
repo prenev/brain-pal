@@ -80,5 +80,7 @@
 	<false/>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

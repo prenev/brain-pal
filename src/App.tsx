@@ -32,6 +32,7 @@ import Summary from './components/Summary'
 import Wallet from './components/Wallet'
 import { levelCard } from './lib/share.ts'
 import { installFeedback } from './lib/feedback'
+import { useWidgetSync } from './lib/nativeWidgets'
 import { sfx } from './lib/sound'
 import { askForReviewIfHappy, noteFirstSeen } from './lib/reviewAsk'
 import type { JournalEntry } from './lib/journal.ts'
@@ -54,6 +55,7 @@ function Shell() {
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
   useGuardRelock()
+  useWidgetSync()
   useEffect(() => installFeedback(), [])
   const [coached, setCoached] = useState(coachDone)
   const [news, setNews] = useState(() => unseenReleases(seenVersion(), APP_VERSION))
@@ -88,10 +90,13 @@ function Shell() {
   useEffect(() => {
     const go = (e: Event) => {
       const route = (e as CustomEvent<string>).detail
-      if (route === 'sos') { setScreen(null); setSos(true) }
+      if (route === 'sos' || route === 'grounding') { setScreen(null); setSos(true) }   // grounding lives inside SOS (rate first, then 5-4-3-2-1)
       else if (route === 'breathe') setTab('breathe')
       else if (route === 'journal') setJournalOpen({})
       else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
+      else if (route === 'worry') setWorryTime(true)
+      else if (route === 'park') setPark(true)
+      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins') { setTab('entries'); setScreen(route) }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])

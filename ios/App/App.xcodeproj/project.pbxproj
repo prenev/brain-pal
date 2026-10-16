@@ -20,7 +20,47 @@
 		B1A0000000000000000A0004 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0003 /* MainViewController.swift */; };
 		B1A0000000000000000A0007 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0006 /* PrivacyInfo.xcprivacy */; };
 		B1A0000000000000000A0009 /* BrainPalIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0008 /* BrainPalIntents.swift */; };
+		B1A0000000000000000B0002 /* WobbiShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0001 /* WobbiShared.swift */; };
+		B1A0000000000000000B0003 /* WobbiShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0001 /* WobbiShared.swift */; };
+		B1A0000000000000000B0008 /* WobbiWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0007 /* WobbiWidgets.swift */; };
+		B1A0000000000000000B0010 /* WobbiWidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0009 /* WobbiWidgetViews.swift */; };
+		B1A0000000000000000B0012 /* WobbiLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0011 /* WobbiLiveActivity.swift */; };
+		B1A0000000000000000B0014 /* WobbiControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0013 /* WobbiControls.swift */; };
+		B1A0000000000000000B0016 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0015 /* Assets.xcassets */; };
+		B1A0000000000000000B0006 /* WobbiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000B0005 /* WobbiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B1A0000000000000000B0024 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B1A0000000000000000B0019;
+			remoteInfo = WobbiWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B1A0000000000000000B0023 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B1A0000000000000000B0006 /* WobbiWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B1A0000000000000000B0025 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B1A0000000000000000B0019 /* WobbiWidgets */;
+			targetProxy = B1A0000000000000000B0024 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXFileReference section */
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -39,6 +79,15 @@
 		B1A0000000000000000A0005 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		B1A0000000000000000A0006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B1A0000000000000000A0008 /* BrainPalIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainPalIntents.swift; sourceTree = "<group>"; };
+		B1A0000000000000000B0001 /* WobbiShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WobbiShared.swift; sourceTree = "<group>"; };
+		B1A0000000000000000B0007 /* WobbiWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WobbiWidgets.swift; sourceTree = "<group>"; };
+		B1A0000000000000000B0009 /* WobbiWidgetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WobbiWidgetViews.swift; sourceTree = "<group>"; };
+		B1A0000000000000000B0011 /* WobbiLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WobbiLiveActivity.swift; sourceTree = "<group>"; };
+		B1A0000000000000000B0013 /* WobbiControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WobbiControls.swift; sourceTree = "<group>"; };
+		B1A0000000000000000B0015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B1A0000000000000000B0017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B1A0000000000000000B0018 /* WobbiWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WobbiWidgets.entitlements; sourceTree = "<group>"; };
+		B1A0000000000000000B0005 /* WobbiWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WobbiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +99,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B1A0000000000000000B0021 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -58,6 +114,7 @@
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
+				B1A0000000000000000B0004 /* WobbiWidgets */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -66,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				B1A0000000000000000B0005 /* WobbiWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -74,6 +132,7 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				B1A0000000000000000B0001 /* WobbiShared.swift */,
 				B1A0000000000000000A0008 /* BrainPalIntents.swift */,
 				B1A0000000000000000A0006 /* PrivacyInfo.xcprivacy */,
 				B1A0000000000000000A0001 /* MindfulPlugin.swift */,
@@ -91,6 +150,20 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		B1A0000000000000000B0004 /* WobbiWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				B1A0000000000000000B0007 /* WobbiWidgets.swift */,
+				B1A0000000000000000B0009 /* WobbiWidgetViews.swift */,
+				B1A0000000000000000B0011 /* WobbiLiveActivity.swift */,
+				B1A0000000000000000B0013 /* WobbiControls.swift */,
+				B1A0000000000000000B0015 /* Assets.xcassets */,
+				B1A0000000000000000B0017 /* Info.plist */,
+				B1A0000000000000000B0018 /* WobbiWidgets.entitlements */,
+			);
+			path = WobbiWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -101,10 +174,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				B1A0000000000000000B0023 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B1A0000000000000000B0025 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -113,6 +188,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B1A0000000000000000B0019 /* WobbiWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1A0000000000000000B0026 /* Build configuration list for PBXNativeTarget "WobbiWidgets" */;
+			buildPhases = (
+				B1A0000000000000000B0020 /* Sources */,
+				B1A0000000000000000B0021 /* Frameworks */,
+				B1A0000000000000000B0022 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WobbiWidgets;
+			productName = WobbiWidgets;
+			productReference = B1A0000000000000000B0005 /* WobbiWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -147,6 +239,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				B1A0000000000000000B0019 /* WobbiWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -166,6 +259,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B1A0000000000000000B0022 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1A0000000000000000B0016 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -175,9 +276,22 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				B1A0000000000000000B0002 /* WobbiShared.swift in Sources */,
 				B1A0000000000000000A0009 /* BrainPalIntents.swift in Sources */,
 				B1A0000000000000000A0002 /* MindfulPlugin.swift in Sources */,
 				B1A0000000000000000A0004 /* MainViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1A0000000000000000B0020 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1A0000000000000000B0003 /* WobbiShared.swift in Sources */,
+				B1A0000000000000000B0008 /* WobbiWidgets.swift in Sources */,
+				B1A0000000000000000B0010 /* WobbiWidgetViews.swift in Sources */,
+				B1A0000000000000000B0012 /* WobbiLiveActivity.swift in Sources */,
+				B1A0000000000000000B0014 /* WobbiControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -360,6 +474,55 @@
 			};
 			name = Release;
 		};
+		B1A0000000000000000B0027 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = WobbiWidgets/WobbiWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZY687MSU74;
+				INFOPLIST_FILE = WobbiWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.brainpal.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		B1A0000000000000000B0028 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = WobbiWidgets/WobbiWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZY687MSU74;
+				INFOPLIST_FILE = WobbiWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.brainpal.app.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+								SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -377,6 +540,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B1A0000000000000000B0026 /* Build configuration list for PBXNativeTarget "WobbiWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1A0000000000000000B0027 /* Debug */,
+				B1A0000000000000000B0028 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

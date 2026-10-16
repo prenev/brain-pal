@@ -7,8 +7,10 @@ const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 /* 1. the copies inside ios/ are exactly what ios-native/ says (CI caught this drifting once) */
 // (the optional `ios-patch.py --apple-signin` entitlement is the only allowed difference)
 const stripApple = t => t.replace(/\s*<key>com\.apple\.developer\.applesignin<\/key>\s*<array>.*?<\/array>/s, '').replace(/\s*<key>com\.apple\.developer\.family-controls<\/key>\s*<true\/>/s, '')
-for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'BrainPalIntents.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy'])
+for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'BrainPalIntents.swift', 'WobbiShared.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy'])
   assert.equal(stripApple(read(`ios/App/App/${f}`)), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
+const WIDGET_FILES = ['WobbiWidgets.swift', 'WobbiWidgetViews.swift', 'WobbiLiveActivity.swift', 'WobbiControls.swift', 'Info.plist', 'WobbiWidgets.entitlements']
+for (const f of WIDGET_FILES) assert.equal(read(`ios/App/WobbiWidgets/${f}`), read(`ios-native/Widgets/${f}`), `ios/App/WobbiWidgets/${f} is stale - run: python3 scripts/ios-patch.py`)
 
 /* 2. every method the JS calls on the Mindful plugin exists in Swift, and vice versa */
 const iface = read('src/lib/native.ts').match(/export interface MindfulPlugin \{([\s\S]*?)\n\}/)[1]
@@ -66,3 +68,34 @@ const reads = [...swift.matchAll(/read: (\[[^\]]*\])/g)].map(m => m[1]); assert.
 assert.match(plist, /NSHealthShareUsageDescription<\/key>\s*<string>[^<]*sleep[^<]*<\/string>/, 'the permission text must honestly mention sleep')
 assert.doesNotMatch(plist, /does not read your health data/, 'stale claim')
 console.log('ios: all tests passed')
+
+/* 4f. Widgets: an embedded WidgetKit extension sharing one App Group with the app; read-only, no network, data shapes agree with JS */
+assert.match(pbx, /productType = "com\.apple\.product-type\.app-extension"/, 'widget extension target')
+assert.match(pbx, /WobbiWidgets\.appex in Embed Foundation Extensions/, 'the app embeds the widget extension')
+assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.brainpal\.app\.widgets;/)
+assert.equal((pbx.match(/WobbiShared\.swift in Sources/g) ?? []).length, 4, 'WobbiShared.swift compiled into both the app and the extension (2 build files, 2 phase entries)')
+for (const f of ['WobbiWidgets.swift', 'WobbiWidgetViews.swift', 'WobbiLiveActivity.swift', 'WobbiControls.swift']) assert.ok(pbx.includes(`${f} in Sources`), `${f} must be compiled`)
+const shared = read('ios-native/WobbiShared.swift')
+const group = shared.match(/static let id = "([^"]+)"/)[1]
+for (const ent of ['ios-native/App.entitlements', 'ios-native/Widgets/WobbiWidgets.entitlements']) assert.ok(read(ent).includes(`<string>${group}</string>`), `${ent} must list the App Group ${group}`)
+const widgetSwift = WIDGET_FILES.filter(f => f.endsWith('.swift')).map(f => read(`ios-native/Widgets/${f}`)).join('\n') + shared
+assert.doesNotMatch(widgetSwift, /URLSession|URLRequest|NWConnection/, 'widgets never touch the network')
+assert.match(read('ios-native/Widgets/Info.plist'), /com\.apple\.widgetkit-extension/)
+assert.match(plist, /<key>NSSupportsLiveActivities<\/key>\s*<true\/>/)
+// every snapshot field the JS writes is decoded by Swift (CodingKeys), so a renamed field can't silently blank a widget
+const tsFields = read('src/lib/widgetData.ts').match(/export interface WidgetSnapshot \{([\s\S]*?)\n\}/)[1].match(/^\s{2}(\w+):/gm).map(l => l.trim().slice(0, -1)).sort()
+const swiftKeys = shared.match(/enum CodingKeys: String, CodingKey \{ case ([^}]+)\}/)[1].split(',').map(k => k.trim().replace(/^focus = "guard"$/, 'guard')).sort()
+assert.deepEqual(swiftKeys, tsFields, 'WidgetSnapshot fields differ between widgetData.ts and WobbiShared.swift')
+// queued actions: what Swift writes is what normalizeActions() accepts
+assert.match(shared, /"kind": "mood", "mood": mood, "at":/); assert.match(shared, /"kind": "anchor", "id": anchorId, "done":/)
+// every route a widget or control opens is one the app accepts
+const routes = read('src/lib/nativeCore.ts').match(/const LINK_ROUTES: LinkRoute\[\] = \[([^\]]+)\]/)[1].match(/'(\w+)'/g).map(r => r.slice(1, -1))
+for (const r of [...widgetSwift.matchAll(/link\("(\w+)"\)/g)].map(m => m[1])) assert.ok(routes.includes(r), `widget link brainpal://${r} is not handled by the app`)
+const controlRoutes = shared.match(/enum WobbiRoute: String, AppEnum \{\n\s*case ([^\n]+)/)[1].split(',').map(c => c.trim().replace(/^\w+ = "(\w+)"$/, '$1'))
+assert.deepEqual(controlRoutes, ['sos', 'breathe', 'park', 'guard'])
+for (const r of controlRoutes) assert.ok(routes.includes(r), `control route ${r} is not handled by the app`)
+// widget art exists for every Wobbi pose and every emoji the app can show
+const poses = [...read('src/lib/pal.ts').matchAll(/^\s{2}(\w+): \{/gm)].map(m => m[1])
+for (const p of poses) assert.ok(existsSync(new URL(`../ios-native/Widgets/Assets.xcassets/pal/pal-${p}.imageset/pal-${p}.png`, import.meta.url)), `widget image for pose ${p} - run: npm run widget:assets`)
+const emoji = [...read('src/lib/emojiData.ts').matchAll(/^ "([\w-]+)":/gm)].map(m => m[1])
+for (const e of emoji) assert.ok(existsSync(new URL(`../ios-native/Widgets/Assets.xcassets/emoji/emoji-${e}.imageset/emoji-${e}.png`, import.meta.url)), `widget image for emoji ${e} - run: npm run widget:assets`)
