@@ -8,6 +8,7 @@ export const RELEASES: Release[] = [
     { emoji: 'shield', title: 'Focus guard', text: 'Pause the apps that eat your time until you do push-ups, a walk, or a minute of breathing.' },
     { emoji: 'cloud', title: 'Works offline, syncs if you want', text: 'No account needed. Sign in only if you want your data on every device.' },
     { emoji: 'sleep', title: 'Sleep, summaries and proof', text: 'Apple Watch sleep, weekly summaries and before-and-after proof of your progress. (Proof and week/month summaries are Pro)' },
+    { emoji: 'star', title: 'Widgets', text: 'Log a mood, tick anchors or open SOS from your home screen, lock screen and Control Center.' },
   ] },
 ]
 

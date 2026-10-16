@@ -97,3 +97,9 @@ import type { ReviewState } from './review.ts'
 const K_REVIEW = 'bp.review'
 export const loadReview = (): ReviewState => { const r = read<Partial<ReviewState> | null>(K_REVIEW, null); return { firstSeen: r?.firstSeen ?? null, lastAsked: r?.lastAsked ?? null, asks: r?.asks ?? 0 } }
 export const saveReview = (r: ReviewState) => write(K_REVIEW, r)
+
+// Sound + haptic feedback preferences (device-only)
+import { normalizeFx, type FxSettings } from './sfx.ts'
+const K_FX = 'bp.fx'
+export const loadFx = (): FxSettings => normalizeFx(read<unknown>(K_FX, null))
+export const saveFx = (f: FxSettings) => write(K_FX, f)

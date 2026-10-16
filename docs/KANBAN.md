@@ -6,14 +6,14 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## 🔜 Backlog (ordered — see ROADMAP "Order of work")
 - **P13** 🧱 Theme picker; optional Gemini "reflect with me"
-- **chore** 🐞 Code-split bundle · neutral demo seed text · Siri/widgets (Mac)
+- **chore** 🐞 Code-split bundle · neutral demo seed text · Apple Watch (Mac)
 
 ## ⏭ Next up
 - **P13** 🧱 Weekly review nudge (Today card on Sunday evening), optional Gemini "reflect with me"
 - **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **P20 Growth** 📄 marketing strategy written (docs/MARKETING.md); share cards, stickers, invite, rating prompt, Siri links done; next: landing page + waitlist, widgets/Watch (Mac)
+- **P20 Growth** 📄 marketing strategy written (docs/MARKETING.md); share cards, stickers, invite, rating prompt, Siri links done; next: landing page + waitlist, Watch (Mac)
 - **P18 Wobbi + Focus guard** 🧱 mascot, onboarding story, notch fix, Screen Time guard — verify, CI, screens
 - (done earlier) **P17 App Store pack** 📄 mascot icon, screenshots, listing, legal pages (in-app + site), privacy manifest, fastlane/TestFlight, docs/APPSTORE.md — verify + CI, then owner steps in TODO.md
 
@@ -24,6 +24,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## ✅ Done
 - **P20 Growth** 🗄 website waitlist table `waitlist_signups` (insert-only for `anon`, RLS, column checks, tested) live in `brain-pal`; the wobbi.app site posts sign-ups to it. Email notification to the owner still open.
+- P24 Widgets: 14 home/lock-screen widgets (interactive mood + anchors), Live Activity (breathing / focus), 4 iOS 18 controls; App Group snapshot + action queue — unit + e2e (mutation-checked), simulator + signed device build, snapshot verified on the iPhone; widget looks/taps on device pending
 - P19 Offline first + Pro monthly subscription (StoreKit 2 + paywall + gates), What's new, SOS-first coach, no scroll bars, streak box removed — verified with the simulated bridge; real purchases need a device + App Store Connect setup
 - SOS is a siren in the Home/Breathe action bar (cards + menu entry removed), no daily-goals card, tools strip starts level with the cards, Wobbi's corner coach replaces the swipe tip
 - Home tools strip scrolls (Thoughts leads; Sleep/Progress/Summary/Coins no longer buried), Wobbi tips per section, splash screen, Wobbi v3 (no centre line), fix: "+N coins" toast could stay forever (its timer was cancelled by later coin changes; e2e fails without the fix)

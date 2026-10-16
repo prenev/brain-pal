@@ -4,7 +4,8 @@ import Pal, { PalSays } from './Pal'
 import BreathRunner from './BreathRunner'
 import { Toggle } from './ui'
 import { burst } from '../lib/confetti'
-import { chime, haptic, hapticSuccess } from '../lib/haptics'
+import { haptic, hapticSuccess } from '../lib/haptics'
+import { sfx } from '../lib/sound'
 import { useStore } from '../lib/store'
 import { guardClear, guardLock, guardPickApps, guardRequestAuth, guardStatus, guardSupported, guardUnlock, type GuardStatus } from '../lib/guardNative'
 import { loadGuard, loadGuardEvents, saveGuard, saveGuardEvents } from '../lib/extras'
@@ -165,7 +166,7 @@ function Challenge({ config, practice, onClose, onEarned }: { config: GuardConfi
 
   async function finish(ch: Challenge, n: number) {
     if (done.current) return; done.current = true
-    await onEarned(ch, n); setPhase('done'); burst(); chime(); hapticSuccess()
+    await onEarned(ch, n); setPhase('done'); burst(); sfx('celebrate'); hapticSuccess()
   }
   const begin = (ch: Challenge) => { done.current = false; setC(ch); setReps(newReps()); setLine(''); setSlow(false); setStarted(ch.kind === 'timer' ? Date.now() : null); setPhase('do') }
   function rep() {
@@ -206,7 +207,7 @@ function Challenge({ config, practice, onClose, onEarned }: { config: GuardConfi
           <Pal pose={c.pose} size={150} motion={reps.reps ? 'jump' : 'bob'} />
           <div className="rep-count" role="status" aria-label="Reps done">{reps.reps} <small>/ {c.target}</small></div>
           <div className="bar" style={{ margin: '0 4px 16px' }}><i style={{ width: `${Math.min(100, (reps.reps / c.target) * 100)}%` }} /></div>
-          <button className="btn primary block rep-btn" onClick={rep}>I did one</button>
+          <button className="btn primary block rep-btn" data-fx="off" onClick={rep}>I did one</button>
           <p className="muted small" role="status" style={{ minHeight: 20 }}>{slow ? `One rep at a time (about ${Math.round(MIN_REP_GAP_MS / 100) / 10}s each) — go slow and steady.` : 'We can’t watch you, so this one’s on the honour system.'}</p>
         </>}
         {c.kind === 'timer' && <>

@@ -45,5 +45,6 @@ assert.equal(shouldAskReview({ ...asked, asks: REVIEW_MAX_ASKS }, at(900), true)
 // Siri / Shortcuts links
 assert.equal(parseRouteLink('brainpal://sos'), 'sos'); assert.equal(parseRouteLink(' BRAINPAL://Breathe/ '), 'breathe')
 assert.equal(parseRouteLink('brainpal://checkin'), 'checkin'); assert.equal(parseRouteLink('brainpal://journal'), 'journal')
+for (const r of ['anchors', 'worry', 'park', 'guard', 'sleep', 'progress', 'coins', 'grounding']) assert.equal(parseRouteLink(`brainpal://${r}`), r, 'widget link ' + r)
 for (const bad of ['brainpal://auth', 'brainpal://auth?code=1', 'brainpal://sos?x=1', 'https://sos', 'brainpal://', 'brainpal://delete']) assert.equal(parseRouteLink(bad), null, bad)
 console.log('share/review/links ok')

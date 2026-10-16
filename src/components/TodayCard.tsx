@@ -7,7 +7,7 @@ import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates.ts'
 import { nextAction } from '../lib/today.ts'
 import { stepChoices } from '../lib/focus.ts'
-import { haptic } from '../lib/haptics'
+import { sfx } from '../lib/sound'
 
 /**
  * The one obvious next thing. With no check-in yet today it is five faces: one tap logs a mood
@@ -35,7 +35,7 @@ export default function TodayCard({ onDetails, onWorry, onBreathe, onStep }: { o
     setBusy(true); setErr('')
     try {
       const n = await addThought({ mood, situation: '', thought: '', emotions: [], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: [], distortions: [], photoFiles: [] })
-      haptic(15); setLogged({ id: n.id, mood })
+      sfx('pop'); setLogged({ id: n.id, mood })
     } catch (e: any) { setErr(e?.message ?? 'Could not save') }
     setBusy(false)
   }
