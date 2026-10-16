@@ -30,7 +30,7 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
       <div className="anchors-head">
         <div>
           <b>Today’s anchors</b>
-          <span className="muted small">{all ? 'Every one done. That counts.' : st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : 'Small things that make a day count'}</span>
+          <span className="muted small">{all ? 'Every one done. That counts.' : 'Small things that make a day count'}</span>
         </div>
         <span className="ring" role="img" aria-label={`${p.done} of ${p.total} done`}>
           <svg viewBox="0 0 38 38" width="46" height="46"><circle cx="19" cy="19" r={R} /><circle className="fg" cx="19" cy="19" r={R} strokeDasharray={C} strokeDashoffset={C * (1 - p.done / p.total)} /></svg>
@@ -49,6 +49,7 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
           </li>
         ))}
       </ul>
+      {st.current > 0 && <p className="muted small anchors-streak"><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {st.current} {st.current === 1 ? 'day' : 'days'} with every anchor done</p>}
       <button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>
     </div>
   )

@@ -52,7 +52,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       </div>
       <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
       {today.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
-      {thoughts.length > 0 && <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries</button>}
+      <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries</button>
 
       {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
     </>

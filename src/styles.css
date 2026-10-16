@@ -588,3 +588,4 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .stepper { display: grid; grid-template-columns: 1fr 40px 54px 40px; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: 16px; background: var(--card2); border: 2px solid var(--edge); font-weight: 800; }
 .stepper button { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; color: var(--accent); }
 .stepper button:disabled { color: #4b5d80; } .stepper b { text-align: center; font-variant-numeric: tabular-nums; }
+.anchors-streak { margin: 8px 0 0; text-align: center; }
