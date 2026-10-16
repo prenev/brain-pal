@@ -13,7 +13,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **P20 Growth** 📄 marketing strategy written (docs/MARKETING.md); next: ratings prompt, share cards, sticker pack
+- **P20 Growth** 📄 marketing strategy written (docs/MARKETING.md); share cards, stickers, invite, rating prompt, Siri links done; next: landing page + waitlist, widgets/Watch (Mac)
 - **P18 Pal + Focus guard** 🧱 mascot, onboarding story, notch fix, Screen Time guard — verify, CI, screens
 - (done earlier) **P17 App Store pack** 📄 mascot icon, screenshots, listing, legal pages (in-app + site), privacy manifest, fastlane/TestFlight, docs/APPSTORE.md — verify + CI, then owner steps in TODO.md
 

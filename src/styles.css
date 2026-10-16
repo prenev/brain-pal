@@ -463,3 +463,10 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .tool .badge { position: absolute; top: 6px; right: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-style: normal; font-weight: 900; display: grid; place-items: center; }
 .tools-row { margin-bottom: 10px; }
 .more-today { display: block; margin: -4px auto 10px; }
+
+/* share cards + stickers */
+.share-preview { border-radius: 18px; overflow: hidden; border: 3px solid var(--line, #2c354a); margin: 8px 0; }
+.share-preview svg { display: block; width: 100%; height: auto; }
+.stickers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+.sticker { background: var(--card, #1b2233); border: 2px solid var(--line, #2c354a); border-radius: 16px; padding: 6px; display: flex; justify-content: center; }
+.sticker:active { transform: scale(.94); }

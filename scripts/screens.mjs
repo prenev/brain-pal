@@ -123,7 +123,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.locator('h3:has-text("Voice memo")').scrollIntoViewIfNeeded(); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await snap('voice-recording')
   await p.click('button:has-text("Stop")'); await p.waitForSelector('audio'); await p.fill('textarea[placeholder^="Type it yourself"]', 'Talked it through: the demo went fine in the end.'); await snap('voice-recorded')
   await p.click('text=Save'); await p.waitForSelector('.celebrate'); await p.waitForTimeout(900); await snap('celebrate')
-  await p.click('.celebrate .btn'); await snap('entries-after-save')
+  await p.click('.celebrate .btn.primary'); await snap('entries-after-save')
   await p.click('.tool >> text=Thoughts'); await p.locator('.overlay .entry:has-text("Voice memo")').first().click(); await snap('entry-with-voice-memo')
 })
 
@@ -164,7 +164,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // journal
   await p.click('text=Need a place to start?'); await p.fill('[aria-label="Title"]', 'A slower morning')
   await p.fill('[aria-label="Journal entry"]', 'Woke up before the alarm. Made tea, sat by the window and just watched the street for ten minutes. Nothing special, but my shoulders dropped for the first time this week.')
   await p.click('[aria-label=Mood]'); await p.click('[aria-label="Mood: good"]'); await p.click('[aria-label=Tags]'); await p.click('.chip:has-text("health")'); await snap('journal-editor-tags'); await p.click('[aria-label=Tags]'); await snap('journal-editor')
-  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn')
+  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn.primary')
   await p.click('.tab >> text=More'); await p.click('.li >> text=Journal'); await snap('journal-list')
 })
 
@@ -204,6 +204,12 @@ await session('http://localhost:4173', false, async (p, snap) => {   // first ru
 await session('http://localhost:4173', true, async (p, snap) => {   // Focus guard on the web (practice mode) and on iPhone (simulated Screen Time)
   await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await snap('guard-web')
   await p.click('button:has-text("Try an activity")'); await snap('guard-choose'); await p.click('.challenge-opt >> text=Push-ups'); await p.click('.rep-btn'); await snap('guard-pushups')
+})
+await session('http://localhost:4173', true, async (p, snap) => {   // share cards + stickers
+  await p.evaluate(() => localStorage.setItem('bp.guard.events', JSON.stringify([{ id: 'a', at: new Date().toISOString(), challenge: 'pushups', minutes: 10, reps: 20 }, { id: 'b', at: new Date().toISOString(), challenge: 'squats', minutes: 10, reps: 35 }])))
+  await p.reload(); await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('[aria-label="Brain rot beaten"]'); await snap('guard-counter')
+  await p.click('[aria-label="Brain rot beaten"] button'); await p.waitForSelector('.share-preview svg'); await snap('share-card'); await p.click('.sheet button:has-text("Close")')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Pal stickers'); await snap('stickers')
 })
 await session('http://localhost:4173', true, async (p, snap) => {
   await p.evaluate(() => { window.__reply = { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4 }, 'Mindful.screenTimePickApps': { count: 4 } } })

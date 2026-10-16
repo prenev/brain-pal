@@ -76,3 +76,11 @@ In the iPhone app the bottom bar is a **real `UITabBar`** added by `MindfulPlugi
 - The web page leaves room via `--native-tab-h` (height the bar covers) and the + button sits above it.
 - **Not verified on a device:** the Swift compiles on macOS CI, and the JS side is covered by e2e with the simulated bridge, but I could not see the real bar. Check on your iPhone: glass look on iOS 26, tab taps switch screens, bar hides behind the + menu, nothing is cut off at the bottom of scrolled screens, and the + button position.
 - Because it is a standalone `UITabBar` (not a `UITabBarController`), iOS 26 may draw it docked rather than as the floating capsule. If you want the floating capsule exactly, the next step is a `UITabBarController` shell — say so.
+
+## Siri, Shortcuts and the Action button (Phase 20)
+`ios-native/BrainPalIntents.swift` (App Intents, iOS 16+) gives three zero-setup Siri phrases: *"I'm anxious in Brain Pal"* (opens SOS), *"Breathe with Brain Pal"*, *"Log my mood in Brain Pal"*. Each intent opens our own `brainpal://sos|breathe|checkin|journal` link, handled by `parseRouteLink` in `nativeInit.ts`. The same links work in the Shortcuts app ("Open URL") and can be bound to the **Action button** (Settings → Action Button → Shortcut). The links and the JS side are unit/e2e tested; the Swift is compiled only by the macOS CI job and **not verified on a device** (check: say the phrase, it should open SOS).
+
+**Not built yet (needs a Mac session, separate Xcode targets):** Home/Lock Screen **widgets** (WidgetKit: streak, one-tap mood, SOS) and an **Apple Watch** app (mood tap, haptic breathing). Plan: App Group shared UserDefaults for the streak number only (no entry text), a Widget Extension target, and a watchOS target; add them with `ios-patch.py` once a Mac can verify the build.
+
+## Rating prompt and offer codes
+`Mindful.requestReview` shows the system rating prompt (`SKStoreReviewController`); JS asks only after a celebration, ≥7 days after first launch, ≥120 days apart, max 3 times (`lib/review.ts`). `Mindful.proRedeemCode` opens Apple's "Redeem code" sheet from the paywall's "Have a code?" link; create the codes in App Store Connect → the subscription → Offer Codes. Both are mocked in e2e, **not verified on a device**.

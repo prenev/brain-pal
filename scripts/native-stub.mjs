@@ -7,12 +7,12 @@ function nativeStub() {
   const reply = {
     'Mindful.isAvailable': { available: true }, 'Mindful.requestAuthorization': { granted: true }, 'Mindful.authorizationStatus': { status: 'authorized' }, 'Mindful.requestSleepAuthorization': { granted: true }, 'Mindful.readSleep': { segments: [] },
     'Mindful.screenTimeStatus': { available: false, authorized: false, appCount: 0 }, 'Mindful.screenTimeRequestAuth': { authorized: true }, 'Mindful.screenTimePickApps': { count: 3 }, 'Mindful.screenTimeLock': { locked: true }, 'Mindful.screenTimeUnlock': { until: 0 },
-    'Mindful.proStatus': { active: false }, 'Mindful.proRestore': { active: false }, 'Mindful.proProducts': { products: [{ id: 'com.brainpal.app.pro.monthly', price: '$4.99', trialDays: 7 }] }, 'Mindful.proPurchase': { status: 'cancelled' },
+    'Mindful.proStatus': { active: false }, 'Mindful.proRedeemCode': { shown: true }, 'Mindful.requestReview': {}, 'Mindful.proRestore': { active: false }, 'Mindful.proProducts': { products: [{ id: 'com.brainpal.app.pro.monthly', price: '$4.99', trialDays: 7 }] }, 'Mindful.proPurchase': { status: 'cancelled' },
     'LocalNotifications.checkPermissions': { display: 'prompt' }, 'LocalNotifications.requestPermissions': { display: 'granted' }, 'LocalNotifications.schedule': { notifications: [] },
   }
   const methods = {
     Haptics: ['impact', 'notification', 'vibrate', 'selectionStart', 'selectionChanged', 'selectionEnd'],
-    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep', 'setTabs', 'selectTab', 'setTabsHidden', 'addListener', 'removeListener', 'screenTimeStatus', 'screenTimeRequestAuth', 'screenTimePickApps', 'screenTimeLock', 'screenTimeUnlock', 'screenTimeClear', 'proProducts', 'proPurchase', 'proRestore', 'proStatus'],
+    Mindful: ['isAvailable', 'requestAuthorization', 'authorizationStatus', 'saveSession', 'keepAwake', 'webAuth', 'appleSignIn', 'requestSleepAuthorization', 'readSleep', 'setTabs', 'selectTab', 'setTabsHidden', 'addListener', 'removeListener', 'screenTimeStatus', 'screenTimeRequestAuth', 'screenTimePickApps', 'screenTimeLock', 'screenTimeUnlock', 'screenTimeClear', 'proProducts', 'proPurchase', 'proRestore', 'proStatus', 'proRedeemCode', 'requestReview'],
     LocalNotifications: ['checkPermissions', 'requestPermissions', 'schedule', 'cancel', 'getPending', 'addListener', 'removeListener'],
     StatusBar: ['setStyle', 'setBackgroundColor', 'show', 'hide', 'setOverlaysWebView'],
     SplashScreen: ['hide', 'show'],

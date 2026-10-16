@@ -16,6 +16,7 @@ import { JournalList } from '../components/Journal'
 import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
+import { Stickers, inviteFriend } from '../components/ShareSheet'
 import { useOpenPaywall } from '../components/Pro'
 import { usePro } from '../lib/proStore'
 import { resetTips } from '../components/Pal'
@@ -39,7 +40,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
   const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard'>(initial)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard' | 'stickers'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -48,6 +49,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
   const [showNews, setShowNews] = useState(false)
   useEffect(() => { if (mode !== 'cloud' && view === 'account') setView(null) }, [mode, view])     // signed out: leave the account page
   const { pro } = usePro()
+  const [inviteMsg, setInviteMsg] = useState('')
   const openPaywall = useOpenPaywall()
   const photos = thoughts.flatMap(t => t.photos)
   const meta = session?.user.user_metadata?.name as string | undefined
@@ -106,7 +108,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard', stickers: 'Pal stickers' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -127,6 +129,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'support' && <Support />}
       {view === 'legal' && <Legal />}
       {view === 'guard' && <Guard />}
+      {view === 'stickers' && <Stickers />}
       {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
         <div className="card" aria-label="Sync status">
@@ -202,10 +205,13 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       <div className="list">
         <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
+        <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Invite a friend" onClick={async () => setInviteMsg((await inviteFriend()) === 'saved' ? 'Invite text copied.' : '')} />
+        <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Pal stickers" onClick={() => setView('stickers')} />
         <Row icon={<Emoji name="tada" size={30} />} color="var(--card2)" label="What’s new" onClick={() => setShowNews(true)} />
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="About & legal" onClick={() => setView('legal')} />
         {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={doSignOut} />}
       </div>
+      {inviteMsg && <p className="muted small" role="status" style={{ textAlign: 'center' }}>{inviteMsg}</p>}
       <p className="muted small" style={{ textAlign: 'center' }}><button className="linkbtn" onClick={() => { resetTips(); resetCoach(); setTipsBack(true) }} disabled={tipsBack}>{tipsBack ? 'Pal’s tips are back' : 'Show Pal’s tips again'}</button></p>
       <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal {APP_VERSION} · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>

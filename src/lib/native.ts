@@ -41,6 +41,8 @@ export interface MindfulPlugin {
   proPurchase(): Promise<{ status: 'purchased' | 'pending' | 'cancelled' | 'unverified' | 'unavailable' | 'failed' | 'unknown'; active?: boolean; until?: number; error?: string }>
   proRestore(): Promise<{ active: boolean; until?: number }>
   proStatus(): Promise<{ active: boolean; until?: number }>
+  proRedeemCode(): Promise<{ shown: boolean }>
+  requestReview(): Promise<void>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
 }

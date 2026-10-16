@@ -76,7 +76,7 @@ async function newEntry(p, { mood = 3, emotion, thought } = {}) {
   if (emotion) await p.click(`.ig >> text=${emotion}`)
   if (thought) await p.fill('textarea[placeholder="What went through your mind?"]', thought)
 }
-const save = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn'); await p.waitForSelector('.topbar') }
+const save = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar') }
 async function connectAi(p) {
   await tab(p, 'More'); await p.click('.li >> text=AI helper')
   await p.click('[role=switch]'); await p.fill('input[type=password]', 'TEST-KEY')
@@ -274,7 +274,7 @@ test('daily anchors: choose up to 5, tick, persist, cap, auto-tick from a breath
   await box('Walk 10 minutes').click(); await p.waitForSelector('[aria-label="1 of 4 done"]')
   await box('Walk 10 minutes').click(); await box('Call a friend').click()
   await box('Get some sunlight').click()
-  await p.waitForSelector('.celebrate >> text=Every anchor done!'); await p.click('.celebrate .btn'); await p.waitForSelector('[aria-label="4 of 4 done"]')
+  await p.waitForSelector('.celebrate >> text=Every anchor done!'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('[aria-label="4 of 4 done"]')
   await p.waitForSelector('text=1 day with every anchor done')
 
   await tab(p, 'More'); await p.waitForSelector('.li:has-text("Daily anchors") >> text=4/5')
@@ -293,7 +293,7 @@ test('Today card: one tap logs a mood (undo / add details), then points at what 
   await p.waitForSelector('[aria-label="Log mood: bad"]')              // asks again once the entry is undone
   await p.click('[aria-label="Log mood: awful"]'); await p.waitForSelector('.entry')
   await p.click('.toast-row >> text=Add details')                      // swaps the quick entry for the full editor, mood kept
-  await p.waitForSelector('text=What’s going on?'); await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn')
+  await p.waitForSelector('text=What’s going on?'); await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary')
   await p.waitForSelector('.topbar'); assert.equal(await p.locator('.entry').count(), 1, 'quick entry was replaced, not duplicated')
   await reload(p); assert.equal(await p.locator('.entry').count(), 1)
   await done(s)
@@ -374,7 +374,7 @@ test('level-up moment: celebrates a real rise with the evidence, once, and stays
   const seeded = { 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 } }
   const s = await open(seeded); const p = s.page
   await p.waitForSelector('.celebrate >> text=Reframing → Level 2'); await p.waitForSelector('.celebrate >> text=3 entries')
-  await p.click('.celebrate .btn'); await p.waitForSelector('.topbar')
+  await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar')
   await reload(p); await p.waitForTimeout(400); assert.equal(await p.locator('.celebrate').count(), 0, 'shown once')
   await done(s)
   const first = await open(); await first.page.waitForTimeout(500)    // brand-new install, nothing to celebrate
@@ -403,7 +403,7 @@ test('Summary: plain-language day / week / month recap you can share', async () 
 
 
 const openJournal = async p => { await p.click('.fab'); await p.click('.sheet-item >> text=Journal entry'); await p.waitForSelector('[aria-label="Journal entry"]') }
-const saveJournalEntry = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate >> text=Saved to your journal'); await p.click('.celebrate .btn'); await p.waitForSelector('.topbar') }
+const saveJournalEntry = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate >> text=Saved to your journal'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar') }
 
 test('journal: write, list, search, filter, edit, delete — and it persists', async () => {
   const s = await open(); const p = s.page
@@ -1058,6 +1058,46 @@ test('Focus guard (web): explains it needs the iPhone app, and you can still pra
   await p.click('button:has-text("Done")')
   await p.waitForSelector('text=This week: 1 activity · 10 reps')
   await done(s)
+})
+
+test('Share: the Focus guard "brain rot, beaten" counter makes a numbers-only card you can share; stickers and the invite use the share sheet', async () => {
+  const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  const stubShare = () => { window.__shared = window.__shared ?? []; navigator.canShare = () => true; navigator.share = async d => { window.__shared.push({ text: d.text ?? '', files: (d.files ?? []).map(f => ({ name: f.name, type: f.type, size: f.size })) }) } }
+  await p.addInitScript(stubShare); await p.evaluate(stubShare)
+  await openGuard(p); assert.equal(await p.locator('[aria-label="Brain rot beaten"]').count(), 0, 'no counter before anything is done')
+  await p.click('button:has-text("Try an activity")'); await p.click('.challenge-opt >> text=Push-ups')
+  await p.click('.rep-btn'); for (let i = 0; i < 9; i++) { await p.clock.runFor(1000); await p.click('.rep-btn') }
+  await p.click('button:has-text("Done")')
+  await p.waitForSelector('[aria-label="Brain rot beaten"] >> text=/10 reps/')
+  await p.click('[aria-label="Brain rot beaten"] button:has-text("Share")'); await p.waitForSelector('.share-preview svg')
+  const card = await p.locator('.share-preview').innerText(); assert.match(card, /10/); assert.match(card, /Brain Pal/)
+  await p.click('.sheet button:has-text("Share")')
+  await p.waitForFunction(() => window.__shared.length === 1)
+  const sent = await p.evaluate(() => window.__shared[0]); assert.equal(sent.files[0].name, 'brain-pal-guard.png'); assert.equal(sent.files[0].type, 'image/png'); assert.ok(sent.files[0].size > 2000, 'a real picture')
+  await p.click('.sheet button:has-text("Close")'); await reload(p)
+  await tab(p, 'More'); await p.click('.li >> text=Pal stickers'); assert.equal(await p.locator('.sticker').count(), 16)
+  await p.click('[aria-label="Share sticker: Pal cheering"]').catch(async () => { await p.locator('.sticker').nth(3).click() })
+  await p.waitForFunction(() => window.__shared.length === 1); assert.match(await p.evaluate(() => window.__shared[0].files[0].name), /^pal-.*\.png$/)
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Invite a friend')
+  await p.waitForFunction(() => window.__shared.length === 2); const inv = await p.evaluate(() => window.__shared[1].text); assert.match(inv, /free, private/i); assert.match(inv, /https:\/\/prenev\.github\.io\/brain-pal/)
+  await done(s)
+})
+
+test('Share: a level-up celebration offers a level card; the rating prompt is asked only at a happy moment after a week (iPhone app); Siri links open SOS', async () => {
+  const seed = (firstSeen) => ({ 'bp.thoughts': [rec('a', 0, { alternateThought: 'x' }), rec('b', 0, { alternateThought: 'y' }), rec('c', 0, { alternateThought: 'z' })], 'bp.levels.seen': { calming: 0, reframing: 1, worry: 0, consistency: 1 }, 'bp.review': { firstSeen, lastAsked: null, asks: 0 } })
+  const veteran = await open(seed(new Date('2026-10-01T09:00:00').toISOString()), { native: true, time: new Date('2026-10-16T12:00:00') }); const p = veteran.page
+  await p.waitForSelector('.celebrate >> text=Reframing → Level 2')
+  assert.equal((await nativeCalls(p, 'requestReview')).length, 0, 'not before the moment has had a second to land')
+  await p.clock.runFor(2000); await p.waitForFunction(() => window.__native.some(c => c.method === 'requestReview'))
+  assert.equal((await nativeCalls(p, 'requestReview')).length, 1)
+  await p.click('.celebrate button:has-text("Share")'); await p.waitForSelector('.share-preview svg'); assert.match(await p.locator('.share-preview').innerText(), /Level 2/)
+  await p.click('.sheet button:has-text("Close")'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar')
+  await p.evaluate(() => window.dispatchEvent(new CustomEvent('bp:route', { detail: 'sos' }))); await p.waitForSelector('[aria-label="Anxiety right now, 0 to 10"]')
+  await done(veteran)
+  const newbie = await open(seed(new Date('2026-10-14T09:00:00').toISOString()), { native: true, time: new Date('2026-10-16T12:00:00') }); const q = newbie.page
+  await q.waitForSelector('.celebrate >> text=Reframing → Level 2'); await q.clock.runFor(5000)
+  assert.equal((await nativeCalls(q, 'requestReview')).length, 0, 'never in the first week')
+  await done(newbie)
 })
 
 test('Focus guard (iPhone): allow, choose apps, switch on (locks), earn time with push-ups (unlocks), lock again, switch off — and it persists', async () => {

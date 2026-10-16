@@ -58,6 +58,14 @@ export function parseAuthLink(raw: string): AuthLink | null {
   return code ? { kind: 'code', code } : null
 }
 
+export type LinkRoute = 'sos' | 'breathe' | 'checkin' | 'journal'
+const LINK_ROUTES: LinkRoute[] = ['sos', 'breathe', 'checkin', 'journal']
+/** brainpal://sos (also breathe, checkin, journal): used by Siri / Shortcuts / the Action button. Anything else is ignored. */
+export function parseRouteLink(raw: string): LinkRoute | null {
+  const m = /^brainpal:\/\/([a-z]+)\/?$/.exec(raw.trim().toLowerCase())
+  return m && (LINK_ROUTES as string[]).includes(m[1]) ? (m[1] as LinkRoute) : null
+}
+
 /** Sessions that haven't been written to Apple Health yet, oldest first, with their start/end times (ms). */
 export function pendingHealthSessions<T extends { id: string; createdAt: string; durationSec: number }>(sessions: T[], synced: Set<string>) {
   return sessions

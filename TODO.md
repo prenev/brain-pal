@@ -52,3 +52,6 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Open Apple Search Ads and App Store Connect analytics access; create offer codes for creators/therapists
 - [ ] Recruit one licensed clinical advisor for a "reviewed by" line
 - [ ] Build the creator list (200 micro-creators) and approve the claims fact sheet (§11)
+- [ ] Device check for sharing/Siri: say "I'm anxious in Brain Pal" (should open SOS); share a card + a sticker to Messages; rating prompt appears after a celebration on a TestFlight build older than 7 days; "Have a code?" opens Apple's redeem sheet
+- [ ] After the app is live: paste the App Store link into `APP_STORE_URL` (`src/lib/share.ts`) so invites/cards point to the store
+- [ ] Widgets + Apple Watch need a Mac session (tell me when you have one)

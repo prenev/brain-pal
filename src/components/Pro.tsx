@@ -5,7 +5,7 @@ import { Emoji } from '../lib/emoji'
 import { burst } from '../lib/confetti'
 import { isIOSApp } from '../lib/native'
 import { ALWAYS_FREE, DISCLOSURE, featureInfo, PRO_FEATURES, priceLine, type ProFeature } from '../lib/pro.ts'
-import { buyPro, loadProduct, refreshPro, restorePro, usePro, type BuyResult } from '../lib/proStore'
+import { buyPro, loadProduct, redeemCode, refreshPro, restorePro, usePro, type BuyResult } from '../lib/proStore'
 import { SITE_URL } from '../lib/legal.ts'
 
 const Ctx = createContext<{ open: (f?: ProFeature) => void; isOpen: boolean }>({ open: () => {}, isOpen: false })
@@ -91,7 +91,7 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
           <p style={{ textAlign: 'center', fontWeight: 800, margin: '8px 0 0' }}>{priceLine(product)}</p>
           <p className="small" role="status" style={{ textAlign: 'center', minHeight: 20 }}>{msg}</p>
           <div className="row" style={{ justifyContent: 'center', gap: 16 }}>
-            <button className="linkbtn" disabled={busy} onClick={restore}>Restore purchases</button>
+            <button className="linkbtn" disabled={busy} onClick={restore}>Restore purchases</button> · <button className="linkbtn" onClick={() => void redeemCode()}>Have a code?</button>
           </div>
           <p className="muted small" style={{ lineHeight: 1.45 }}>{DISCLOSURE(product?.price ?? null)}</p>
           <p className="small" style={{ textAlign: 'center' }}>

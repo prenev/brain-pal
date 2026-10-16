@@ -2,6 +2,7 @@ import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { completeAuthLink } from './authLink'
+import { parseRouteLink } from './nativeCore'
 import type { Route } from './rituals.ts'
 
 export const ROUTES: Route[] = ['breathe', 'checkin', 'journal', 'anchors']
@@ -13,6 +14,8 @@ export async function initNative() {
   try {
     // brainpal://auth… opened from an email link (confirm / magic link / password reset)
     await App.addListener('appUrlOpen', async ({ url }) => {
+      const go = parseRouteLink(url)
+      if (go) { window.dispatchEvent(new CustomEvent(routeEvent, { detail: go })); return }
       const problem = await completeAuthLink(url)
       if (problem) console.warn('auth link failed:', problem)
     })

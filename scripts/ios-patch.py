@@ -12,7 +12,7 @@ pbx = app / 'App.xcodeproj' / 'project.pbxproj'
 if not pbx.exists():
     sys.exit('ios/ not found - run `npx cap add ios` first')
 
-for f in ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy']:
+for f in ['MindfulPlugin.swift', 'MainViewController.swift', 'BrainPalIntents.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy']:
     shutil.copy(root / 'ios-native' / f, src / f)
 
 # ---- project.pbxproj: file refs, build files, group, sources phase, entitlements setting
@@ -38,6 +38,16 @@ if ID['mind_ref'] not in p:
 if 'CODE_SIGN_ENTITLEMENTS' not in p:
     p = p.replace('\t\t\t\tCODE_SIGN_STYLE = Automatic;\n', '\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tCODE_SIGN_STYLE = Automatic;\n')
 pbx.write_text(p)
+
+# ---- Siri / Shortcuts intents (App Intents) compiled into the app target
+INT = {'ref': 'B1A0000000000000000A0008', 'bf': 'B1A0000000000000000A0009'}
+p = pbx.read_text()
+if INT['ref'] not in p:
+    p = p.replace('/* End PBXBuildFile section */', f"\t\t{INT['bf']} /* BrainPalIntents.swift in Sources */ = {{isa = PBXBuildFile; fileRef = {INT['ref']} /* BrainPalIntents.swift */; }};\n/* End PBXBuildFile section */")
+    p = p.replace('/* End PBXFileReference section */', f"\t\t{INT['ref']} /* BrainPalIntents.swift */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainPalIntents.swift; sourceTree = \"<group>\"; }};\n/* End PBXFileReference section */")
+    p = re.sub(r'(\t\t\t\t[0-9A-F]{24} /\* SceneDelegate\.swift \*/,\n)', r'\1' + f"\t\t\t\t{INT['ref']} /* BrainPalIntents.swift */,\n", p, count=1)
+    p = re.sub(r'(\t\t\t\t[0-9A-F]{24} /\* SceneDelegate\.swift in Sources \*/,\n)', r'\1' + f"\t\t\t\t{INT['bf']} /* BrainPalIntents.swift in Sources */,\n", p, count=1)
+    pbx.write_text(p)
 
 # ---- App Store hygiene: privacy manifest as a bundled resource, iPhone-only, version 1.0.0
 PRIV = {'ref': 'B1A0000000000000000A0006', 'bf': 'B1A0000000000000000A0007'}

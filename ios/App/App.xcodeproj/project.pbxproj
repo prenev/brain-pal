@@ -19,6 +19,7 @@
 		B1A0000000000000000A0002 /* MindfulPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0001 /* MindfulPlugin.swift */; };
 		B1A0000000000000000A0004 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0003 /* MainViewController.swift */; };
 		B1A0000000000000000A0007 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0006 /* PrivacyInfo.xcprivacy */; };
+		B1A0000000000000000A0009 /* BrainPalIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0000000000000000A0008 /* BrainPalIntents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		B1A0000000000000000A0003 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		B1A0000000000000000A0005 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		B1A0000000000000000A0006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B1A0000000000000000A0008 /* BrainPalIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainPalIntents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
+				B1A0000000000000000A0008 /* BrainPalIntents.swift */,
 				B1A0000000000000000A0006 /* PrivacyInfo.xcprivacy */,
 				B1A0000000000000000A0001 /* MindfulPlugin.swift */,
 				B1A0000000000000000A0003 /* MainViewController.swift */,
@@ -172,6 +175,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				B1A0000000000000000A0009 /* BrainPalIntents.swift in Sources */,
 				B1A0000000000000000A0002 /* MindfulPlugin.swift in Sources */,
 				B1A0000000000000000A0004 /* MainViewController.swift in Sources */,
 			);

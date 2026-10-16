@@ -7,7 +7,7 @@ const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 /* 1. the copies inside ios/ are exactly what ios-native/ says (CI caught this drifting once) */
 // (the optional `ios-patch.py --apple-signin` entitlement is the only allowed difference)
 const stripApple = t => t.replace(/\s*<key>com\.apple\.developer\.applesignin<\/key>\s*<array>.*?<\/array>/s, '').replace(/\s*<key>com\.apple\.developer\.family-controls<\/key>\s*<true\/>/s, '')
-for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy'])
+for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'BrainPalIntents.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy'])
   assert.equal(stripApple(read(`ios/App/App/${f}`)), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
 
 /* 2. every method the JS calls on the Mindful plugin exists in Swift, and vice versa */
@@ -22,7 +22,7 @@ assert.match(swift, /jsName = "Mindful"/); assert.match(read('src/lib/native.ts'
 
 /* 3. project wiring */
 const pbx = read('ios/App/App.xcodeproj/project.pbxproj')
-for (const f of ['MindfulPlugin.swift', 'MainViewController.swift'])
+for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'BrainPalIntents.swift'])
   assert.ok(new RegExp(`${f} in Sources`).test(pbx), `${f} must be compiled`)
 assert.equal((pbx.match(/CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements/g) ?? []).length, 2, 'entitlements on Debug and Release')
 assert.ok(read('ios/App/App/SceneDelegate.swift').includes('MainViewController()'), 'root view controller must register our plugin')
