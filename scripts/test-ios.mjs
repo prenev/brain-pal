@@ -5,8 +5,10 @@ import { existsSync, readFileSync } from 'node:fs'
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
 /* 1. the copies inside ios/ are exactly what ios-native/ says (CI caught this drifting once) */
+// (the optional `ios-patch.py --apple-signin` entitlement is the only allowed difference)
+const stripApple = t => t.replace(/\s*<key>com\.apple\.developer\.applesignin<\/key>\s*<array>.*?<\/array>/s, '')
 for (const f of ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements'])
-  assert.equal(read(`ios/App/App/${f}`), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
+  assert.equal(stripApple(read(`ios/App/App/${f}`)), read(`ios-native/${f}`), `ios/App/App/${f} is stale - run: python3 scripts/ios-patch.py`)
 
 /* 2. every method the JS calls on the Mindful plugin exists in Swift, and vice versa */
 const iface = read('src/lib/native.ts').match(/export interface MindfulPlugin \{([\s\S]*?)\n\}/)[1]
@@ -37,6 +39,15 @@ assert.match(read('capacitor.config.ts'), /appId: 'com\.brainpal\.app'/)
 if (existsSync(new URL('../ios/App/App/capacitor.config.json', import.meta.url))) assert.equal(JSON.parse(read('ios/App/App/capacitor.config.json')).appId, 'com.brainpal.app')
 assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.brainpal\.app/)
 
-/* 5. the plugin never *reads* health data (privacy promise in the UI and docs) */
-assert.doesNotMatch(swift, /HKSampleQuery|HKAnchoredObjectQuery|HKStatisticsQuery|read: \[[^\]]+\]/, 'Swift must stay write-only')
+/* 4b. social sign-in plumbing */
+assert.match(swift, /ASWebAuthenticationSession\(/); assert.match(swift, /ASAuthorizationAppleIDProvider/)
+assert.match(swift, /request\.nonce = Self\.sha256\(nonce\)/, 'Apple must receive the hashed nonce, JS the raw one')
+
+/* 5. the only health data we ever READ is sleep analysis (privacy promise in the UI and docs) */
+assert.equal((swift.match(/HKSampleQuery\(/g) ?? []).length, 1, 'exactly one read query')
+assert.match(swift, /HKSampleQuery\(sampleType: sleep,/, 'the one query reads the sleep type'); assert.match(swift, /\.sleepAnalysis/)
+assert.doesNotMatch(swift, /HKAnchoredObjectQuery|HKStatisticsQuery|HKStatisticsCollectionQuery|HKQuantityType|HKWorkout|HKCorrelation|HKClinical|HKDocument/, 'no other health data types or query kinds')
+const reads = [...swift.matchAll(/read: (\[[^\]]*\])/g)].map(m => m[1]); assert.ok(reads.every(r => r === '[]' || r === '[sleep]'), `only [] or [sleep] may be requested for reading, got ${reads}`)
+assert.match(plist, /NSHealthShareUsageDescription<\/key>\s*<string>[^<]*sleep[^<]*<\/string>/, 'the permission text must honestly mention sleep')
+assert.doesNotMatch(plist, /does not read your health data/, 'stale claim')
 console.log('ios: all tests passed')

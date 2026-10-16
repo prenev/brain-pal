@@ -4,7 +4,7 @@ The iPhone app is this same web app in a native shell. It adds what browsers can
 
 | Feature | In the app |
 |---|---|
-| **Apple Health** | Saves each breathing / grounding session as *Mindful Minutes* (write-only; never reads your data) |
+| **Apple Health** | Saves each breathing / grounding session as *Mindful Minutes* (write). **Reads sleep only**, and only if you connect it under *Stats → Sleep* (no other health data is ever read — `scripts/test-ios.mjs` enforces that) |
 | **Real haptics** | Taptic Engine taps shaped like the breathing pattern (swell on inhale, fade on exhale) |
 | **Reminders** | Scheduled on the phone — no server, no Supabase, no VAPID keys. Today's nudge is dropped once you've checked in |
 | **Screen stays on** | During a breathing session the phone won't auto-lock |
@@ -43,7 +43,7 @@ Every time you change web code: `npm run ios:sync`, then ▶ Run again.
 The Simulator can test Health permissions and saving, but **not haptics** (use a real phone for those).
 
 ## Accounts inside the app
-Email + password works as-is. For magic-link / password-reset emails to open the app, add `brainpal://auth` under **Supabase ▸ Authentication ▸ URL Configuration ▸ Redirect URLs**. (Google/Apple sign-in buttons need extra native setup and aren't wired for the app yet.)
+Email + password works as-is. For magic-link / password-reset emails to open the app, add `brainpal://auth` under **Supabase ▸ Authentication ▸ URL Configuration ▸ Redirect URLs**. Google and Apple sign-in buttons show automatically once the provider is enabled in Supabase; setup, and why Apple needs a paid developer account, is in `docs/SUPABASE.md`. For Apple run `npm run ios:apple` (adds the capability) instead of plain `ios-patch.py`.
 
 ## How it's put together
 - `capacitor.config.ts` – app id/name, colours. `ios/` – the generated Xcode project (Swift Package Manager, no CocoaPods).
@@ -55,4 +55,14 @@ Email + password works as-is. For magic-link / password-reset emails to open the
 ## Honest status
 - **Verified:** the JavaScript, 8 unit suites, 5 browser tests that simulate the iOS bridge, and a JS↔Swift contract test. On every iOS-related push, the **`iOS build` GitHub Action compiles the whole app (Capacitor + our Swift HealthKit plugin) for the iOS Simulator on a macOS runner — it passes** (unsigned build).
 - **Not yet verified:** running on a physical iPhone — i.e. the HealthKit permission sheet, saving to the Health app, real Taptic feedback and local notifications. Your first ▶ Run is that test. If anything misbehaves, send me what Xcode or the phone shows.
-- Not done: Android, push notifications via APNs (local reminders are used instead), Sign in with Apple / Google inside the app, App Store submission assets (screenshots, privacy policy, health-data disclosures).
+- Not verified on a real device: Google sheet and Sign in with Apple (compile-checked by CI only; Apple needs a paid account).
+- Not done: Android, push notifications via APNs (local reminders are used instead), App Store submission assets (screenshots, privacy policy, health-data disclosures).
+
+
+## Sleep from your Apple Watch (Phase 10)
+*Stats → Sleep → Connect Apple Health sleep* asks iOS for permission to **read sleep analysis** and shows last night, the last week, bedtime consistency and (with enough days) how sleep and mood relate. Notes:
+- iOS never tells an app whether *read* access was granted. If nothing shows up, check **Settings → Health → Data Access & Devices → Brain Pal → Sleep**, and that the Watch (or iPhone Sleep schedule) is actually tracking sleep.
+- Sleep stages (Deep / REM / Core) need an Apple Watch with watchOS 9+/iOS 16+; older data shows as plain "asleep".
+- When the Watch and iPhone both report the same minutes they are merged (named stage wins; an explicit *awake* beats sleep), so time is never counted twice. Short blips (< 20 min) are ignored, naps are kept apart from the night, and a night belongs to the morning you woke up.
+- The Health permission text (`NSHealthShareUsageDescription`) now says it reads sleep; `python3 scripts/ios-patch.py` updates existing projects.
+- Not verified on a real Watch yet: the Swift query is compile-checked on the macOS CI job and the JS side is tested with simulated segments (`scripts/native-stub.mjs`).

@@ -17,8 +17,8 @@ const ease = (t: number) => 0.5 - Math.cos(Math.PI * Math.min(1, Math.max(0, t))
 export interface BreathResult { completed: boolean; elapsedSec: number; cyclesDone: number }
 
 /** Animated orb + haptic/sound-cued breathing timer. Starts on mount; calls onFinish once. */
-export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish }: {
-  pattern: BreathPattern; cycles: number; vibrate: boolean; sound: boolean; onFinish: (r: BreathResult) => void
+export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish, endLabel = 'End session' }: {
+  pattern: BreathPattern; cycles: number; vibrate: boolean; sound: boolean; onFinish: (r: BreathResult) => void; endLabel?: string
 }) {
   const orb = useRef<HTMLDivElement>(null)
   const stop = useRef<() => void>(() => {})
@@ -74,7 +74,7 @@ export default function BreathRunner({ pattern, cycles, vibrate, sound, onFinish
         </div>
       </div>
       <p className="muted" style={{ textAlign: 'center' }}>Round {cycle} of {cycles}</p>
-      <button className="btn block" onClick={() => stop.current()}>End session</button>
+      <button className="btn block" onClick={() => stop.current()}>{endLabel}</button>
     </>
   )
 }

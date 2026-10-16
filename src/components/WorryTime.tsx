@@ -48,7 +48,7 @@ export default function WorryTime({ onClose }: { onClose: () => void }) {
       {current && step === 'act' && <>
         <h1 style={{ fontSize: 26, margin: '8px 0 16px' }}>What’s one small next step?</h1>
         <div className="card worry-focus"><p>{current.text}</p></div>
-        <textarea className="input" autoFocus value={action} onChange={e => setAction(e.target.value)} placeholder="e.g. Email Sam tomorrow morning" />
+        <textarea className="input" autoFocus value={action} onChange={e => setAction(e.target.value)} placeholder="e.g. Email the landlord tomorrow morning" />
         <button className="btn primary block" style={{ marginTop: 12 }} onClick={saveAction}>Save plan</button>
         <p className="muted small" style={{ textAlign: 'center' }}>Then it’s handled — your mind can stop carrying it.</p>
       </>}

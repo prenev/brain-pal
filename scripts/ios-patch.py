@@ -53,10 +53,20 @@ t = add_key(t, 'NSMicrophoneUsageDescription', '<string>Brain Pal uses the micro
 t = add_key(t, 'NSCameraUsageDescription', '<string>Brain Pal uses the camera so you can attach photos to your entries.</string>')
 t = add_key(t, 'NSPhotoLibraryUsageDescription', '<string>Brain Pal lets you attach photos from your library to your entries.</string>')
 t = add_key(t, 'NSHealthUpdateUsageDescription', '<string>Brain Pal saves your breathing sessions to Apple Health as Mindful Minutes.</string>')
-t = add_key(t, 'NSHealthShareUsageDescription', '<string>Brain Pal checks whether it is allowed to save Mindful Minutes. It does not read your health data.</string>')
+HEALTH_SHARE = '<string>Brain Pal can read your sleep from Apple Health (for example from your Apple Watch) to show it next to your mood. It reads nothing else and never sends it anywhere.</string>'
+t = add_key(t, 'NSHealthShareUsageDescription', HEALTH_SHARE)
+t = re.sub(r'(<key>NSHealthShareUsageDescription</key>\s*)<string>[^<]*</string>', lambda m: m.group(1) + HEALTH_SHARE, t)   # existing projects get the honest wording too
 t = add_key(t, 'CFBundleURLTypes', '<array><dict><key>CFBundleURLName</key><string>com.brainpal.app</string><key>CFBundleURLSchemes</key><array><string>brainpal</string></array></dict></array>')
 # iPhone: portrait only (the UI is designed for it); iPad keeps all orientations
 t = re.sub(r'(<key>UISupportedInterfaceOrientations</key>\s*<array>)(.*?)(</array>)',
            r'\1\n\t\t<string>UIInterfaceOrientationPortrait</string>\n\t\3', t, count=1, flags=re.S)
 ip.write_text(t)
+# ---- optional: Sign in with Apple capability (needs a paid Apple Developer account; free Personal Teams reject it)
+if '--apple-signin' in sys.argv:
+    ent = src / 'App.entitlements'
+    t = ent.read_text()
+    if 'applesignin' not in t:
+        t = t.replace('</dict>', '\t<key>com.apple.developer.applesignin</key>\n\t<array><string>Default</string></array>\n</dict>')
+        ent.write_text(t)
+    print('Sign in with Apple entitlement added')
 print('ios project patched')

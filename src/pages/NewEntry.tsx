@@ -9,6 +9,7 @@ import Face from '../components/Face'
 import { EMOTIONS, REFRAME_QUESTIONS, TRAPS } from '../lib/constants'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
+import { rankByUse, shortList, STARTER_EMOTIONS } from '../lib/today.ts'
 import type { AudioClip, EmotionRating } from '../lib/types'
 
 const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16)
@@ -19,13 +20,15 @@ const fmtWhen = (d: Date) => {
 }
 
 export default function NewEntry({ date, onClose, onSaved, initialMood = null }: { date: Date; onClose: () => void; onSaved: () => void; initialMood?: number | null }) {
-  const { addThought, allTags } = useStore()
+  const { addThought, allTags, thoughts } = useStore()
   const [when, setWhen] = useState(date)
   const [pickDate, setPickDate] = useState(false)
   const [mood, setMood] = useState<number | null>(initialMood)
   const [emotions, setEmotions] = useState<EmotionRating[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [q, setQ] = useState('')
+  const [allEmos, setAllEmos] = useState(false)
+  const [allTagsShown, setAllTagsShown] = useState(false)
   const [emoOpen, setEmoOpen] = useState(true)
   const [tagOpen, setTagOpen] = useState(true)
   const [situation, setSituation] = useState('')
@@ -45,8 +48,11 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const [error, setError] = useState('')
 
   const match = (o: string) => !q || o.includes(q.toLowerCase())
-  const emoOptions = useMemo(() => EMOTIONS.filter(match), [q])
-  const tagOptions = useMemo(() => allTags.filter(match), [q, allTags])
+  // Short lists first (your most-used, else sensible starters); searching or "More" shows everything.
+  const rankedEmos = useMemo(() => rankByUse(EMOTIONS, thoughts.map(t => t.emotions.map(e => e.name)), { starters: STARTER_EMOTIONS }), [thoughts])
+  const rankedTags = useMemo(() => rankByUse(allTags, thoughts.map(t => t.tags)), [thoughts, allTags])
+  const emoOptions = useMemo(() => (q || allEmos ? rankedEmos : shortList(rankedEmos, emotions.map(e => e.name))).filter(match), [q, allEmos, rankedEmos, emotions])
+  const tagOptions = useMemo(() => (q || allTagsShown ? rankedTags : shortList(rankedTags, tags)).filter(match), [q, allTagsShown, rankedTags, tags])
   const peak = Math.max(0, ...emotions.map(e => e.intensity))
   const setEmos = (names: string[]) => setEmotions(names.map(n => emotions.find(e => e.name === n) ?? { name: n, intensity: 60 }))
   const addCustom = (kind: 'emotion' | 'tag') => {
@@ -128,6 +134,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
           <div className="row"><button className="icon-btn dark" aria-label="Add emotion" onClick={() => addCustom('emotion')}><Plus size={22} /></button>
             <button className="icon-btn dark" aria-label="Collapse" onClick={() => setEmoOpen(!emoOpen)}><ChevronUp size={22} style={{ transform: emoOpen ? '' : 'rotate(180deg)' }} /></button></div></div>
         {emoOpen && <IconGrid options={[...emoOptions, ...customEmos]} value={emotions.map(e => e.name)} onChange={setEmos} />}
+        {emoOpen && !q && <button type="button" className="linkbtn morebtn" onClick={() => setAllEmos(!allEmos)}>{allEmos ? 'Show fewer' : `More emotions (${EMOTIONS.length - emoOptions.length})`}</button>}
         {emoOpen && emotions.length > 0 && <>
           <div className="hr" />
           {emotions.map(e => (
@@ -145,6 +152,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
           <div className="row"><button className="icon-btn dark" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={22} /></button>
             <button className="icon-btn dark" aria-label="Collapse" onClick={() => setTagOpen(!tagOpen)}><ChevronUp size={22} style={{ transform: tagOpen ? '' : 'rotate(180deg)' }} /></button></div></div>
         {tagOpen && <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />}
+        {tagOpen && !q && allTags.length > 6 && <button type="button" className="linkbtn morebtn" onClick={() => setAllTagsShown(!allTagsShown)}>{allTagsShown ? 'Show fewer' : `More tags (${Math.max(0, allTags.length - tagOptions.length)})`}</button>}
       </div>
 
       {crisis && <div role="alert"><Support /></div>}

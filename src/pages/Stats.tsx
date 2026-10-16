@@ -9,6 +9,9 @@ import { NameIcon } from '../lib/icons'
 import { Emoji } from '../lib/emoji'
 import Face from '../components/Face'
 import { monthLabel } from '../components/ui'
+import Progress from '../components/Progress'
+import Summary from '../components/Summary'
+import Sleep from '../components/Sleep'
 
 function MoodChart({ points, days }: { points: Map<number, number>; days: number }) {
   const W = 320, H = 200, L = 34, T = 14, B = 26
@@ -40,7 +43,7 @@ function MoodChart({ points, days }: { points: Map<number, number>; days: number
   )
 }
 
-export default function Stats() {
+function Insights() {
   const { thoughts, sessions, worries, streak } = useStore()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const isNow = dayKey(month).slice(0, 7) === dayKey(new Date()).slice(0, 7)
@@ -171,6 +174,24 @@ export default function Stats() {
         <div className="card-head"><h3>Achievements</h3></div>
         <div className="badges">{badges.map(b => <div key={b.label} className={`badge ${b.ok ? '' : 'locked'}`}><div className="em"><Emoji name={b.em} size={40} /></div>{b.label}</div>)}</div>
       </div>
+    </>
+  )
+}
+
+const VIEWS = [{ id: 'insights', label: 'Insights' }, { id: 'progress', label: 'Progress' }, { id: 'summary', label: 'Summary' }, { id: 'sleep', label: 'Sleep' }] as const
+
+/** Stats tab: your charts and insights, your skill levels with proof you're improving, and plain-language summaries. */
+export default function Stats() {
+  const [view, setView] = useState<(typeof VIEWS)[number]['id']>('insights')
+  return (
+    <>
+      <div className="seg four" role="tablist" aria-label="Stats view" style={{ marginBottom: 14 }}>
+        {VIEWS.map(v => <button key={v.id} role="tab" aria-selected={view === v.id} className={view === v.id ? 'on' : ''} onClick={() => setView(v.id)}>{v.label}</button>)}
+      </div>
+      {view === 'insights' && <Insights />}
+      {view === 'progress' && <Progress />}
+      {view === 'summary' && <Summary />}
+      {view === 'sleep' && <Sleep />}
     </>
   )
 }

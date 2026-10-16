@@ -22,7 +22,7 @@ const TOOLS: Tool[] = [
 const WORDS = ['calm', 'a little uneasy', 'uneasy', 'tense', 'anxious', 'very anxious', 'panicking']
 const word = (n: number) => WORDS[Math.min(6, Math.floor((n / 10) * 6.99))]
 
-export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: () => void }) {
+export default function Sos({ onClose, onLog, onStep }: { onClose: () => void; onLog: () => void; onStep: () => void }) {
   const { addSession } = useStore()
   const [step, setStep] = useState<Step>('rate')
   const [before, setBefore] = useState(6)
@@ -105,6 +105,7 @@ export default function Sos({ onClose, onLog }: { onClose: () => void; onLog: ()
           </p>
         </div>
         <button className="btn primary block" onClick={onLog}>Write down what triggered it</button>
+        {drop >= 0 && <button className="btn block" style={{ marginTop: 10 }} onClick={onStep}>One small step</button>}
         <button className="btn block" style={{ marginTop: 10 }} onClick={onClose}>Done</button>
       </>}
       {step !== 'breath' && step !== 'ground' && <div style={{ marginTop: 18 }}>

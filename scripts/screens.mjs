@@ -12,8 +12,8 @@ const out = join(root, 'screenshots')
 rmSync(out, { recursive: true, force: true }); mkdirSync(out)
 const sh = (cmd, env = {}) => execSync(cmd, { cwd: root, stdio: 'pipe', env: { ...process.env, ...env } })
 
-sh('npx vite build')
-sh('npx vite build --outDir node_modules/.dist-auth', { VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'x', VITE_OAUTH_PROVIDERS: 'google,apple' })
+sh('npx vite build', { VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' })   // local mode, whatever .env says
+sh('npx vite build --outDir node_modules/.dist-auth', { VITE_SUPABASE_URL: 'http://127.0.0.1:9', VITE_SUPABASE_ANON_KEY: 'x' })
 const local = await preview({ root, preview: { port: 4173, strictPort: true }, build: { outDir: 'dist' } })
 const cloud = await preview({ root, preview: { port: 4174, strictPort: true }, build: { outDir: 'node_modules/.dist-auth' } })
 
@@ -33,7 +33,7 @@ const rows = [
   [9, 4, 'relaxed', 20, ['social'], [], 'Quiet evening, breathing exercise helped']]
 const thoughts = rows.map(([ago, mood, emo, inten, tags, distortions, text], i) => {
   const d = new Date(); d.setDate(d.getDate() - ago); d.setHours(i % 2 ? 22 : 9 + i, 10)
-  return { id: 's' + i, createdAt: d.toISOString(), mood, situation: i === 0 ? 'Team presentation' : '', thought: text,
+  return { id: 's' + i, createdAt: d.toISOString(), mood, situation: i === 0 ? 'A busy day at work' : '', thought: text,
     emotions: [{ name: emo, intensity: inten }], internalBehaviour: i === 0 ? 'Tight chest, racing heart' : '', externalBehaviour: i === 0 ? 'Spoke quickly, skipped slides' : '',
     alternateThought: i % 2 === 0 ? 'I prepared well and can handle a wobble' : '', outcomeIntensity: i % 2 === 0 ? 35 : null, tags, distortions, photos: i === 2 ? [photo, photo] : [] }
 })
@@ -42,7 +42,7 @@ const sessions = [[0, 8, 4, 'breathing'], [1, 7, 3, 'grounding'], [2, 6, 5, 'bre
   return { id: 'b' + i, createdAt: d.toISOString(), pattern: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, cycles: 6, durationSec: 384, completed: true, kind, anxietyBefore: b, anxietyAfter: a }
 })
 
-const worries = [['Rent is due on Friday', 'actionable', 'Pay on Thursday morning'], ['My friend seemed upset yesterday', 'let-go', null], ['What if the flight is delayed', 'let-go', null], ['Presentation next week', 'open', null], ['I forgot to reply to Sam', 'open', null]]
+const worries = [['Rent is due on Friday', 'actionable', 'Pay on Thursday morning'], ['My friend seemed upset yesterday', 'let-go', null], ['What if the flight is delayed', 'let-go', null], ['The meeting next week', 'open', null], ['I forgot to reply to an email', 'open', null]]
   .map(([text, status, action], i) => ({ id: 'w' + i, createdAt: new Date(Date.now() - (5 - i) * 3600e3).toISOString(), text, status, action, reviewedAt: status === 'open' ? null : new Date().toISOString() }))
 
 /** Canned Gemini responses so AI screens can be captured without a key. */
@@ -54,20 +54,22 @@ async function mockGemini(ctx) {
     const text = t => json({ candidates: [{ content: { parts: [{ text: t }] } }] })
     if (req.url().includes('/models?')) return json({ models: [{ name: 'models/gemini-3.5-flash', supportedGenerationMethods: ['generateContent'] }] })
     if (body.includes('single word OK')) return text('OK')
-    if (body.includes('inline_data')) return text('I am really worried about my presentation tomorrow. My chest feels tight and I keep thinking everyone will notice if I mess up.')
+    if (body.includes('inline_data')) return text('I am really worried about the meeting tomorrow. My chest feels tight and I keep thinking everyone will notice if I mess up.')
     if (body.includes('fill in a CBT thought record')) return text(JSON.stringify({ situation: 'Presentation tomorrow', thought: 'Everyone will notice if I mess up', emotions: [{ name: 'anxious', intensity: 80 }], internalBehaviour: 'Tight chest', externalBehaviour: '', alternateThought: '', distortions: ['catastrophizing', 'mind reading'], tags: ['work'] }))
     return text(JSON.stringify({ distortions: ['mind reading'], reframes: ['I have prepared well and can handle a wobble.', 'Most people are focused on themselves, not on me.', 'One slip would not ruin the whole talk.'], crisis: false }))
   })
 }
 
-async function session(base, seed, fn, { native = false } = {}) {
+async function session(base, seed, fn, { native = false, onboarding = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, permissions: ['notifications', 'microphone'] })
   await mockGemini(ctx)
+  await ctx.route('http://127.0.0.1:9/auth/v1/settings', r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ external: { email: true, google: true, apple: true } }) }))
   if (native) await ctx.addInitScript(nativeStub)
+  if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })
   if (seed) await ctx.addInitScript(([t, s, w]) => { if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)) } }, [thoughts, sessions, worries])
   const p = await ctx.newPage()
   p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && !/Failed to load resource|ERR_/.test(m.text()) && errors.push(m.text()))
-  await p.goto(base); await p.waitForSelector('.topbar, form')
+  await p.goto(base); await p.waitForSelector('.topbar, form, .onboarding')
   const snap = async n => { await p.waitForTimeout(350); await p.screenshot({ path: join(out, `${String(names.length + 1).padStart(2, '0')}-${n}.png`) }); names.push(n) }
   await fn(p, snap); await ctx.close()
 }
@@ -99,7 +101,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.tab >> text=More'); await snap('more')
   await p.click('.li >> text=Worry time'); await snap('worry-time')
   await p.click('text=Start worry time'); await snap('worry-review-ask')
-  await p.click('text=Yes — I can take a step'); await p.fill('textarea', 'Reply to Sam tonight'); await snap('worry-review-plan')
+  await p.click('text=Yes — I can take a step'); await p.fill('textarea', 'Reply to the email tonight'); await snap('worry-review-plan')
   await p.click('text=Save plan'); await p.click('text=it’s out of my control'); await snap('worry-review-done'); await p.click('button:has-text("Done")'); await p.click('[aria-label=Back]')
   await p.click('.li >> text=AI helper'); await snap('ai-settings'); await p.click('[aria-label=Back]')
   await p.click('text=Photo Gallery'); await snap('gallery'); await p.click('[aria-label=Back]')
@@ -133,10 +135,69 @@ await session('http://localhost:4173', true, async (p, snap) => {   // AI helper
 await session('http://localhost:4173', true, async (p, snap) => {   // iPhone app (native bridge simulated)
   await p.click('.tab >> text=More'); await p.click('.li >> text=Apple Health'); await snap('iphone-apple-health')
   await p.click('[role=switch]'); await p.waitForSelector('text=Connected.'); await p.click('text=Save past sessions'); await p.waitForTimeout(300); await snap('iphone-apple-health-connected')
-  await p.click('[aria-label=Back]'); await p.click('.li >> text=Reminders'); await p.click('[role=switch]'); await p.waitForSelector('text=Reminder set for'); await snap('iphone-reminders')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Reminders'); await snap('iphone-rituals')
+  await p.click('[role=switch][aria-label="Morning breathe"]'); await p.click('[role=switch][aria-label="Evening breathe"]'); await p.waitForSelector('input[aria-label="Evening breathe time"]'); await snap('iphone-rituals-on')
 }, { native: true })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // daily anchors
+  await p.click('text=Choose your daily anchors'); await snap('anchors-picker')
+  for (const l of ['Slow breathing', 'Walk 10 minutes', 'Get some sunlight', 'Drink water']) await p.click(`.sheet .chip >> text=${l}`)
+  await snap('anchors-manage'); await p.click('button:has-text("Done")'); await snap('anchors-home')
+  await p.click('[role=checkbox][aria-label="Walk 10 minutes"]'); await p.click('[role=checkbox][aria-label="Drink water"]'); await snap('anchors-progress')
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Daily anchors'); await snap('anchors-more')
+})
+
+await session('http://localhost:4173', true, async (p, snap) => {   // progress + summaries
+  await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Progress")'); await snap('progress')
+  await p.locator('h2:has-text("Proof")').scrollIntoViewIfNeeded(); await snap('progress-proof')
+  await p.click('[role=tab]:has-text("Summary")'); await snap('summary-week')
+  await p.click('[role=tab]:has-text("Today")'); await snap('summary-today')
+})
+
+await session('http://localhost:4173', true, async (p, snap) => {   // journal
+  await p.click('.fab'); await p.click('.sheet-item >> text=Write in journal'); await p.waitForSelector('[aria-label="Journal entry"]'); await snap('journal-editor-empty')
+  await p.click('text=Need a place to start?'); await p.fill('[aria-label="Title"]', 'A slower morning')
+  await p.fill('[aria-label="Journal entry"]', 'Woke up before the alarm. Made tea, sat by the window and just watched the street for ten minutes. Nothing special, but my shoulders dropped for the first time this week.')
+  await p.click('[aria-label="Mood: good"]'); await p.click('.chip:has-text("health")'); await snap('journal-editor')
+  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn')
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Journal'); await snap('journal-list')
+})
+
+await session('http://localhost:4173', true, async (p, snap) => {   // one small step
+  await p.clock.install()
+  await p.click('.fab'); await p.click('.sheet-item >> text=Start a small step'); await snap('step-choose')
+  await p.click('.chip:has-text("Write one sentence")'); await p.click('button:has-text("Start")'); await p.waitForSelector('.orb'); await snap('step-calm')
+  await p.click('button:has-text("Skip — start now")'); await p.waitForSelector('[role=timer]'); await p.clock.fastForward('01:30'); await snap('step-focus')
+  await p.clock.fastForward('04:00'); await p.waitForSelector('text=Done — nice.'); await snap('step-done')
+})
+
+await session('http://localhost:4173', true, async (p, snap) => {   // sleep (Apple Watch data via Health, simulated)
+  const H = 3600000
+  const segs = Array.from({ length: 10 }, (_, k) => {
+    const wake = new Date(); wake.setDate(wake.getDate() - k); wake.setHours(7, 0, 0, 0)
+    const hours = [8, 6.5, 7.5, 5.5, 7, 8, 6, 7.5, 6.5, 7][k], end = wake.getTime(), start = end - hours * H, sg = (kind, a, b) => ({ kind, start: a, end: b })
+    return [sg('core', start, start + H), sg('deep', start + H, start + 2 * H), sg('core', start + 2 * H, end - 2.5 * H), sg('rem', end - 2.5 * H, end - H), sg('core', end - H, end)]
+  }).flat()
+  await p.evaluate(segments => { window.__reply = { 'Mindful.readSleep': { segments } } }, segs)
+  await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Sleep")'); await snap('sleep-connect')
+  await p.click('button:has-text("Connect Apple Health sleep")'); await p.waitForSelector('[aria-label="Last night"] >> text=8h'); await snap('sleep')
+  await p.locator('[aria-label="Sleep and mood"]').scrollIntoViewIfNeeded(); await snap('sleep-mood')
+}, { native: true })
+
+await session('http://localhost:4173', true, async (p, snap) => {   // coins
+  await p.click('.tab >> text=More'); await p.click('.li >> text=Coins'); await snap('coins')
+  await p.locator('h2:has-text("Shop")').scrollIntoViewIfNeeded(); await snap('coins-shop')
+  if (await p.locator('.shop-item:has-text("Ocean") button.primary:not([disabled])').count()) { await p.click('.shop-item:has-text("Ocean") button.primary'); await p.waitForSelector('text=Ocean unlocked'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('coins-theme') }
+})
+
+await session('http://localhost:4173', false, async (p, snap) => {   // first run
+  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await snap('welcome-1')
+  await p.click('button:has-text("Next")'); await snap('welcome-2')
+  await p.click('button:has-text("Next")'); await p.click('.chip:has-text("Slow breathing")'); await p.click('.chip:has-text("Walk 10 minutes")'); await snap('welcome-3')
+}, { onboarding: true })
+
 await session('http://localhost:4174', false, async (p, snap) => {
+  await p.waitForSelector('button:has-text("Continue with Apple")')
   await snap('login-signin')
   await p.click('text=Create an account'); await snap('login-signup')
   await p.click('text=Back to sign in'); await p.click('text=Forgot password?'); await snap('login-forgot')

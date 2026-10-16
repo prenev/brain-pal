@@ -4,7 +4,7 @@ export const dayKey = (d: Date | string): string => {
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
 }
 
-const shift = (key: string, days: number): string => {
+export const shift = (key: string, days: number): string => {
   const [y, m, d] = key.split('-').map(Number)
   return dayKey(new Date(y, m - 1, d + days))
 }

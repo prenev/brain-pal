@@ -6,3 +6,4 @@ dist
 dev-dist
 screenshots/*.png
 test-results
+ios/App/build/

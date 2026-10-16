@@ -12,7 +12,10 @@
     "test:e2e": "node scripts/e2e.mjs",
     "test": "node scripts/run-tests.mjs",
     "ios:sync": "npm run build && npx cap sync ios && python3 scripts/ios-patch.py",
-    "ios:open": "npx cap open ios"
+    "ios:apple": "python3 scripts/ios-patch.py --apple-signin",
+    "ios:open": "npx cap open ios",
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "test:db": "node scripts/test-db.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

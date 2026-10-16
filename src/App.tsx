@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Plus, ArrowLeft, Pencil } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Plus, ArrowLeft, Pencil, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
 import { StoreProvider, useStore } from './lib/store'
+import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
 import Entries from './pages/Entries'
 import Stats from './pages/Stats'
 import CalendarPage from './pages/CalendarPage'
@@ -14,18 +15,35 @@ import NewEntry from './pages/NewEntry'
 import Sos from './components/Sos'
 import WorryTime from './components/WorryTime'
 import ParkWorry from './components/ParkWorry'
+import { JournalEditor } from './components/Journal'
+import FocusFlow from './components/FocusFlow'
+import Onboarding from './components/Onboarding'
+import type { JournalEntry } from './lib/journal.ts'
 
-const TABS = [
-  { id: 'entries', label: 'Entries', icon: 'notebook' },
-  { id: 'stats', label: 'Stats', icon: 'chart' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
-  { id: 'breathe', label: 'Breathe', icon: 'wind' },
-  { id: 'more', label: 'More', icon: 'gear' },
-] as const
-type Tab = (typeof TABS)[number]['id']
+type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
+// Line icons for the tab bar; Entries keeps the Fluent nib as the app's signature.
+const TABS: { id: Tab; label: string; icon: LucideIcon | 'nib' }[] = [
+  { id: 'entries', label: 'Entries', icon: 'nib' },
+  { id: 'stats', label: 'Stats', icon: ChartColumn },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+  { id: 'breathe', label: 'Breathe', icon: Wind },
+  { id: 'more', label: 'More', icon: CircleEllipsis },
+]
 
 function Shell() {
-  const { ready, needsLogin, recovery } = useStore()
+  const { ready, needsLogin, recovery, levels, coins, thoughts, sessions, worries, journal, anchors } = useStore()
+  const hasData = thoughts.length + sessions.length + worries.length + journal.length + anchors.length > 0
+  const [onboarded, setOnboarded] = useState(() => { try { return !!localStorage.getItem('bp.onboarded') } catch { return true } })
+  const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
+  useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
+  const [coinToast, setCoinToast] = useState(0)
+  const lastCoins = useRef<number | null>(null)
+  // A quiet "+N coins" when you earn some (never on load, never when coins drop from spending).
+  useEffect(() => {
+    if (!ready) return
+    const prev = lastCoins.current; lastCoins.current = coins
+    if (prev !== null && coins > prev) { setCoinToast(coins - prev); const t = setTimeout(() => setCoinToast(0), 2600); return () => clearTimeout(t) }
+  }, [ready, coins])
   const [tab, setTab] = useState<Tab>('entries')
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
@@ -33,12 +51,43 @@ function Shell() {
   const [sos, setSos] = useState(false)
   const [worryTime, setWorryTime] = useState(false)
   const [park, setPark] = useState(false)
-  const [moreView, setMoreView] = useState<'support' | null>(null)
+  const [moreView, setMoreView] = useState<'support' | 'journal' | null>(null)
   const [composeMood, setComposeMood] = useState<number | null>(null)
   const [cel, setCel] = useState<Celebration | null>(null)
+  const [focusOpen, setFocusOpen] = useState(false)
+  const [journalOpen, setJournalOpen] = useState<{ entry?: JournalEntry } | null>(null)
+
+  // A tapped reminder (iPhone app) opens the matching tool.
+  useEffect(() => {
+    const go = (e: Event) => {
+      const route = (e as CustomEvent<string>).detail
+      if (route === 'breathe') setTab('breathe')
+      else if (route === 'journal') setJournalOpen({})
+      else if (route === 'checkin' || route === 'anchors') setTab('entries')
+    }
+    window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
+  }, [])
+
+  // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
+  useEffect(() => {
+    if (!ready || needsLogin || recovery || cel) return
+    let seen: Partial<Record<SkillId, number>> | null = null
+    try { seen = JSON.parse(localStorage.getItem('bp.levels.seen') ?? 'null') } catch { /* ignore */ }
+    const save = (v: Partial<Record<SkillId, number>>) => { try { localStorage.setItem('bp.levels.seen', JSON.stringify(v)) } catch { /* ignore */ } }
+    const current = Object.fromEntries(Object.entries(levels).map(([k, v]) => [k, v.level])) as Record<SkillId, number>
+    if (!seen) { save(current); return }
+    const ups = levelUps(seen, levels)
+    const quiet = ups.filter(u => u.to < 2)          // Level 1 is just "you started": record it, don't interrupt
+    const up = ups.find(u => u.to >= 2)
+    if (quiet.length || up) save({ ...seen, ...Object.fromEntries(quiet.map(u => [u.skill, u.to])), ...(up ? { [up.skill]: up.to } : {}) })
+    if (!up) return
+    const def = SKILLS.find(s => s.id === up.skill)!
+    setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count) })
+  }, [ready, needsLogin, recovery, cel, levels])
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
   if (needsLogin || recovery) return <Login />
+  if (!onboarded && !hasData) return <Onboarding onDone={finishOnboarding} />
 
   const start = (d: Date) => { setMenu(false); setOtherDay(false); setComposeAt(d) }
   const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d }
@@ -46,18 +95,18 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
-        {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} onWorry={() => setWorryTime(true)} />}
+        {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} onWorry={() => setWorryTime(true)} onJournal={e => setJournalOpen({ entry: e })} />}
       </div>
 
       <div className="dock">
-        <nav className="tabbar glass" aria-label="Main">
-          {TABS.map(({ id, label, icon }) => (
+        <nav className="tabbar" aria-label="Main">
+          {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => { setMoreView(null); setTab(id) }}>
-              <Emoji name={icon} size={28} />{label}
+              {Icon === 'nib' ? <Emoji name="nib" size={26} style={{ filter: 'drop-shadow(0 0 1.5px rgba(255,255,255,.55))' }} /> : <Icon size={24} strokeWidth={2.2} />}{label}
             </button>
           ))}
         </nav>
@@ -76,6 +125,8 @@ function Shell() {
           </> : <>
             <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setFocusOpen(true) }}><span className="ic"><Emoji name="rocket" size={30} /></span>Start a small step</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Write in journal</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Emoji name="wind" size={30} /></span>Start breathing</button>
             <div className="sheet-label">Create Entry</div>
             <button className="sheet-item" onClick={() => setOtherDay(true)}><span className="ic"><Emoji name="calendar" size={30} /></span>Other day</button>
@@ -84,10 +135,13 @@ function Shell() {
           </>}
         </Sheet>
       )}
-      {sos && <Sos onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
+      {sos && <Sos onStep={() => setFocusOpen(true)} onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
+      {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
+      {coinToast > 0 && <div className="coin-toast" role="status"><Emoji name="star" size={20} /> +{coinToast} {coinToast === 1 ? 'coin' : 'coins'}</div>}
       {cel && <Celebrate c={cel} onClose={() => setCel(null)} />}
     </>
   )

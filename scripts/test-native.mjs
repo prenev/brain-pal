@@ -30,6 +30,12 @@ assert.deepEqual(parseAuthLink('brainpal://auth#access_token=AT&refresh_token=RT
 assert.equal(parseAuthLink('brainpal://auth#access_token=AT&refresh_token=RT&type=recovery').type, 'recovery')
 assert.deepEqual(parseAuthLink('brainpal://auth?code=abc123'), { kind: 'code', code: 'abc123' })
 assert.deepEqual(parseAuthLink('brainpal://auth#error=access_denied&error_description=Email+link+is+invalid+or+has+expired'), { kind: 'error', message: 'Email link is invalid or has expired' })
+// PKCE code in the query, errors in either place, trailing slash, code wins nothing over tokens
+assert.deepEqual(parseAuthLink('brainpal://auth/?code=abc'), { kind: 'code', code: 'abc' })
+assert.deepEqual(parseAuthLink('  brainpal://auth?code=a%2Fb  '), { kind: 'code', code: 'a/b' })
+assert.deepEqual(parseAuthLink('brainpal://auth?error=access_denied&error_description=User+cancelled'), { kind: 'error', message: 'User cancelled' })
+assert.equal(parseAuthLink('brainpal://auth?code=abc#access_token=A&refresh_token=R').kind, 'tokens')
+for (const bad of ['brainpal://authx?code=abc', 'brainpal://auth.evil.com?code=abc', 'brainpan://auth?code=abc', 'http://auth?code=abc']) assert.equal(parseAuthLink(bad), null, bad)
 for (const bad of ['https://evil.com/#access_token=a&refresh_token=b', 'brainpal://other#access_token=a&refresh_token=b', 'brainpal://auth', 'brainpal://auth#access_token=only', 'not a url', '']) assert.equal(parseAuthLink(bad), null, bad)
 
 /* ---- Apple Health backlog ---- */
