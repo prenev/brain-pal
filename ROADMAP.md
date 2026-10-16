@@ -167,6 +167,9 @@ Done: Home order is now mood → today's anchors → a long **Focus guard tile**
 ## Phase 23 — Feel: haptics + sounds
 Done: one delegated touch handler gives buttons, chips, emotion icons, tabs and switches a light Taptic tick (the + and primary buttons a firmer one), sliders tick every 10% while dragging, and celebrations, level-ups, coins, finished anchors/breathing/Focus-guard challenges play short synthesized sounds (no audio files, no library: a tiny WebAudio score engine in `lib/sfx.ts` + `lib/sound.ts`, so it works offline and adds nothing to the bundle). More → Sounds & haptics switches each off (device-only, default on); sounds follow the iPhone silent switch. Not verified on a device: how the sounds and taps *feel* (volume, taste), and that iOS plays WebAudio in the app web view after the first touch.
 
+## Phase 27 — Home tiles regrouped, anchors shrink when done
+Done: once every anchor is ticked the card collapses to one slim line (ring, "Anchors done", streak; tap to open the list, "Collapse" to close) and loses the green glow. Focus guard and the worry tile lost their gradients/coloured borders. Home is now Focus guard + Journal side by side, then Worries / Sleep / Focus as the three small tiles (Worries shows "N parked" or "Park one"); a planned small step still appears as one line under them.
+
 ## Phase 26 — Breathe page as a two-step flow
 Done: the Breathe tab first shows only the breathing styles (Calm 4-6, Coherent, Box, 4-7-8, Your own pace); tapping one opens a second screen with the rhythm's wave and blurb, box length / your-own-pace steppers where relevant, "How long?" and the vibration + soft-tone switches (both **on by default**, changeable), then Start. Back returns to the list. The in-session Sound/Muted button is unchanged.
 

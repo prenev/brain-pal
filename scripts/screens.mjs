@@ -246,6 +246,12 @@ await session('http://localhost:4173', true, async (p, snap) => {   // Home tile
 await session('http://localhost:4173', false, async (p, snap) => {   // empty states: Focus guard on the web, nothing parked
   await snap('home-empty-tiles')
 })
+await session('http://localhost:4173', false, async (p, snap) => {   // every anchor done: the card shrinks to one slim line
+  const anchors = ['walk', 'water'].map((id, order) => ({ id, label: id === 'walk' ? 'Walk' : 'Water', emoji: id, link: null, order, createdAt: '2026-10-01T09:00:00.000Z', archivedAt: null }))
+  await p.evaluate(a => localStorage.setItem('bp.anchors', JSON.stringify(a)), anchors); await p.reload()
+  await p.click('[role=checkbox][aria-label=Walk]'); await snap('home-anchors-one')
+  await p.click('[role=checkbox][aria-label=Water]'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.anchors-mini'); await snap('home-anchors-done')
+})
 
 await local.close(); await cloud.close(); await browser.close()
 

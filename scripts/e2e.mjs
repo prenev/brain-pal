@@ -286,6 +286,10 @@ test('daily anchors: choose up to 5, tick, persist, cap, auto-tick from a breath
   await box('Get some sunlight').click()
   await p.waitForSelector('.celebrate >> text=Every anchor done!'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('[aria-label="4 of 4 done"]')
   await p.waitForSelector('text=1 day with every anchor done')
+  const mini = p.locator('.anchors-mini'); await mini.waitFor(); assert.equal(await p.locator('.anchor-rows').count(), 0, 'all done: the card shrinks to one slim line')
+  assert.ok((await mini.boundingBox()).height < 70, 'compact'); assert.equal(await p.locator('.anchors.all-done').count(), 0, 'no green all-done highlight')
+  assert.match(await mini.evaluate(e => getComputedStyle(e).boxShadow), /^none$|rgba?\(0, 0, 0/, 'no green glow')
+  await mini.click(); await p.waitForSelector('.anchor-rows'); await p.click('button:has-text("Collapse")'); await p.waitForSelector('.anchors-mini')
 
   await tab(p, 'More'); await p.waitForSelector('.li:has-text("Daily anchors") >> text=4/5')
   await p.click('.li >> text=Daily anchors'); await p.waitForSelector('.anchor-edit li')
@@ -509,7 +513,7 @@ const todayEntry = () => rec('today', 0)
 const middayToday = () => { const d = new Date(); d.setHours(12, 0, 0, 0); return d }
 test('small step: pick a step from your worry plan, settle, focus (pause is free), finish — it counts everywhere', async () => {
   const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.worries': [plan('w1', 'Email the landlord'), plan('w2', 'Book the dentist', 1)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }, { time: middayToday() }); const p = s.page
-    await p.waitForSelector('.worry-tile >> text=A small step is waiting: Email the landlord')   // newest plan first
+    await p.waitForSelector('.tile-step >> text=A small step is waiting: Email the landlord')   // newest plan first
   await p.click('.tile-step'); await p.waitForSelector('[aria-label="One small step"]')
   assert.equal(await p.locator('.step-choice').count(), 2); await p.click('.step-choice:has-text("Email the landlord")')
   await p.click('[role=radio]:has-text("5 min")'); await p.click('button:has-text("Start")')
@@ -521,7 +525,7 @@ test('small step: pick a step from your worry plan, settle, focus (pause is free
   await p.click('button:has-text("Resume")'); await p.clock.fastForward('04:00')
   await p.waitForSelector('text=Done — nice.'); assert.match(await p.locator('[aria-label="One small step"] .card').innerText(), /“Email the landlord”/)
   await p.click('button:has-text("Close")')
-  await p.waitForSelector('.worry-tile >> text=Book the dentist'); assert.equal(await p.locator('.worry-tile >> text=Email the landlord').count(), 0, 'a finished step leaves the list')
+  await p.waitForSelector('.tile-step >> text=Book the dentist'); assert.equal(await p.locator('.tile-step >> text=Email the landlord').count(), 0, 'a finished step leaves the list')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Small steps: level 1"]')
   await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=/You finished 1 small step \\(\\d+ minutes? of focus\\)\\./')
   await done(s)
@@ -529,7 +533,7 @@ test('small step: pick a step from your worry plan, settle, focus (pause is free
 
 test('small step: stopping early is neutral and never counts as finished; your own step works', async () => {
   const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
-  assert.equal(await p.locator('.worry-tile >> text=small step').count(), 0, 'nothing is suggested without a plan')
+  assert.equal(await p.locator('.tile-step').count(), 0, 'nothing is suggested without a plan')
   await fabMenu(p); await p.click('.sheet-item >> text=Start a small step'); await p.waitForSelector('.chip:has-text("Write one sentence")')
   assert.equal(await p.isDisabled('button:has-text("Start")'), true, 'needs a step first'); await p.fill('input[placeholder^="e.g. Open"]', 'Open the tax form'); await p.click('button:has-text("Start")')
   await p.click('button:has-text("Skip — start now")'); await p.waitForSelector('[role=timer]'); await p.waitForSelector('h1:has-text("Open the tax form")')
@@ -1031,23 +1035,23 @@ test('every interactive control has an accessible name', async () => {
   await done(s)
 })
 
-test('home: layout is mood → anchors → Focus-guard tile → worry tile → Journal / Sleep / Focus → today’s entries; no + button, no title, coins in the app bar', async () => {
+test('home: layout is mood → anchors → Focus guard + Journal → Worries / Sleep / Focus → today’s entries; no + button, no title, coins in the app bar', async () => {
   const s = await open({ 'bp.thoughts': [rec('t1', 0, { thought: 'today thought' }), rec('t2', 0, { thought: 'second today' }), rec('t3', 3, { thought: 'older thought' })] }); const p = s.page
   await p.waitForSelector('.tools-row')
   assert.equal(await p.locator('.tab[aria-current=true]').innerText(), 'Home')
   assert.equal(await p.locator('.topbar .title').count(), 0, 'no "Home" title in the app bar')
   assert.equal(await p.locator('.fab').count(), 0, 'no + button on Home')
   assert.ok(await p.evaluate(() => document.querySelector('.topbar').nextElementSibling.matches('.today')), 'the mood card is first, even after logging today')
-  const order = await p.evaluate(() => [...document.querySelector('.app').children].map(e => e.className.split(' ').find(c => ['topbar', 'today', 'anchors', 'anchor-empty', 'guard-tile', 'worry-tile', 'tools-row', 'entry'].includes(c)) ?? e.className.split(' ')[0]).filter((c, i, a) => c !== a[i - 1]))
-  assert.deepEqual(order.map(c => (c === 'anchor-empty' ? 'anchors' : c === 'linkbtn' ? 'more-today' : c)), ['topbar', 'today', 'anchors', 'guard-tile', 'worry-tile', 'tools-row', 'entry', 'more-today'], JSON.stringify(order))
-  assert.deepEqual(await p.$$eval('.tool b', els => els.map(e => e.textContent)), ['Journal', 'Sleep', 'Focus'])
-  assert.ok(await p.$$eval('.tool b', els => els.every(e => e.getBoundingClientRect().height < 24)), 'every tool label is a single line')
+  const order = await p.evaluate(() => [...document.querySelector('.app').children].map(e => e.className.split(' ').find(c => ['topbar', 'today', 'anchors', 'anchor-empty', 'home-top', 'tools-row', 'entry'].includes(c)) ?? e.className.split(' ')[0]).filter((c, i, a) => c !== a[i - 1]))
+  assert.deepEqual(order.map(c => (c === 'anchor-empty' ? 'anchors' : c === 'linkbtn' ? 'more-today' : c)), ['topbar', 'today', 'anchors', 'home-top', 'tools-row', 'entry', 'more-today'], JSON.stringify(order))
+  assert.deepEqual(await p.$$eval('.home-top b', els => els.map(e => e.textContent)), ['Focus guard', 'Journal'], 'row 1: Focus guard + Journal'); assert.deepEqual(await p.$$eval('.tools-row .tool b', els => els.map(e => e.textContent)), ['Worries', 'Sleep', 'Focus'], 'row 2: Worries, Sleep, Focus')
+  assert.ok(await p.$$eval('.tools-row .tool b', els => els.every(e => e.getBoundingClientRect().height < 24)), 'every tool label is a single line')
   assert.equal(await p.locator('.coin-pill').count(), 1); await p.click('.coin-pill'); await p.waitForSelector('.overlay .title >> text=Coins'); await p.click('[aria-label=Back]')
   assert.equal(await p.locator('.entry').count(), 2, 'Home lists every entry from today, not just the latest')
   assert.equal(await p.locator('text=rough patch').count(), 0, 'no rough-patch card')
   await p.click('.tool >> text=Journal'); await p.waitForSelector('[aria-label="New journal entry"]'); assert.equal(await p.locator('text=Write something').count(), 0, 'the Write button became the + button'); await p.click('[aria-label=Back]')
   await p.click('.guard-tile'); await p.waitForSelector('.overlay .title >> text=Focus guard'); await p.click('[aria-label=Back]')
-  await p.click('.worry-tile'); await p.waitForSelector('.sheet textarea'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })         // nothing parked yet: the tile invites you to park one
+  await p.click('.worry-tool'); await p.waitForSelector('.sheet textarea'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })         // nothing parked yet: the tile invites you to park one
   await p.click('.tool >> text=Sleep'); await p.waitForSelector('.overlay .title >> text=Sleep'); await p.click('[aria-label=Back]')
   await p.click('.more-today'); await p.waitForFunction(() => document.querySelectorAll('.overlay .entry').length === 3); await p.click('[aria-label=Back]')    // "All entries"
   await tab(p, 'Calendar'); await p.click('.fab')
@@ -1064,10 +1068,9 @@ test('home: tapping a face opens the entry flow with that mood and "just save my
   const night = (asleepMin) => ({ date: new Date().toISOString().slice(0, 10), start: 0, end: 1, asleepMin, inBedMin: asleepMin + 20, awakeMin: 20, deepMin: 60, remMin: 80, coreMin: asleepMin - 140, unspecifiedMin: 0, efficiency: 90, source: 'manual', quality: null })
   const w = (id, text) => ({ id, createdAt: new Date().toISOString(), text, status: 'open', action: null, reviewedAt: null })
   const s = await open({ 'bp.sleep.manual': [night(250)], 'bp.worries': [w('w1', 'the deadline'), w('w2', 'rent is due'), w('w3', 'my friend seems upset')] }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.waitForSelector('.worry-tile.has')
-  assert.match(await p.locator('.worry-tile').innerText(), /3 worries parked/); assert.match(await p.locator('.worry-tile').innerText(), /the deadline/); assert.match(await p.locator('.worry-tile').innerText(), /\+1 more/)
+  await p.waitForSelector('.worry-tool >> text=3 parked')
   assert.match(await p.locator('.tool:has-text("Sleep") small').innerText(), /4h 10m/, 'last night under Sleep')
-  await p.click('.tile-main'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
+  await p.click('.worry-tool'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
   await p.click('[aria-label="Log mood: bad"]'); await p.waitForSelector('.wiz-body'); assert.match(await p.locator('.wiz-face').getAttribute('aria-label'), /Change mood/)
   await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
   assert.equal(await p.locator('.today').count(), 1, 'the mood card is still there after logging'); assert.equal(await p.locator('.entry').count(), 1)
@@ -1422,7 +1425,7 @@ test('Wobbi tips: every section has one short tip, dismissing sticks, and More b
   await tab(p, 'Stats')
   for (const [v, re] of [['Progress', /Skills grow/], ['Summary', /plain words/], ['Sleep', /sleep and mood|Apple Health/]]) { await p.click(`[role=tab]:has-text("${v}")`); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, v) }
   await tab(p, 'Home')
-  for (const [t, re] of [['.more-today', /month by month/], ['.tools-row .tool >> text=Journal', /Only you can read/], ['.coin-pill', /Coins come from/]]) { await p.click(t); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
+  for (const [t, re] of [['.more-today', /month by month/], ['.home-top .tool >> text=Journal', /Only you can read/], ['.coin-pill', /Coins come from/]]) { await p.click(t); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
   // dismiss: stays gone after a reload; More brings it back
   await tab(p, 'Calendar'); await p.click('.pal-tip [aria-label="Hide this tip"]'); assert.equal(await p.locator('.pal-tip').count(), 0)
   await reload(p); await tab(p, 'Calendar'); await p.waitForSelector('.cal'); assert.equal(await p.locator('.pal-tip').count(), 0, 'a dismissed tip stays dismissed')

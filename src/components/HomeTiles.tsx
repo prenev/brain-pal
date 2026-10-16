@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Plus } from 'lucide-react'
-import Pal from './Pal'
+import { Plus } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { loadGuard } from '../lib/extras'
@@ -8,7 +7,7 @@ import { guardStatus, guardSupported } from '../lib/guardNative'
 import { isUnlocked, minutesLeft } from '../lib/guard.ts'
 import { stepChoices } from '../lib/focus.ts'
 
-/** Long Focus-guard tile: what's blocked and whether it is locked right now, or an invitation to pick apps. */
+/** Half-width Focus-guard tile: what's blocked and whether it is locked right now, or an invitation to pick apps. */
 export function GuardTile({ onOpen }: { onOpen: () => void }) {
   const [cfg, setCfg] = useState(loadGuard)
   const [until, setUntil] = useState<number | null>(null)
@@ -33,34 +32,26 @@ export function GuardTile({ onOpen }: { onOpen: () => void }) {
         {state === 'empty' && <span className="tile-sub">Pick the apps that eat your time, and earn them back.</span>}
         {state === 'web' && <span className="tile-sub">Pause distracting apps until you move. Works in the iPhone app.</span>}
       </span>
-      {state === 'empty' ? <span className="tile-cta"><Plus size={16} strokeWidth={3} /> Add apps</span> : <ChevronRight size={22} className="tile-go" />}
+      {state === 'empty' && <span className="tile-cta"><Plus size={16} strokeWidth={3} /> Add apps</span>}
     </button>
   )
 }
 
-/** Long worry tile: how many are parked (with the first two), a planned small step, or an invitation to park one. */
-export function WorryTile({ onWorry, onPark, onStep }: { onWorry: () => void; onPark: () => void; onStep: () => void }) {
-  const { worries, focusSessions } = useStore()
-  const open = worries.filter(w => w.status === 'open')
-  const step = stepChoices(worries, focusSessions).fromWorries[0]?.text
-  if (open.length === 0 && !step) return (
-    <button className="card home-tile worry-tile empty" onClick={onPark} aria-label="Park a worry">
-      <span className="tile-art"><Pal pose="think" size={52} /></span>
-      <span className="tile-body"><b>Park your worries</b><span className="tile-sub">Write one down and let it wait until worry time.</span></span>
-      <span className="tile-cta"><Plus size={16} strokeWidth={3} /> Park one</span>
+/** Worry tile in the tools row: how many are parked, or an invitation to park one. Opens worry time (or the park sheet while nothing is parked). */
+export function WorryTool({ onWorry, onPark }: { onWorry: () => void; onPark: () => void }) {
+  const { worries } = useStore()
+  const n = worries.filter(w => w.status === 'open').length
+  return (
+    <button className="card tool worry-tool" onClick={n ? onWorry : onPark} aria-label={n ? `${n} parked ${n === 1 ? 'worry' : 'worries'}` : 'Park a worry'}>
+      <Emoji name="worry" size={30} /><b>Worries</b><small>{n ? `${n} parked` : 'Park one'}</small>
     </button>
   )
-  return (
-    <div className="card home-tile worry-tile has" role="group" aria-label="Worries">
-      <button className="tile-main" onClick={onWorry} aria-label={open.length ? `${open.length} parked ${open.length === 1 ? 'worry' : 'worries'}` : 'Worry time'}>
-        <span className="tile-art" aria-hidden="true"><Emoji name="worry" size={44} /></span>
-        <span className="tile-body">
-          <b>{open.length ? `${open.length} ${open.length === 1 ? 'worry' : 'worries'} parked` : 'Worries, handled'}</b>
-          <span className="tile-lines">{open.length ? <>{open.slice(0, 2).map(w => <span key={w.id}>{w.text}</span>)}{open.length > 2 && <em>+{open.length - 2} more</em>}</> : <span>You turned them into steps. Nothing is waiting to be parked.</span>}</span>
-        </span>
-        <ChevronRight size={22} className="tile-go" />
-      </button>
-      {step && <button className="tile-step" onClick={onStep}><Emoji name="rocket" size={20} /> A small step is waiting: {step}</button>}
-    </div>
-  )
+}
+
+/** One line under the tools when a worry has a planned small step waiting. */
+export function StepNudge({ onStep }: { onStep: () => void }) {
+  const { worries, focusSessions } = useStore()
+  const step = stepChoices(worries, focusSessions).fromWorries[0]?.text
+  if (!step) return null
+  return <button className="tile-step" onClick={onStep}><Emoji name="rocket" size={20} /> A small step is waiting: {step}</button>
 }

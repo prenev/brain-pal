@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, Check, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ChevronDown, X } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type AnchorLink } from '../lib/anchors.ts'
@@ -9,6 +9,7 @@ const LINK_LABEL: Record<AnchorLink, string> = { breathing: 'a breathing session
 /** Today's anchors on the home screen: big round checks, a progress bar, and a gentle all-done moment. */
 export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
   const { anchorsToday: p, anchorStreak: st, toggleAnchor } = useStore()
+  const [expanded, setExpanded] = useState(false)
 
   if (p.total === 0) return (
     <button className="card row anchor-empty" onClick={onEdit}>
@@ -24,8 +25,20 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
   }
   const all = p.done === p.total
   const R = 15, C = 2 * Math.PI * R
+  const streakLine = st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : null
+  // everything ticked: shrink to one slim line (tap to open the list again)
+  if (all && !expanded) return (
+    <button className="card anchors-mini" aria-label="Daily anchors, all done. Show the list" aria-expanded="false" onClick={() => setExpanded(true)}>
+      <span className="ring" role="img" aria-label={`${p.done} of ${p.total} done`}>
+        <svg viewBox="0 0 38 38" width="34" height="34"><circle cx="19" cy="19" r={R} /><circle className="fg" cx="19" cy="19" r={R} strokeDasharray={C} strokeDashoffset={0} /></svg>
+        <i>{p.done}/{p.total}</i>
+      </span>
+      <span className="mini-text"><b>Anchors done</b>{streakLine && <span className="muted small">{streakLine}</span>}</span>
+      <ChevronDown size={20} className="tile-go" aria-hidden="true" />
+    </button>
+  )
   return (
-    <div className={`card anchors ${all ? 'all-done' : ''}`} aria-label="Daily anchors">
+    <div className="card anchors" aria-label="Daily anchors">
       <div className="anchors-head">
         <div>
           <b>Today’s anchors</b>
@@ -48,8 +61,8 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
           </li>
         ))}
       </ul>
-      {st.current > 0 && <p className="muted small anchors-streak"><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {st.current} {st.current === 1 ? 'day' : 'days'} with every anchor done</p>}
-      <button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>
+      {streakLine && <p className="muted small anchors-streak"><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {streakLine}</p>}
+      <div className="anchors-actions"><button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>{all && <button className="linkbtn anchors-edit" onClick={() => setExpanded(false)}>Collapse</button>}</div>
     </div>
   )
 }
