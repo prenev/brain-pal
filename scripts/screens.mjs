@@ -235,13 +235,13 @@ await session('http://localhost:4173', true, async (p, snap) => {   // not Pro: 
 await session('http://localhost:4173', true, async (p, snap) => {   // Home tiles on the iPhone app (Focus guard locked, worries parked) + the Focus hub
   await p.evaluate(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4, unlockedUntil: null } }; localStorage.setItem('bp.guard', JSON.stringify({ enabled: true, challenges: ['pushups', 'breathe'], unlockMinutes: 10, appCount: 4 })) })
   await p.reload(); await p.waitForSelector('.guard-tile.locked'); await snap('home-guard-locked')
-  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-stage'); await snap('focus-timer')
+  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-screen'); await snap('focus-timer')
   await p.click('.pomo-wobbi'); await p.clock.fastForward?.('01:00').catch(() => {}); await p.waitForTimeout(600); await snap('focus-timer-running')
-  await p.click('[aria-label="Timer settings"]'); await snap('focus-settings'); await p.click('button:has-text("Done")')
-  await p.click('[role=tab]:has-text("To-do")'); await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Reply to Sam'); await p.click('[aria-label="Add to-do"]')
-  await p.click('.todo-text >> text=Write the report'); await snap('focus-todo')
+  await p.click('[aria-label="Timer settings"]'); await snap('focus-settings'); await p.click('.pomo-sheet button:has-text("Done")')
+  await p.click('.pomo-task'); await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Reply to Sam'); await p.click('[aria-label="Add to-do"]')
+  await p.click('.todo-text >> text=Write the report'); await snap('focus-todo'); await p.click('.pomo-sheet button:has-text("Done")'); await snap('focus-timer-task')
   await p.evaluate(() => { const n = Date.now(), b = (d, t) => ({ id: 'b' + d + t, createdAt: new Date(n - d * 864e5).toISOString(), minutes: 25, actualSec: 1500, completed: true, worryId: null, step: t ? 'Pomodoro · ' + t : 'Pomodoro' }); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 })); localStorage.setItem('bp.focus', JSON.stringify([b(0, 'Write the report'), b(0, 'Write the report'), b(1, 'Email'), b(2), b(3, 'Write the report'), b(5)])) })
-  await p.reload(); await p.click('.tool >> text=Focus'); await p.click('[role=tab]:has-text("Stats")'); await p.waitForSelector('.pomo-stats'); await snap('focus-stats')
+  await p.reload(); await p.click('.tool >> text=Focus'); await p.click('.pomo-nav [aria-label="Stats"]'); await p.waitForSelector('.pomo-stats'); await snap('focus-stats')
 }, { native: true })
 await session('http://localhost:4173', false, async (p, snap) => {   // empty states: Focus guard on the web, nothing parked
   await snap('home-empty-tiles')

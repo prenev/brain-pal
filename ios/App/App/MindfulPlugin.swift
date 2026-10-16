@@ -421,23 +421,43 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: Live Activity (breathing / focus countdown on the lock screen and in the Dynamic Island)
 
-    private func liveState(_ call: CAPPluginCall) -> (String, String, Date, Date, Double?) {
-        let starts = Date(timeIntervalSince1970: (call.getDouble("startsAt") ?? Date().timeIntervalSince1970 * 1000) / 1000)
-        let ends = Date(timeIntervalSince1970: (call.getDouble("endsAt") ?? 0) / 1000)
-        return (call.getString("title") ?? "Wobbi", call.getString("subtitle") ?? "", starts, max(ends, starts.addingTimeInterval(1)), call.getDouble("remainingSec"))
+    private func ms(_ v: Any?) -> Date? {
+        guard let n = (v as? NSNumber)?.doubleValue ?? (v as? Double) else { return nil }
+        return Date(timeIntervalSince1970: n / 1000)
     }
+
+    #if canImport(ActivityKit)
+    @available(iOS 16.2, *)
+    private func liveState(_ call: CAPPluginCall) -> WobbiActivityAttributes.ContentState {
+        let starts = ms(call.getDouble("startsAt")) ?? Date()
+        let ends = max(ms(call.getDouble("endsAt")) ?? starts, starts.addingTimeInterval(1))
+        let next: [WobbiActivityAttributes.Segment] = (call.getArray("next") ?? []).prefix(8).compactMap { v in
+            guard let o = v as? JSObject, let a = ms(o["startsAt"]), let b = ms(o["endsAt"]), b > a else { return nil }
+            return .init(title: (o["title"] as? String) ?? "Wobbi", subtitle: (o["subtitle"] as? String) ?? "", phase: o["phase"] as? String, startsAt: a, endsAt: b)
+        }
+        return .init(title: call.getString("title") ?? "Wobbi", subtitle: call.getString("subtitle") ?? "", startsAt: starts, endsAt: ends,
+                     pausedRemaining: call.getDouble("remainingSec"), phase: call.getString("phase"), next: next.isEmpty ? nil : next)
+    }
+
+    /// When the content goes stale iOS draws it again, which is how the clock moves on to the break while the app sleeps.
+    @available(iOS 16.2, *)
+    private func staleDate(_ s: WobbiActivityAttributes.ContentState) -> Date? {
+        if s.pausedRemaining != nil { return nil }
+        return s.next?.isEmpty == false ? s.endsAt : (s.next?.last?.endsAt ?? s.endsAt).addingTimeInterval(60)
+    }
+    #endif
+
 
     @objc func liveActivityStart(_ call: CAPPluginCall) {
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) {
-            let (title, subtitle, starts, ends, paused) = liveState(call)
+            let state = liveState(call)
             let kind = call.getString("kind") == "focus" ? "focus" : "breathe"
             Task {
                 for a in Activity<WobbiActivityAttributes>.activities { await a.end(nil, dismissalPolicy: .immediate) }   // only ever one
                 guard ActivityAuthorizationInfo().areActivitiesEnabled else { call.resolve(["started": false]); return }
-                let state = WobbiActivityAttributes.ContentState(title: title, subtitle: subtitle, startsAt: starts, endsAt: ends, pausedRemaining: paused)
                 do {
-                    _ = try Activity.request(attributes: WobbiActivityAttributes(kind: kind), content: .init(state: state, staleDate: ends.addingTimeInterval(60)), pushType: nil)
+                    _ = try Activity.request(attributes: WobbiActivityAttributes(kind: kind), content: .init(state: state, staleDate: staleDate(state)), pushType: nil)
                     call.resolve(["started": true])
                 } catch { call.resolve(["started": false]) }
             }
@@ -450,10 +470,9 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func liveActivityUpdate(_ call: CAPPluginCall) {
         #if canImport(ActivityKit)
         if #available(iOS 16.2, *) {
-            let (title, subtitle, starts, ends, paused) = liveState(call)
-            let state = WobbiActivityAttributes.ContentState(title: title, subtitle: subtitle, startsAt: starts, endsAt: ends, pausedRemaining: paused)
+            let state = liveState(call)
             Task {
-                for a in Activity<WobbiActivityAttributes>.activities { await a.update(.init(state: state, staleDate: paused == nil ? ends.addingTimeInterval(60) : nil)) }
+                for a in Activity<WobbiActivityAttributes>.activities { await a.update(.init(state: state, staleDate: staleDate(state))) }
                 call.resolve()
             }
             return

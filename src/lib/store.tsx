@@ -67,7 +67,7 @@ interface Ctx {
   rituals: Ritual[]
   setRituals(next: Ritual[]): void
   focusSessions: FocusSession[]
-  addFocus(d: Omit<FocusSession, 'id' | 'createdAt'>): FocusSession
+  addFocus(d: Omit<FocusSession, 'id' | 'createdAt'> & { createdAt?: string }): FocusSession
   journal: JournalEntry[]
   addJournal(d: { title: string; body: string; mood: number | null; tags: string[]; prompt: string | null; audio?: JournalEntry['audio'] }): JournalEntry
   updateJournal(id: string, d: { title: string; body: string; mood: number | null; tags: string[]; audio?: JournalEntry['audio'] }): void
@@ -102,6 +102,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [checks, setChecks] = useState<Set<string>>(loadChecks)
   const [journal, setJournal] = useState<JournalEntry[]>(loadJournal)
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>(loadFocus)
+  const focusRef = useRef(focusSessions); focusRef.current = focusSessions
   const [rituals, setRitualsState] = useState<Ritual[]>(loadRituals)
   const [purchases, setPurchases] = useState<Purchase[]>(loadPurchases)
   const [themeId, setThemeId] = useState<string | null>(loadTheme)
@@ -301,8 +302,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRituals(next) { setRitualsState(next); saveRituals(next) },
     focusSessions,
     addFocus(d) {
-      const f: FocusSession = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...d, step: d.step.trim().slice(0, 140) }
-      const next = [f, ...focusSessions]; setFocusSessions(next); saveFocus(next); return f
+      const f: FocusSession = { id: crypto.randomUUID(), ...d, createdAt: d.createdAt ?? new Date().toISOString(), step: d.step.trim().slice(0, 140) }
+      const next = [f, ...focusRef.current]; focusRef.current = next; setFocusSessions(next); saveFocus(next); return f   // the ref: several blocks can finish in one go (the app was closed)
     },
     journal,
     addJournal(d) {

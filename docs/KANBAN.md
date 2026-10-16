@@ -5,7 +5,7 @@ The agent's own board. **Rules:** one card *In progress* at a time · a card mov
 Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · 📄 docs · 🐞 bug/chore
 
 ## 🔜 Backlog (ordered — see ROADMAP "Order of work")
-- **Focus hub follow-ups** 🧱 #30 background timer + Live Activity · #31 to-do v2/sync · #32 focus stats · #33 auto-block during a block · #34 blocked-app icons on the tile · #35 sounds + widget/Siri
+- **Focus hub follow-ups** 🧱 #30 background timer + Live Activity (mostly done: runs while closed, island follows phases; verify on device) · #31 to-do v2/sync · #32 focus stats · #33 auto-block during a block · #34 blocked-app icons on the tile · #35 sounds + widget/Siri
 - **P13** 🧱 Theme picker; optional Gemini "reflect with me"
 - **chore** 🐞 Code-split bundle · neutral demo seed text · Apple Watch (Mac)
 

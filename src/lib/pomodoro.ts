@@ -1,5 +1,5 @@
 import { dayKey } from './dates.ts'
-import type { Timer } from './focus.ts'
+import { elapsedMs, remainingMs, startTimer, type Timer } from './focus.ts'
 
 /** Pomodoro rhythm, run state, stats and a tiny to-do list. Pure: the timer itself reuses the timestamp-based Timer in focus.ts. Tested in scripts/test-pomodoro.mjs. */
 export type PomoPhase = 'work' | 'short' | 'long'
@@ -38,6 +38,45 @@ export function normalizeRun(raw: unknown): PomoRun {
   const t = r.timer as Partial<Timer> | null | undefined
   const ok = !!t && typeof t === 'object' && (t.status === 'running' || t.status === 'paused') && typeof t.totalMs === 'number' && t.totalMs > 0 && typeof t.accumulatedMs === 'number' && t.accumulatedMs >= 0 && (t.status === 'paused' || typeof t.startedAt === 'number')
   return { phase, taskId: typeof r.taskId === 'string' ? r.taskId : null, timer: ok ? { status: t!.status as Timer['status'], totalMs: t!.totalMs!, accumulatedMs: t!.accumulatedMs!, startedAt: t!.status === 'running' ? t!.startedAt! : null } : null }
+}
+
+/* ---- the clock keeps going while the app is closed ---- */
+export interface Segment { phase: PomoPhase; start: number; end: number }
+export interface Finished { phase: PomoPhase; end: number; actualSec: number; taskId: string | null }
+
+/** Replays everything that happened since the app last looked: each phase that ran out is finished at the moment it really ended,
+ *  and the next one starts then too (if it starts by itself), so coming back after an hour lands in the right phase with the right time left. */
+export function catchUp(run: PomoRun, s: PomoSettings, doneToday: number, now: number): { run: PomoRun; finished: Finished[] } {
+  const finished: Finished[] = []
+  let r = run, done = doneToday
+  for (let i = 0; i < 200; i++) {
+    const t = r.timer
+    if (!t || t.status !== 'running' || t.startedAt === null || remainingMs(t, now) > 0) break
+    const end = t.startedAt + (t.totalMs - t.accumulatedMs)
+    finished.push({ phase: r.phase, end, actualSec: Math.round(t.totalMs / 1000), taskId: r.taskId })
+    if (r.phase === 'work') done++
+    const nxt = nextPhase(r.phase, done, s), auto = r.phase === 'work' ? s.autoBreak : s.autoFocus
+    r = { phase: nxt, taskId: r.taskId, timer: auto ? startTimer(phaseMinutes(nxt, s), end) : null }
+  }
+  return { run: r, finished }
+}
+
+/** What the clock will do if nobody touches it: the running phase, then each one that starts by itself. Used for the
+ *  notifications and the lock-screen / Dynamic Island timer, which have to know the future because the app is asleep. */
+export function plan(run: PomoRun, s: PomoSettings, doneToday: number, now: number, max = 8): Segment[] {
+  const t = run.timer
+  if (!t || t.status !== 'running') return []
+  const out: Segment[] = [{ phase: run.phase, start: now - elapsedMs(t, now), end: now + remainingMs(t, now) }]
+  let phase = run.phase, done = doneToday
+  while (out.length < max) {
+    if (phase === 'work') done++
+    const auto = phase === 'work' ? s.autoBreak : s.autoFocus
+    if (!auto) break
+    phase = nextPhase(phase, done, s)
+    const start = out[out.length - 1].end
+    out.push({ phase, start, end: start + phaseMinutes(phase, s) * 60_000 })
+  }
+  return out
 }
 
 /* ---- stats from finished blocks (they are saved as focus sessions whose step starts with "Pomodoro") ---- */
