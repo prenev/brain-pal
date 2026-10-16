@@ -6,7 +6,7 @@ export type Eyes = 'open' | 'happy' | 'closed' | 'wide' | 'side' | 'heart'
 export type Mouth = 'smile' | 'grin' | 'open' | 'o' | 'flat' | 'wavy' | 'small'
 export type Brows = 'worried' | 'determined' | null
 export type Legs = 'stand' | 'wide' | 'squat' | 'jump' | 'walkA' | 'walkB'
-export type Extra = 'sparkles' | 'confetti' | 'bubble' | 'sweat' | 'zzz' | 'hearts' | 'shield'
+export type Extra = 'sparkles' | 'confetti' | 'bubble' | 'sweat' | 'zzz' | 'hearts' | 'shield' | 'play' | 'laptop' | 'book' | 'cup' | 'shades' | 'laurel' | 'blanket' | 'phone' | 'headband' | 'partyhat'
 
 export interface PoseSpec { armL: number; armR: number; legs: Legs; eyes: Eyes; mouth: Mouth; brows: Brows; dy: number; scale: number; tilt: number; extras: Extra[] }
 const BASE: PoseSpec = { armL: 14, armR: 14, legs: 'stand', eyes: 'open', mouth: 'smile', brows: null, dy: 0, scale: 1, tilt: 0, extras: [] }
@@ -29,6 +29,18 @@ export const POSES = {
   walkB: { legs: 'walkB', armL: -30, armR: 38 },
   love: { eyes: 'heart', armL: 64, armR: 64, extras: ['hearts'] },
   stop: { armR: 172, brows: 'determined', mouth: 'flat', extras: ['shield'] },
+  // the pomodoro cast
+  holdPlay: { armL: -52, armR: -52, eyes: 'happy', mouth: 'smile', extras: ['play'] },
+  focus: { armL: -58, armR: -58, eyes: 'side', brows: 'determined', mouth: 'flat', extras: ['laptop'] },
+  read: { armL: -60, armR: -60, eyes: 'side', mouth: 'small', extras: ['book'] },
+  hype: { armL: 128, armR: 14, brows: 'determined', mouth: 'grin', extras: ['headband', 'sweat'], legs: 'wide' },
+  coffee: { armL: 10, armR: 48, eyes: 'happy', mouth: 'smile', extras: ['cup'], tilt: -3 },
+  stretch: { armL: 176, armR: 176, eyes: 'closed', mouth: 'open', legs: 'wide', dy: -3, scale: 1.04 },
+  chill: { armL: 146, armR: 146, mouth: 'smile', extras: ['shades'], legs: 'wide', tilt: 3 },
+  nap: { eyes: 'closed', mouth: 'small', extras: ['blanket', 'zzz'], tilt: 7 },
+  champ: { armL: 165, armR: 165, eyes: 'happy', mouth: 'grin', extras: ['laurel', 'sparkles'], dy: -4 },
+  party: { armL: 150, armR: 150, eyes: 'happy', mouth: 'open', extras: ['partyhat', 'confetti'], legs: 'jump', dy: -10 },
+  scroll: { armL: -50, armR: -50, eyes: 'wide', brows: 'worried', mouth: 'flat', extras: ['phone'] },
 } as const satisfies Record<string, Partial<PoseSpec>>
 export type PoseName = keyof typeof POSES
 export const POSE_NAMES = Object.keys(POSES) as PoseName[]
@@ -37,6 +49,7 @@ export const POSE_NAMES = Object.keys(POSES) as PoseName[]
 export const POSE_LABEL: Record<PoseName, string> = {
   idle: 'Wobbi smiling', wave: 'Wobbi waving', wave2: 'Wobbi waving', cheer: 'Wobbi cheering', celebrate: 'Wobbi celebrating', think: 'Wobbi thinking', worried: 'Wobbi looking worried', sleepy: 'Wobbi sleepy',
   breatheIn: 'Wobbi breathing in', breatheOut: 'Wobbi breathing out', flex: 'Wobbi flexing', squat: 'Wobbi squatting', walkA: 'Wobbi walking', walkB: 'Wobbi walking', love: 'Wobbi with hearts', stop: 'Wobbi holding up a hand',
+  holdPlay: 'Wobbi holding a play button', focus: 'Wobbi working on a laptop', read: 'Wobbi reading', hype: 'Wobbi pumped up', coffee: 'Wobbi with a warm drink', stretch: 'Wobbi stretching', chill: 'Wobbi in sunglasses', nap: 'Wobbi napping under a blanket', champ: 'Wobbi wearing a laurel wreath', party: 'Wobbi with a party hat', scroll: 'Wobbi stuck on a phone',
 }
 
 /** Named animations = ordered pose frames (used for the sprite sheet; in the app CSS animates the same pieces). */
@@ -47,6 +60,10 @@ export const ANIMATIONS: Record<string, PoseName[]> = {
   walk: ['walkA', 'idle', 'walkB', 'idle'],
   workout: ['idle', 'squat', 'flex', 'squat'],
   sleep: ['sleepy', 'sleepy', 'idle', 'sleepy'],
+  focus: ['focus', 'hype', 'focus', 'read'],
+  break: ['coffee', 'stretch', 'coffee', 'chill'],
+  nap: ['nap', 'nap', 'sleepy', 'nap'],
+  party: ['party', 'cheer', 'party', 'champ'],
 }
 
 const C = { body: '#c8b8ff', hi: '#eee8ff', edge: '#9f8be6', fold: '#ad9bf0', cheek: '#ff9ec0', ink: '#2a2745', white: '#fff', limb: '#bba8fb', gold: '#ffd95a', blue: '#7cc4ff', pink: '#ff8fb1', green: '#5fd39a' }
@@ -108,6 +125,7 @@ function mouth(kind: Mouth) {
     default: return `<path d="M${cx - 7} ${y} q7 7 14 0" fill="none" stroke="${C.ink}" stroke-width="3.2" stroke-linecap="round"/>`
   }
 }
+const hand = (x: number, y: number) => `<ellipse cx="${x}" cy="${y}" rx="7" ry="6.4" fill="${C.limb}" stroke="${C.edge}" stroke-width="2.4"/>`
 const star = (x: number, y: number, s: number, c = C.gold) => `<path d="M${x} ${y - s} l${f(s * 0.28)} ${f(s * 0.72)} ${f(s * 0.72)} ${f(s * 0.28)} ${f(-s * 0.72)} ${f(s * 0.28)} ${f(-s * 0.28)} ${f(s * 0.72)} ${f(-s * 0.28)} ${f(-s * 0.72)} ${f(-s * 0.72)} ${f(-s * 0.28)} ${f(s * 0.72)} ${f(-s * 0.28)}z" fill="${c}"/>`
 function extra(kind: Extra) {
   switch (kind) {
@@ -117,6 +135,16 @@ function extra(kind: Extra) {
     case 'sweat': return `<path d="M158 52 q-7 11 0 15 q7 -4 0 -15z" fill="${C.blue}" stroke="#4aa8ff" stroke-width="1.4"/>`
     case 'zzz': return `<g fill="none" stroke="#9ec9ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M150 36h11l-11 12h11"/><path d="M166 14h8l-8 9h8" opacity=".8"/></g>`
     case 'hearts': return `<g fill="${C.pink}"><path d="M30 40c-8-5-8-12-3-12 2 0 3 1.4 3 3 0-1.6 1-3 3-3 5 0 5 7-3 12z"/><path d="M172 30c-6-4-6-9-2-9 1.6 0 2.4 1 2.4 2.4 0-1.4.8-2.4 2.4-2.4 4 0 4 5-2.4 9z" opacity=".8"/></g>`
+    case 'play': return `<path d="M89 103 L89 137 L119 120z" fill="#4a3b66" stroke="#4a3b66" stroke-width="13" stroke-linejoin="round"/><path d="M89 103 L89 137 L119 120z" fill="#fff6e6" stroke="#fff6e6" stroke-width="8" stroke-linejoin="round"/><path d="M95 110 v12" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>${hand(68, 121)}${hand(132, 121)}`
+    case 'laptop': return `<rect x="56" y="104" width="88" height="50" rx="8" fill="#343a52" stroke="#1d2133" stroke-width="3"/><circle cx="100" cy="129" r="5" fill="#fff" opacity=".85"/><rect x="50" y="152" width="100" height="6" rx="3" fill="#1d2133"/>${hand(70, 118)}${hand(130, 118)}`
+    case 'book': return `<path d="M100 112 q-20-9-42-3 v38 q22-6 42 3z" fill="#fff6e0" stroke="${C.ink}" stroke-width="3" stroke-linejoin="round"/><path d="M100 112 q20-9 42-3 v38 q-22-6-42 3z" fill="#fffaf0" stroke="${C.ink}" stroke-width="3" stroke-linejoin="round"/><path d="M66 122 q14-3 28 1 M66 132 q14-3 28 1 M106 123 q14-4 28-1 M106 133 q14-4 28-1" fill="none" stroke="#c9b9a0" stroke-width="2" stroke-linecap="round"/><path d="M54 150 q23-6 46 3 q23-9 46-3" fill="none" stroke="${C.blue}" stroke-width="4" stroke-linecap="round"/>${hand(66, 128)}${hand(134, 128)}`
+    case 'cup': return `<path d="M171 109 q-10 1-10 9 q0 8 10 9" fill="none" stroke="${C.ink}" stroke-width="3.4" stroke-linecap="round"/><rect x="170" y="101" width="24" height="28" rx="6" fill="#fff" stroke="${C.ink}" stroke-width="3"/><rect x="170" y="110" width="24" height="7" fill="${C.pink}" opacity=".85"/><path d="M176 95 q-4-6 0-11 M186 95 q-4-6 0-11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>${hand(182, 119)}`
+    case 'shades': return `<rect x="66" y="66" width="27" height="17" rx="7" fill="${C.ink}"/><rect x="107" y="66" width="27" height="17" rx="7" fill="${C.ink}"/><path d="M93 72 h14" stroke="${C.ink}" stroke-width="3.6" stroke-linecap="round"/><path d="M66 70 l-8-3 M134 70 l8-3" stroke="${C.ink}" stroke-width="3" stroke-linecap="round"/><path d="M71 70 l7 0 M112 70 l7 0" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".55"/>`
+    case 'laurel': return [-1, 1].map(side => [0, 1, 2, 3, 4, 5].map(i => { const th = (200 + i * 12) * Math.PI / 180, x = 100 + side * 54 * Math.cos(th) * -1, y = 70 + 36 * Math.sin(th); return `<ellipse cx="${f(x)}" cy="${f(y)}" rx="8.5" ry="3.8" fill="${i % 2 ? '#7be0a8' : C.green}" stroke="#2fa56f" stroke-width="1.2" transform="rotate(${f(side * (-62 + i * 14))} ${f(x)} ${f(y)})"/>` }).join('')).join('')
+    case 'blanket': return `<path d="M36 108 q16-9 32 0 t32 0 t32 0 t32 0 V158 H36z" fill="#aab4ff" stroke="#7783dd" stroke-width="3" stroke-linejoin="round"/><g fill="#fff" opacity=".9">${star(62, 132, 5, '#fff')}${star(104, 142, 4, '#fff')}${star(140, 128, 5, '#fff')}</g><path d="M36 108 q16-9 32 0 t32 0 t32 0 t32 0" fill="none" stroke="#c9d0ff" stroke-width="3" stroke-linecap="round"/>`
+    case 'phone': return `<rect x="86" y="100" width="28" height="44" rx="7" fill="#20243a" stroke="${C.ink}" stroke-width="3"/><rect x="90" y="106" width="20" height="30" rx="3" fill="#6ec1ff" opacity=".85"/><path d="M93 114 h14 M93 120 h10 M93 126 h12" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>${hand(82, 126)}${hand(118, 126)}`
+    case 'headband': return `<path d="M54 52 q46-18 92 0" fill="none" stroke="#ff5d73" stroke-width="9" stroke-linecap="round"/><circle cx="100" cy="42" r="5.2" fill="#fff"/><path d="M146 52 l12 7 M146 52 l10 -6" stroke="#ff5d73" stroke-width="5" stroke-linecap="round"/>`
+    case 'partyhat': return `<path d="M100 2 L80 44 H120z" fill="${C.pink}" stroke="#d6537f" stroke-width="2.4" stroke-linejoin="round"/><path d="M92 20 l16 6 M87 32 l26 8" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".85"/><circle cx="100" cy="4" r="5.5" fill="${C.gold}"/>`
     case 'shield': return `<path d="M170 78 l12 4 v12 q0 12 -12 18 q-12 -6 -12 -18 v-12z" fill="${C.green}" stroke="#2fa56f" stroke-width="2"/><path d="M164 94 l4 4 8 -9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`
   }
 }

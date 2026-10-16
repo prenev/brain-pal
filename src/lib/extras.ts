@@ -116,3 +116,9 @@ export const loadPomo = (): PomoSettings => normalizePomo(read<unknown>(K_POMO, 
 export const savePomo = (s: PomoSettings) => write(K_POMO, s)
 export const loadTodos = (): Todo[] => normalizeTodos(read<unknown>(K_TODOS, []))
 export const saveTodos = (t: Todo[]) => write(K_TODOS, t)
+
+// the pomodoro run in progress (so leaving the screen or restarting the app keeps the clock)
+import { IDLE_RUN, normalizeRun, type PomoRun } from './pomodoro.ts'
+const K_RUN = 'bp.pomo.run'
+export const loadRun = (): PomoRun => normalizeRun(read<unknown>(K_RUN, IDLE_RUN))
+export const saveRun = (r: PomoRun) => write(K_RUN, r)

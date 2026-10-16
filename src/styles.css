@@ -609,19 +609,42 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .tile-step { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); text-align: left; font-weight: 700; font-size: 14px; }
 .card.tool small { color: var(--muted); font-size: 11.5px; font-weight: 800; margin-top: -2px; }
 
-/* ---- Focus: pomodoro + to-do ---- */
-.pomo { --pc: var(--accent); text-align: center; }
-.pomo.short { --pc: var(--blue, #4aa8ff); } .pomo.long { --pc: #9b7bff; }
-.pomo .seg button { display: grid; gap: 1px; padding: 8px 4px; } .pomo .seg small { font-size: 12px; font-weight: 800; opacity: .75; }
-.pomo-ring { position: relative; width: 230px; height: 230px; margin: 18px auto 8px; }
-.pomo-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); } .pomo-ring circle { fill: none; stroke: var(--card2); stroke-width: 7; }
-.pomo-ring .fg { stroke: var(--pc); stroke-linecap: round; transition: stroke-dashoffset .3s linear, stroke .4s; }
-.pomo-ring > div { position: absolute; inset: 0; display: grid; place-content: center; gap: 2px; }
-.pomo-ring b { font-size: 52px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; } .pomo-ring span { color: var(--pc); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; }
-.pomo-task { margin: 4px 0 14px; min-height: 22px; } .pomo-task b { color: var(--text, #e8eefc); }
-.pomo-ctl { display: flex; gap: 10px; } .pomo-ctl .btn { display: grid; place-items: center; }
-.pomo-dots { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
-.pomo-dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--card2); border: 2px solid var(--edge); } .pomo-dots i.on { background: var(--accent); border-color: var(--accent); }
+/* ---- Focus: pomodoro stage ---- */
+.pomo-stage { --pbg: #a9dcc4; --pfill: #ef9a95; --ppale: #fbece6; --ptx: #34504a; border-radius: 34px; padding: 14px 14px 18px; text-align: center; background: var(--pbg); color: var(--ptx); transition: background .5s; margin-bottom: 14px; }
+.pomo-stage.short { --pbg: #f8d7bd; --pfill: #78c3a2; --ppale: #fff3e8; --ptx: #6a4630; }
+.pomo-stage.long { --pbg: #d3c9f7; --pfill: #f1a4c3; --ppale: #f5f0ff; --ptx: #43376b; }
+.pomo-top { display: flex; justify-content: space-between; align-items: center; }
+.pomo-chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; background: rgba(255,255,255,.55); font-weight: 900; font-size: 14px; }
+.pomo-chip i { width: 10px; height: 10px; border-radius: 50%; background: rgba(0,0,0,.2); } .pomo-chip i.ok { background: var(--pfill); }
+.pomo-gear { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.55); color: var(--ptx); }
+.pomo-title { width: 92%; max-width: 310px; height: auto; margin: 4px auto -18px; display: block; overflow: visible; }
+.pomo-title text { font-family: var(--font); font-weight: 900; font-size: 38px; letter-spacing: 3px; fill: #fff8ec; stroke: #5d4038; stroke-width: 8px; stroke-linejoin: round; paint-order: stroke; }
+.pomo-orbit { position: relative; width: min(300px, 82vw); aspect-ratio: 1; margin: 0 auto; }
+.pomo-flowers { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pomo-flowers .tick { stroke: #fff; stroke-width: 4; stroke-linecap: round; opacity: .85; }
+.pomo-flowers .flower circle { fill: var(--ppale); stroke: rgba(93,64,56,.35); stroke-width: .9; transition: fill .4s; }
+.pomo-flowers .flower.on circle { fill: var(--pfill); } .pomo-flowers .flower .heart { fill: #fff; stroke: none; } .pomo-flowers .flower.on .heart { fill: #fff6d8; }
+.pomo-wobbi { position: absolute; left: 50%; top: 50%; width: 190px; height: 190px; transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%; }
+.pomo-wobbi:active { transform: translate(-50%, -50%) scale(.96); }
+.pomo-wobbi .pal { filter: drop-shadow(0 8px 10px rgba(0,0,0,.14)); }
+.pomo-wobbi.run .pal { animation: palBob 3.4s ease-in-out infinite; }
+.pomo-dots { display: flex; justify-content: center; gap: 10px; margin: 6px 0 2px; }
+.pomo-dots i { width: 13px; height: 13px; border-radius: 50%; background: rgba(0,0,0,.16); transition: background .3s; } .pomo-dots i.on { background: var(--pfill); }
+.pomo-clock { font-size: 56px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.pomo-line { margin: 2px 8px 10px; min-height: 22px; font-weight: 700; font-size: 14.5px; opacity: .85; } .pomo-line b { font-weight: 900; }
+.pomo-phase { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 19px; letter-spacing: .02em; } .pomo-phase b { font-weight: 900; }
+.pomo-phase button { color: var(--ptx); opacity: .6; width: 40px; height: 40px; display: grid; place-items: center; } .pomo-phase button:disabled { opacity: .2; }
+.pomo-ctl { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+.pomo-ctl button { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.55); color: var(--ptx); } .pomo-ctl button:disabled { opacity: .35; }
+.pomo-ctl .go { width: auto; min-width: 150px; height: 54px; padding: 0 28px; border-radius: 999px; background: #fff8ec; font-weight: 900; font-size: 19px; letter-spacing: .04em; text-transform: uppercase; border-bottom: 4px solid rgba(0,0,0,.18); }
+.pomo-ctl .go:active { transform: translateY(2px); border-bottom-width: 2px; }
+.goal-bar { height: 16px; border-radius: 99px; background: var(--card2); overflow: hidden; margin-top: 12px; } .goal-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .5s; }
+.week-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 140px; margin-top: 12px; align-items: end; }
+.week-bars > div { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; color: var(--muted); font-weight: 800; font-size: 12px; }
+.week-bars i { width: 100%; max-width: 28px; border-radius: 8px 8px 4px 4px; background: #4a5d86; } .week-bars .today i { background: var(--accent); } .week-bars .today { color: var(--accent); } .week-bars .bar-n { color: var(--text, #e8eefc); min-height: 14px; }
+.pomo-stats { display: grid; gap: 12px; } .pomo-stats .card { margin: 0; }
+.stat-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; } .stat-tiles .card { text-align: center; padding: 14px 6px; } .stat-tiles b { display: block; font-size: 24px; } .stat-tiles span { color: var(--muted); font-weight: 800; font-size: 12.5px; }
+.pomo-stage .seg, .seg small { }
 .todos ul { list-style: none; margin: 10px 0 0; padding: 0; } .todos li { display: flex; align-items: center; gap: 8px; border-top: 2px solid var(--edge); }
 .todo-add { display: flex; gap: 8px; margin-top: 12px; } .todo-add .input { flex: 1; } .todo-add .btn { width: 52px; display: grid; place-items: center; padding: 0; }
 .tickbox-btn { padding: 12px 4px 12px 2px; } .todos .tickbox { width: 26px; height: 26px; border-width: 3px; }

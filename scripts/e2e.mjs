@@ -1079,30 +1079,76 @@ test('home: the Focus-guard tile shows what is blocked (or invites you to add ap
   await open1.page.waitForSelector('.guard-tile.open'); assert.match(await open1.page.locator('.guard-tile').innerText(), /1 app open for [78] more min/); await done(open1)
 })
 
-test('Focus: pomodoro runs focus → short break (by itself), counts the block, long break after four; tasks come from the to-do list; the list persists', async () => {
-  const s = await open({ 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 } }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page      // (levels pre-seen: finishing blocks would otherwise open the level-up moment)
-  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo')
-  assert.equal(await p.locator('.pomo-ring b').innerText(), '25:00')
-  // to-dos: add, validate, pick, persist
+const seenLevels = { 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 } }     // (finishing blocks would otherwise open the level-up moment)
+const openFocus = async (p, tab_ = 'Timer') => { await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-stage'); if (tab_ !== 'Timer') await p.click(`[role=tab]:has-text("${tab_}")`) }
+const clockText = p => p.locator('.pomo-clock').innerText()
+
+test('Focus: tap Wobbi to start; focus → short break (by itself) → focus; a long break after four; pausing freezes; blocks are counted and saved as focus sessions', async () => {
+  const s = await open(seenLevels, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await openFocus(p)
+  assert.equal(await clockText(p), '25:00'); assert.match(await p.locator('.pomo-title').getAttribute('aria-label'), /Pomodoro/); assert.equal(await p.locator('.pomo-flowers .flower').count(), 24, 'a ring of flowers')
+  assert.match(await p.locator('.pomo-phase').innerText(), /FOCUS\s*25 MIN/)
+  await p.click('.pomo-wobbi'); await p.waitForSelector('.pomo-ctl .go >> text=Pause')
+  await p.clock.fastForward(10 * 60_000); assert.match(await clockText(p), /^1[45]:/, 'ten minutes in'); assert.equal(await p.locator('.pomo-flowers .flower.on').count(), 10, '10 of 25 minutes ≈ 10 of 24 flowers')
+  await p.click('.pomo-ctl .go'); await p.waitForSelector('.pomo-ctl .go >> text=Resume'); const frozen = await clockText(p); await p.clock.fastForward(5 * 60_000); assert.equal(await clockText(p), frozen, 'pausing freezes the clock')
+  await p.click('.pomo-ctl .go'); await p.clock.fastForward(16 * 60_000)
+  await p.waitForSelector('.pomo-stage.short'); assert.match(await p.locator('.pomo-phase').innerText(), /SHORT BREAK 5 MIN/); assert.match(await clockText(p), /^0[45]:/, 'the break started by itself')
+  assert.equal(await p.locator('.pomo-dots i.on').count(), 1)
+  await p.clock.fastForward(6 * 60_000); await p.waitForSelector('.pomo-stage.work'); assert.equal(await p.locator('.pomo-wobbi.run').count(), 0, 'after a break the next focus block waits for you (default)')
+  for (let i = 0; i < 3; i++) { await p.click('.pomo-ctl .go'); await p.clock.fastForward(26 * 60_000); if (i < 2) await p.clock.fastForward(6 * 60_000) }
+  await p.waitForSelector('.pomo-stage.long'); assert.match(await p.locator('.pomo-phase').innerText(), /LONG BREAK 15 MIN/); assert.equal(await p.locator('.pomo-dots i.on').count(), 4)
+  assert.equal((await p.evaluate(() => JSON.parse(localStorage.getItem('bp.focus')).filter(f => f.completed && f.step.startsWith('Pomodoro')).length)), 4, 'finished blocks count as focus sessions (coins, levels)')
+  await done(s)
+})
+
+test('Focus: the clock keeps going when you leave the screen or reload; a block that ended while the app was closed is still counted', async () => {
+  const s = await open(seenLevels, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await openFocus(p); await p.click('.pomo-wobbi'); await p.clock.fastForward(5 * 60_000)
+  await p.click('[aria-label=Back]'); await p.clock.fastForward(5 * 60_000)                           // off the Focus screen for five more minutes
+  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo-stage'); assert.match(await clockText(p), /^1[45]:/, 'ten minutes have passed')
+  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.pomo.run'))); assert.equal(saved.timer.status, 'running'); assert.equal(saved.phase, 'work')
+  await done(s)
+  const t0 = new Date('2026-10-16T12:00:00').getTime()
+  const late = await open({ ...seenLevels, 'bp.pomo.run': { phase: 'work', taskId: null, timer: { status: 'running', totalMs: 25 * 60_000, accumulatedMs: 0, startedAt: t0 - 40 * 60_000 } } }, { time: new Date(t0) }); const q = late.page
+  await q.waitForFunction(() => JSON.parse(localStorage.getItem('bp.focus') ?? '[]').some(f => f.step.startsWith('Pomodoro') && f.completed))
+  await openFocus(q); await q.waitForSelector('.pomo-stage.short'); await done(late)
+})
+
+test('Focus: the iPhone app schedules a notification for the end of the block, mirrors it on the lock screen, and cancels both when you pause', async () => {
+  const s = await open(seenLevels, { native: true, time: new Date('2026-10-16T12:00:00'), reply: { 'LocalNotifications.checkPermissions': { display: 'granted' } } }); const p = s.page
+  await openFocus(p); await p.click('.pomo-wobbi')
+  await p.waitForFunction(() => window.__native.some(c => c.plugin === 'LocalNotifications' && c.method === 'schedule' && c.options.notifications?.[0]?.id === 7301))
+  const sch = (await p.evaluate(() => window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'schedule').pop().options.notifications[0])); assert.match(sch.title, /Focus block done/); assert.equal(Math.round((new Date(sch.schedule.at).getTime() - new Date('2026-10-16T12:00:00').getTime()) / 60000), 25)
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityStart' && c.options.kind === 'focus' && c.options.title === 'Focus'))
+  const n = await p.evaluate(() => window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'cancel').length)
+  await p.click('.pomo-ctl .go'); await p.waitForFunction(k => window.__native.filter(c => c.plugin === 'LocalNotifications' && c.method === 'cancel').length > k, n)
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityUpdate' && typeof c.options.remainingSec === 'number'))
+  await done(s)
+})
+
+test('Focus: settings change the lengths and automatic starts; presets; the goal; the to-do list picks the task; stats show today, the week, streak and top tasks', async () => {
+  const s = await open(seenLevels, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await openFocus(p, 'To-do')
   await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("Write what you want to get done")')
   await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Call the dentist'); await p.click('[aria-label="Add to-do"]')
-  await p.fill('[aria-label="New to-do"]', 'call the dentist'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("already on the list")')
-  assert.equal(await p.locator('.todos li').count(), 2)
-  await p.click('.todo-text >> text=Write the report'); await p.waitForSelector('.pomo-task >> text=Write the report')
-  await p.click('.pomo-ctl .btn.primary'); await p.waitForSelector('.pomo-ctl >> text=Pause')
-  await p.clock.fastForward(10 * 60_000); assert.match(await p.locator('.pomo-ring b').innerText(), /^1[45]:/, 'ten minutes in')
-  await p.click('.pomo-ctl .btn.primary'); await p.waitForSelector('.pomo-ctl >> text=Resume'); const frozen = await p.locator('.pomo-ring b').innerText(); await p.clock.fastForward(5 * 60_000); assert.equal(await p.locator('.pomo-ring b').innerText(), frozen, 'pausing freezes the clock')
-  await p.click('.pomo-ctl .btn.primary'); await p.clock.fastForward(16 * 60_000)
-  await p.waitForSelector('.pomo-ring span >> text=Short break'); assert.equal(await p.locator('.pomo-dots i.on').count(), 1); assert.match(await p.locator('.pomo-ring b').innerText(), /^0[45]:/, 'the break started by itself')
-  assert.match(await p.locator('.todo-text:has-text("Write the report")').innerText(), /1/, 'the block counts on its task')
-  await p.clock.fastForward(6 * 60_000); await p.waitForSelector('.pomo-ring span >> text=Focus')
-  for (let i = 0; i < 3; i++) { await p.clock.fastForward(26 * 60_000); if (i < 2) await p.clock.fastForward(6 * 60_000) }
-  await p.waitForSelector('.pomo-ring span >> text=Long break'); assert.equal(await p.locator('.pomo-dots i.on').count(), 4)
-  // finished blocks count as focus sessions everywhere (progress, coins)
-  assert.equal((await p.evaluate(() => JSON.parse(localStorage.getItem('bp.focus')).filter(f => f.completed && f.step.startsWith('Pomodoro')).length)), 4)
-  // checking a task off removes it from the timer; it all survives a reload
-  await p.click('[aria-label="Done: Write the report"]'); await p.waitForSelector('.todos li.done')
-  await reload(p); await p.click('.tool >> text=Focus'); assert.equal(await p.locator('.todos li').count(), 2); assert.equal(await p.locator('.todos li.done').count(), 1)
+  await p.fill('[aria-label="New to-do"]', 'call the dentist'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("already on the list")'); assert.equal(await p.locator('.todos li').count(), 2)
+  await p.click('.todo-text >> text=Write the report')
+  await p.click('[role=tab]:has-text("Timer")'); await p.waitForSelector('.pomo-line >> text=Write the report')
+  await p.click('[aria-label="Timer settings"]'); await p.waitForSelector('[aria-label="Presets"]')
+  await p.click('[aria-label="Presets"] >> text=Deep'); assert.equal(await p.locator('.stepper[aria-label="Focus"] b').innerText(), '50 min'); await p.click('[aria-label="More focus"]'); assert.equal(await p.locator('.stepper[aria-label="Focus"] b').innerText(), '55 min')
+  await p.click('[aria-label="Less daily goal"]'); await p.click('[role=switch][aria-label="Start focus automatically after a break"]')
+  assert.deepEqual(await p.evaluate(() => { const v = JSON.parse(localStorage.getItem('bp.pomo')); return [v.work, v.short, v.long, v.every, v.goal, v.autoFocus, v.autoBreak, v.bell] }), [55, 10, 20, 3, 2, true, true, true])
+  await p.click('button:has-text("Done")'); await p.waitForSelector('.pomo-clock >> text=55:00'); assert.match(await p.locator('.pomo-chip').innerText(), /0\/2 today/)
+  await p.click('[aria-label="Next phase"]'); await p.waitForSelector('.pomo-stage.short'); assert.match(await p.locator('.pomo-phase').innerText(), /SHORT BREAK 10 MIN/); await p.click('[aria-label="Next phase"]'); await p.click('[aria-label="Next phase"]'); await p.waitForSelector('.pomo-stage.work')
+  // stats
+  const now = Date.now(), blk = (daysAgo, task) => ({ id: 'b' + daysAgo + task, createdAt: new Date(now - daysAgo * 864e5).toISOString(), minutes: 25, actualSec: 1500, completed: true, worryId: null, step: task ? `Pomodoro · ${task}` : 'Pomodoro' })
+  await p.evaluate(b => localStorage.setItem('bp.focus', JSON.stringify(b)), [blk(0, 'Write the report'), blk(0, 'Write the report'), blk(1, 'Email'), blk(2), blk(4, 'Write the report')])
+  await reload(p); await openFocus(p, 'Stats')
+  await p.waitForSelector('.pomo-stats'); assert.match(await p.locator('.pomo-stats').innerText(), /2 blocks · 50 min focused · goal met!/); assert.equal(await p.locator('.week-bars > div').count(), 7)
+  assert.equal(await p.locator('.stat-tiles .card').first().innerText().then(t => t.split('\n')[0]), '3', 'streak: today, yesterday and 2 days ago'); assert.match(await p.locator('.stat-tiles').innerText(), /5\s*blocks/); assert.match(await p.locator('.stat-tiles').innerText(), /2h 5m/)
+  assert.match(await p.locator('.pomo-stats').innerText(), /Most-worked tasks[\s\S]*Write the report\s*3/)
+  await p.click('[role=tab]:has-text("To-do")'); await p.click('[aria-label="Done: Write the report"]'); await p.waitForSelector('.todos li.done')
+  await reload(p); await openFocus(p, 'To-do'); assert.equal(await p.locator('.todos li').count(), 2); assert.equal(await p.locator('.todos li.done').count(), 1)
   p.once('dialog', d => d.accept()); await p.click('[aria-label="Remove Call the dentist"]'); assert.equal(await p.locator('.todos li').count(), 1)
   await done(s)
 })
@@ -1204,7 +1250,7 @@ test('Share: the Focus guard "brain rot, beaten" counter makes a numbers-only ca
   await p.waitForFunction(() => window.__shared.length === 1)
   const sent = await p.evaluate(() => window.__shared[0]); assert.equal(sent.files[0].name, 'brain-pal-guard.png'); assert.equal(sent.files[0].type, 'image/png'); assert.ok(sent.files[0].size > 2000, 'a real picture')
   await p.click('.sheet button:has-text("Close")'); await reload(p)
-  await tab(p, 'More'); await p.click('.li >> text=Wobbi stickers'); assert.equal(await p.locator('.sticker').count(), 16)
+  await tab(p, 'More'); await p.click('.li >> text=Wobbi stickers'); assert.ok((await p.locator('.sticker').count()) >= 27, 'every pose is a sticker')
   await p.click('[aria-label="Share sticker: Wobbi cheering"]').catch(async () => { await p.locator('.sticker').nth(3).click() })
   await p.waitForFunction(() => window.__shared.length === 1); assert.match(await p.evaluate(() => window.__shared[0].files[0].name), /^pal-.*\.png$/)
   await p.click('[aria-label=Back]'); await p.click('.li >> text=Invite a friend')

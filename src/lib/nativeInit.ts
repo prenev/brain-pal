@@ -5,7 +5,7 @@ import { completeAuthLink } from './authLink'
 import { parseRouteLink } from './nativeCore'
 import type { Route } from './rituals.ts'
 
-export const ROUTES: Route[] = ['breathe', 'checkin', 'journal', 'anchors']
+export const ROUTES: (Route | 'focus')[] = ['breathe', 'checkin', 'journal', 'anchors', 'focus']
 export const routeEvent = 'bp:route'
 
 /** One-time setup inside the iPhone app. Every step is best-effort: a missing plugin must never stop the app booting. */

@@ -28,6 +28,7 @@ import { APP_VERSION } from './lib/appInfo.ts'
 import { PaywallProvider, usePaywallOpen } from './components/Pro'
 import Sleep from './components/Sleep'
 import FocusHub from './components/FocusHub'
+import { PomoProvider } from './lib/pomoStore'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
 import Wallet from './components/Wallet'
@@ -96,7 +97,7 @@ function Shell() {
       else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
       else if (route === 'worry') setWorryTime(true)
       else if (route === 'park') setPark(true)
-      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins') { setTab('entries'); setScreen(route) }
+      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins' || route === 'focus') { setTab('entries'); setScreen(route) }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
@@ -204,5 +205,5 @@ function Shell() {
 }
 
 export default function App() {
-  return <StoreProvider><PaywallProvider><Shell /></PaywallProvider></StoreProvider>
+  return <StoreProvider><PomoProvider><PaywallProvider><Shell /></PaywallProvider></PomoProvider></StoreProvider>
 }

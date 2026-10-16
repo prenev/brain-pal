@@ -58,8 +58,8 @@ export function parseAuthLink(raw: string): AuthLink | null {
   return code ? { kind: 'code', code } : null
 }
 
-export type LinkRoute = 'sos' | 'breathe' | 'checkin' | 'journal' | 'anchors' | 'worry' | 'park' | 'guard' | 'sleep' | 'progress' | 'coins' | 'grounding'
-const LINK_ROUTES: LinkRoute[] = ['sos', 'breathe', 'checkin', 'journal', 'anchors', 'worry', 'park', 'guard', 'sleep', 'progress', 'coins', 'grounding']
+export type LinkRoute = 'sos' | 'breathe' | 'checkin' | 'journal' | 'anchors' | 'worry' | 'park' | 'guard' | 'sleep' | 'progress' | 'coins' | 'grounding' | 'focus'
+const LINK_ROUTES: LinkRoute[] = ['sos', 'breathe', 'checkin', 'journal', 'anchors', 'worry', 'park', 'guard', 'sleep', 'progress', 'coins', 'grounding', 'focus']
 /** brainpal://sos (also breathe, checkin, journal, and the screens widgets open): used by Siri / Shortcuts / the Action button / widgets. Anything else is ignored. */
 export function parseRouteLink(raw: string): LinkRoute | null {
   const m = /^brainpal:\/\/([a-z]+)\/?$/.exec(raw.trim().toLowerCase())

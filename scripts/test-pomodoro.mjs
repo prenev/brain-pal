@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { addPomoTo, addTodo, cleanTodoText, DEFAULT_POMO, isPomoStep, MAX_TODO_TEXT, MAX_TODOS, nextPhase, normalizePomo, normalizeTodos, phaseMinutes, pomoStep, POMO_PRESETS, removeTodo, tidyTodos, toggleTodo } from '../src/lib/pomodoro.ts'
+import { IDLE_RUN, normalizeRun, pomoStats, addPomoTo, addTodo, cleanTodoText, DEFAULT_POMO, isPomoStep, MAX_TODO_TEXT, MAX_TODOS, nextPhase, normalizePomo, normalizeTodos, phaseMinutes, pomoStep, POMO_PRESETS, removeTodo, tidyTodos, toggleTodo } from '../src/lib/pomodoro.ts'
 
 // rhythm
 assert.equal(nextPhase('work', 1, DEFAULT_POMO), 'short'); assert.equal(nextPhase('work', 3, DEFAULT_POMO), 'short'); assert.equal(nextPhase('work', 4, DEFAULT_POMO), 'long'); assert.equal(nextPhase('work', 8, DEFAULT_POMO), 'long')
@@ -7,7 +7,8 @@ assert.equal(nextPhase('short', 4, DEFAULT_POMO), 'work'); assert.equal(nextPhas
 assert.equal(nextPhase('work', 3, { ...DEFAULT_POMO, every: 3 }), 'long')
 assert.equal(phaseMinutes('work', DEFAULT_POMO), 25); assert.equal(phaseMinutes('short', DEFAULT_POMO), 5); assert.equal(phaseMinutes('long', DEFAULT_POMO), 15)
 assert.equal(new Set(POMO_PRESETS.map(p => p.id)).size, POMO_PRESETS.length); for (const p of POMO_PRESETS) assert.ok(p.s.work > p.s.short && p.s.long > p.s.short, p.id)
-assert.deepEqual(normalizePomo(null), DEFAULT_POMO); assert.deepEqual(normalizePomo({ work: 9999, short: -5, long: 'x', every: 1 }), { work: 120, short: 1, long: 15, every: 2 })
+assert.deepEqual(normalizePomo(null), DEFAULT_POMO); assert.deepEqual(normalizePomo({ work: 9999, short: -5, long: 'x', every: 1, autoFocus: 'yes', goal: 99 }), { work: 120, short: 1, long: 15, every: 2, autoBreak: true, autoFocus: false, bell: true, goal: 12 })
+assert.deepEqual(normalizePomo({ ...DEFAULT_POMO, autoFocus: true, bell: false }), { ...DEFAULT_POMO, autoFocus: true, bell: false })
 assert.equal(pomoStep(null), 'Pomodoro'); assert.equal(pomoStep('Write report'), 'Pomodoro · Write report'); assert.ok(isPomoStep('Pomodoro') && isPomoStep('Pomodoro · x') && !isPomoStep('Open the tax form') && !isPomoStep('Pomodoros are great'))
 
 // to-dos
@@ -24,4 +25,21 @@ const list = [{ id: '1', text: 'old done', done: true, createdAt: '2026-09-01T00
 assert.deepEqual(tidyTodos(list, now).map(t => t.id), ['4', '3', '2'])
 // junk never crashes
 assert.deepEqual(normalizeTodos('x'), []); assert.deepEqual(normalizeTodos([null, 5, { id: 1 }, { id: 'a', text: '   ', createdAt: 'z' }, { id: 'b', text: ' ok ', createdAt: 'z', done: 'yes', pomos: -3 }]), [{ id: 'b', text: 'ok', done: false, createdAt: 'z', doneAt: null, pomos: 0 }])
+
+// the run survives a restart; junk never crashes
+assert.deepEqual(normalizeRun(null), IDLE_RUN); assert.deepEqual(normalizeRun('x'), IDLE_RUN)
+const run = { phase: 'short', taskId: 'a', timer: { status: 'running', totalMs: 300000, accumulatedMs: 1000, startedAt: 5 } }
+assert.deepEqual(normalizeRun(JSON.parse(JSON.stringify(run))), run)
+assert.equal(normalizeRun({ phase: 'weird', timer: { status: 'finished', totalMs: 5, accumulatedMs: 0, startedAt: null } }).timer, null, 'a finished/invalid timer is dropped'); assert.equal(normalizeRun({ phase: 'weird' }).phase, 'work')
+assert.equal(normalizeRun({ timer: { status: 'running', totalMs: 5, accumulatedMs: 0, startedAt: null } }).timer, null, 'running without a start time is invalid'); assert.equal(normalizeRun({ timer: { status: 'paused', totalMs: 5, accumulatedMs: 2, startedAt: null } }).timer.accumulatedMs, 2)
+
+// stats
+const at = (d, h = 10) => new Date(2026, 9, d, h).toISOString(), blk = (d, task = null, sec = 1500, done = true) => ({ createdAt: at(d), actualSec: sec, completed: done, step: pomoStep(task) })
+const now2 = new Date(2026, 9, 16, 15)
+const st = pomoStats([blk(16, 'Report'), blk(16, 'Report'), blk(16), blk(15, 'Email'), blk(14, 'Report'), blk(10), blk(16, 'x', 600, false), { createdAt: at(16), actualSec: 1500, completed: true, step: 'Open the tax form' }], now2, 4)
+assert.deepEqual(st.today, { blocks: 3, minutes: 75, goal: 4, goalMet: false }); assert.equal(st.week.length, 7); assert.equal(st.week.at(-1).blocks, 3); assert.equal(st.week[0].day, '2026-10-10'); assert.equal(st.week[0].blocks, 1); assert.equal(st.week[1].blocks, 0)
+assert.equal(st.streak, 3, '14th, 15th and 16th'); assert.deepEqual(st.total, { blocks: 6, minutes: 150 }, 'unfinished and non-pomodoro sessions are not counted'); assert.deepEqual(st.best, { day: '2026-10-16', blocks: 3 })
+assert.deepEqual(st.tasks, [{ task: 'Report', blocks: 3 }, { task: 'Email', blocks: 1 }])
+assert.equal(pomoStats([blk(16), blk(16), blk(16), blk(16)], now2, 4).today.goalMet, true)
+assert.equal(pomoStats([blk(15), blk(14)], now2, 4).streak, 2, 'nothing yet today: yesterday still counts'); assert.equal(pomoStats([blk(13)], now2, 4).streak, 0); assert.equal(pomoStats([], now2, 4).best, null)
 console.log('pomodoro ok')
