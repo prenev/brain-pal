@@ -1,6 +1,6 @@
 // The App Store listing text. Single source: `npm run store:meta` writes it to fastlane/metadata/ (what `fastlane deliver` uploads)
 // and scripts/test-store.mjs checks Apple's limits and the wording rules. Edit here, not in the generated files.
-export const SITE = 'https://prenev.github.io/brain-pal'
+export const SITE = 'https://wobbi.app'
 
 export const LISTING = {
   name: 'Wobbi: Mood & Calm',                       // ≤ 30
@@ -43,11 +43,11 @@ REMINDERS THAT RESPECT YOU
 SLEEP (OPTIONAL)
 • Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Wobbi only reads sleep, only if you allow it, and it never leaves your device.
 
-BRAIN PAL PRO (OPTIONAL MONTHLY SUBSCRIPTION)
+WOBBI PRO (OPTIONAL MONTHLY SUBSCRIPTION)
 • Unlock advanced analytics: before-and-after proof of your progress, plus weekly and monthly summaries.
 • The SOS siren, breathing, crisis support, check-ins, journal, worry time, reminders and exporting your data are always free.
 • Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically each month unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings → your name → Subscriptions.
-• Terms of Service: https://prenev.github.io/brain-pal/terms.html · Privacy Policy: https://prenev.github.io/brain-pal/privacy.html
+• Terms of Service: https://wobbi.app/terms/ · Privacy Policy: https://wobbi.app/privacy/
 
 PRIVATE BY DESIGN
 • Works fully offline with no account. Everything stays on your device by default; an account is optional and only adds sync.
@@ -56,9 +56,9 @@ PRIVATE BY DESIGN
 
 Wobbi is a self-help tool and is not medical care. It does not diagnose or treat any condition. If you might be in danger, call your local emergency number.`,   // ≤ 4000
   release_notes: 'Welcome to Wobbi 1.0 — mood check-ins, journal, breathing, worry time, daily anchors, sleep and progress, all private on your device.', // ≤ 4000
-  support_url: `${SITE}/support.html`,
+  support_url: `${SITE}/support/`,
   marketing_url: SITE,
-  privacy_url: `${SITE}/privacy.html`,
+  privacy_url: `${SITE}/privacy/`,
 }
 
 export const APP = {

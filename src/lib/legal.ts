@@ -5,10 +5,12 @@
 /** OWNER: fill these in before submitting (npm run store:check lists what is still empty). */
 export const OWNER = {
   developerName: '',        // your legal name or company, as on your Apple Developer account
-  contactEmail: '',         // public support + privacy contact (App Store Connect needs one too)
+  contactEmail: 'hello@wobbi.app',         // public support + privacy contact (App Store Connect needs one too)
   governingLaw: '',         // e.g. "the laws of England and Wales" / "the State of California, USA"
 }
-export const SITE_URL = 'https://prenev.github.io/brain-pal'
+export const SITE_URL = 'https://wobbi.app'
+/** Public legal pages live on the website (wobbi.app/privacy/ …). */
+export const legalUrl = (id: 'privacy' | 'terms' | 'support' | 'licenses') => `${SITE_URL}/${id}/`
 export const APP_NAME = 'Wobbi'
 export const LEGAL_UPDATED = '16 October 2026'
 
@@ -40,6 +42,7 @@ export const privacy = (): LegalDoc => ({
       'Health data is used only inside the app on your device to show it to you. It is not uploaded, not stored in iCloud by us, and never used for advertising or sold.',
       'You can withdraw access at any time in the Health app or iOS Settings.',
     ] },
+    { h: 'Website and waitlist', p: ['This applies to wobbi.app, not to the app. The site has no analytics, advertising, tracking cookies or third-party scripts that collect data about visitors. Fonts and images are served from the site itself.', 'If you join the waitlist we store what you type into the form: your email address, and optionally your name, which topics interest you, which phone you use and a short note. We use it only to tell you when Wobbi is available and to decide what to build first. You agree to that with the consent box before sending. The list is kept in our backend (Supabase) and is readable only by us; nobody who visits the site can read it. We do not sell it or share it for advertising, and we will not use it for anything unrelated to Wobbi.', 'To be removed from the waitlist, or to see or correct what we hold, email ' + mail() + ' from the address you signed up with and we will delete it.'] },
     { h: 'AI helper (optional, off by default)', p: ['If you turn it on you add your own Google Gemini API key. The key stays on your device. When you tap an AI action (for example transcribe a voice memo or suggest reframes), only the text or audio for that action is sent from your device directly to Google. It does not pass through our servers.', 'Google handles it under its own terms. On Google’s free tier, Google may use what you send to improve its products and humans may review it, so do not send anything you would not want that to apply to. Text that looks like self-harm is never sent to an AI; the app shows support options instead.'] },
     { h: 'Focus guard (iPhone, optional)', p: ['If you turn on the Focus guard you choose apps with Apple’s Screen Time picker. iOS gives Wobbi only anonymous tokens for what you chose: we cannot see which apps they are, how you use them, or your Screen Time data. The choice and unlock times are stored on your device only and never uploaded. You can switch the guard off at any time.'] },
     { h: 'Purchases', p: ['Subscriptions are bought and managed through Apple. We never see your payment details. We only learn, from Apple, whether your Wobbi Pro subscription is active and when it ends, so we can unlock the Pro features on your device.'] },
