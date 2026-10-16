@@ -89,7 +89,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.tab >> text=Calendar'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('calendar')
   await p.click('.cell:not(.off) .bub:has(svg) >> nth=-1'); await p.evaluate(() => window.scrollTo(0, 700)); await snap('calendar-day')
   await p.click('.tab >> text=Breathe'); await snap('breathe')
-  await p.click('.tech >> text=Box'); await snap('breathe-box'); await p.click('.tech >> text=Your own pace'); await snap('breathe-own-pace')
+  await p.click('.tech >> text=Box'); await snap('breathe-box'); await p.click('[aria-label="Back to breathing styles"]'); await p.click('.tech >> text=Your own pace'); await snap('breathe-own-pace')
   await p.click('button:has-text("Start ·")'); await p.waitForTimeout(3200); await snap('breathe-running'); await p.waitForTimeout(2200); await snap('breathe-running-2'); await p.click('text=End session')
   // SOS flow
   await p.click('[aria-label^="Anxious right now"]'); await snap('sos-rate')

@@ -40,6 +40,7 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 
 - **Home** — the first tab, top to bottom: *How are you feeling?* (tap a face to start a thought entry), today's anchors (max 5), a long **Focus guard** tile (blocked apps and lock state, or "Add apps"), a long **worry** tile (what's parked, a planned small step, or "Park your worries"), **Journal / Sleep / Focus**, then everything you logged today. Coins and the SOS siren sit in the top bar.
 - **Focus** — a pomodoro timer (Classic, Gentle, Deep) and a small to-do list; finished blocks count as focus sessions (coins, levels).
+- **Breathe tab** — step 1: pick a style (calm, coherent, box, 4-7-8 or your own pace); step 2: set how long (and box length / your own timings), with vibration and soft tones already on and changeable; then the full-screen breathing scene.
 - **SOS ("Anxious right now?")** — the red siren button in the action bar of Home and Breathe. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
 - **Thinking traps** — the thought record lists 10 common cognitive distortions with a "try asking" prompt for each, plus tap-to-add reframing questions.
 - **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.

@@ -439,17 +439,22 @@ test('journal editor: topic chips change each time, the formatting bar edits the
   await done(s)
 })
 
-test('breathe: pick a rhythm card (calm, coherent, box with its own length, 4-7-8, or your own pace), set minutes, see the breaths per minute', async () => {
+test('breathe: step 1 only lists the rhythms; tapping one opens step 2 (box length / own pace, how long, vibration + tones already on) and back returns', async () => {
   const s = await open(null, { native: true }); const p = s.page
   await tab(p, 'Breathe'); await p.waitForSelector('.techs')
   assert.deepEqual(await p.$$eval('.tech b', els => els.map(e => e.textContent)), ['Calm 4-6', 'Coherent', 'Box', '4-7-8', 'Your own pace'])
   assert.equal(await p.locator('.tech svg.wave path').count(), 5, 'each rhythm draws its own wave')
-  assert.equal(await p.locator('.tech[aria-checked=true]').count(), 1)
-  await p.click('.tech >> text=Coherent'); await p.waitForSelector('text=6 breaths a minute'.replace('6', '5.5'))
-  await p.click('.tech >> text=Box'); await p.click('.seg[aria-label="Box length"] >> text=5 sec'); await p.waitForSelector('.tech:has-text("Box") >> text=5 · 5 · 5 · 5')
-  await p.click('.tech >> text=Your own pace'); await p.click('[aria-label="Longer breathe out"]'); await p.click('[aria-label="Longer breathe out"]'); await p.waitForSelector('.tech:has-text("Your own pace") >> text=5 · 6 s')
+  for (const sel of ['.seg[aria-label="Session length"]', '[role=switch][aria-label="Vibration"]', 'button:has-text("Start ·")']) assert.equal(await p.locator(sel).count(), 0, `${sel} is on the next screen, not the list`)
+  await p.click('.tech >> text=Coherent'); await p.waitForSelector('text=5.5 breaths a minute'); assert.equal(await p.locator('.techs').count(), 0, 'the list steps aside')
+  assert.equal(await p.getAttribute('[role=switch][aria-label="Vibration"]', 'aria-checked'), 'true', 'vibration starts on'); assert.equal(await p.getAttribute('[role=switch][aria-label="Soft tones"]', 'aria-checked'), 'true', 'tones start on')
+  await p.click('[aria-label="Back to breathing styles"]'); await p.waitForSelector('.techs')
+  await p.click('.tech >> text=Box'); await p.click('.seg[aria-label="Box length"] >> text=5 sec'); await p.waitForSelector('text=5 · 5 · 5 · 5 s')
+  await p.click('[aria-label="Back to breathing styles"]'); await p.waitForSelector('.tech:has-text("Box") >> text=5 · 5 · 5 · 5')
+  await p.click('.tech >> text=Your own pace'); await p.click('[aria-label="Longer breathe out"]'); await p.click('[aria-label="Longer breathe out"]'); await p.waitForSelector('text=5 · 6 s')
+  await p.click('[role=switch][aria-label="Soft tones"]'); assert.equal(await p.getAttribute('[role=switch][aria-label="Soft tones"]', 'aria-checked'), 'false', 'they can switch it off')
   await p.click('.seg[aria-label="Session length"] >> text=3 min'); await p.waitForSelector('button:has-text("Start · 3 min")')
   await p.click('button:has-text("Start · 3 min")'); await p.waitForSelector('.breath-scene'); await p.waitForSelector('.breath-round >> text=/Round 1 of 16/')   // 3 min of 5+6 s breaths
+  await p.waitForSelector('.breath-bar >> text=Muted')
   await p.click('button:has-text("End session")'); await p.waitForSelector('.techs')
   await done(s)
 })
@@ -897,7 +902,7 @@ test('iPhone app mode: Apple Health saves mindful minutes (only when connected, 
   await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /Off/)
   await p.click('.li >> text=Apple Health'); await p.waitForSelector('text=Mindful Minutes')
   // a session before connecting is NOT written
-  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
+  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
   await p.waitForSelector('text=Nice work'); assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 0)
   // connect
   await tab(p, 'More'); await p.click('.li >> text=Apple Health'); await p.click('[role=switch]'); await p.waitForSelector('text=Connected.')
@@ -908,11 +913,11 @@ test('iPhone app mode: Apple Health saves mindful minutes (only when connected, 
   assert.ok(first.end > first.start && Math.abs((first.end - first.start) / 1000 - 10) < 3, 'start/end span the session')
   await p.click('text=Save past sessions'); await p.waitForSelector('text=Everything is already saved'); assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 1)
   // a new session is written automatically
-  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
+  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")')
   await p.waitForFunction(() => window.__native.filter(c => c.method === 'saveSession').length === 2)
   // switch off: later sessions are not written
   await tab(p, 'More'); await p.click('.li >> text=Apple Health'); await p.click('[role=switch]')
-  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")'); await p.waitForTimeout(500)
+  await p.click('[aria-label=Back]'); await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6'); await p.click('button:has-text("Start")'); await p.waitForTimeout(10500); await p.click('button:has-text("End session")'); await p.waitForTimeout(500)
   assert.equal((await calls(p, 'Mindful', 'saveSession')).length, 2)
   await reload(p); await tab(p, 'More'); assert.match(await p.locator('.li:has-text("Apple Health")').innerText(), /Off/)
   await done(s)
@@ -1311,7 +1316,7 @@ test('widgets (iPhone app): the app keeps the widget snapshot fresh, applies moo
 
   // Live Activity: a breathing session starts one with the real end time and ends it when you leave
   const b = await open(null, { native: true }); const q = b.page
-  await tab(q, 'Breathe'); await q.click('button:has-text("Start")'); await q.waitForSelector('.breath-scene')
+  await tab(q, 'Breathe'); await q.click('.tech >> text=Calm 4-6'); await q.click('button:has-text("Start")'); await q.waitForSelector('.breath-scene')
   await q.waitForFunction(() => window.__native.some(c => c.method === 'liveActivityStart'))
   const [start] = await nativeCalls(q, 'liveActivityStart')
   assert.equal(start.kind, 'breathe'); assert.match(start.subtitle, /^In \d/); assert.ok(start.endsAt - start.startsAt >= 30_000, 'ends when the session ends')
@@ -1330,7 +1335,7 @@ test('breathing is an immersive full-screen scene: Wobbi swells and settles with
   const pal = () => p.locator('.breath-pal').evaluate(e => new DOMMatrix(getComputedStyle(e).transform).a)
   const a = await pal(); await p.waitForTimeout(2500); const b = await pal()
   assert.ok(b > a + 0.05, `Wobbi grows while breathing in (${a} → ${b})`)
-  await p.waitForSelector('.breath-bar >> text=Muted'); await p.click('[aria-label="Turn tones on"]'); await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted')
+  await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted'); await p.click('[aria-label="Turn tones on"]'); await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted')
   assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 8/)
   await p.waitForTimeout(8000); await p.waitForSelector('.breath-scene[data-phase=hold1]')                // box 4: 4 s in, then a hold
   await p.click('button:has-text("End session")'); await p.waitForSelector('.breath-scene', { state: 'detached' })
@@ -1455,7 +1460,7 @@ test('Pro (web): advanced analytics shows a friendly lock (everything else is fr
   assert.match(await p.locator('[aria-label="Wobbi Pro"]').innerText(), /Pro is part of the iPhone app/); assert.equal(await p.locator('button:has-text("Subscribe"), button:has-text("Start free trial")').count(), 0, 'no purchase button on the web')
   await p.click('[aria-label="Wobbi Pro"] [aria-label=Close]')
   // always free: breathing, SOS flow, export, support
-  await tab(p, 'Breathe'); await p.waitForSelector('button:has-text("Start")'); await p.click('[aria-label^="Anxious right now"]'); await p.waitForSelector('input[aria-label="Anxiety right now, 0 to 10"]'); await p.click('[aria-label=Close]')
+  await tab(p, 'Breathe'); await p.waitForSelector('.techs'); await p.click('[aria-label^="Anxious right now"]'); await p.waitForSelector('input[aria-label="Anxiety right now, 0 to 10"]'); await p.click('[aria-label=Close]')
   await tab(p, 'More'); for (const r of ['Export data', 'Get support']) assert.equal(await p.locator(`.li:has-text("${r}")`).count(), 1, `${r} stays free`)
   await done(s)
 })
