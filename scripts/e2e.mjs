@@ -1110,7 +1110,7 @@ test('home: layout is mood → anchors → big Focus + Journal cards → Worries
   assert.deepEqual(order.map(c => (c === 'anchor-empty' ? 'anchors' : c === 'linkbtn' ? 'more-today' : c)), ['topbar', 'today', 'anchors', 'home-top', 'tools-row', 'entry', 'more-today'], JSON.stringify(order))
   assert.deepEqual(await p.$$eval('.home-top .big-card', els => els.map(e => e.getAttribute('aria-label'))), ['Focus', 'Journal'], 'row 1: the big Focus + Journal cards'); assert.deepEqual(await p.$$eval('.tools-row .tool b', els => els.map(e => e.textContent)), ['Worries', 'Sleep', 'Ground'], 'row 2: Worries, Sleep, Ground')
   assert.equal(await p.locator('.home-top .big-card .pal svg').count(), 2, 'the big cards are drawn with Wobbi, not an emoji icon'); assert.equal(await p.locator('.home-top .emoji').count(), 0)
-  assert.equal(await p.locator('.tools-row .cute-icon').count(), 3, 'Worries / Sleep / Ground use the drawn icons'); assert.equal(await p.locator('.tools-row .emoji').count(), 0)
+  assert.equal(await p.locator('.tools-row .tool-icon').count(), 3, 'Worries / Sleep / Ground use Phosphor icons'); assert.equal(await p.locator('.tools-row .emoji').count(), 0)
   assert.equal(await p.locator('.home-top .pal-bob, .home-top .pal-jump').count(), 0, 'no bouncing on Home, only blinking')
   assert.equal(await p.locator('text=Focus guard').count(), 0, 'Focus guard is gone from Home'); await tab(p, 'More'); assert.equal(await p.locator('.li >> text=Focus guard').count(), 0, '…and from More'); await tab(p, 'Home')
   assert.ok(await p.$$eval('.tools-row .tool b', els => els.every(e => e.getBoundingClientRect().height < 24)), 'every tool label is a single line')

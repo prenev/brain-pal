@@ -1,6 +1,6 @@
 import { Check, Lock, Pause, PenLine, Play } from 'lucide-react'
 import Pal from './Pal'
-import CuteIcon from './CuteIcon'
+import { Footprints, Jar } from '@phosphor-icons/react'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { usePomo } from '../lib/pomoStore'
@@ -55,7 +55,7 @@ export function JournalCard({ onOpen }: { onOpen: () => void }) {
 export function GroundTool({ onOpen }: { onOpen: () => void }) {
   return (
     <button className="card tool" onClick={onOpen} aria-label="Ground yourself: 5-4-3-2-1">
-      <CuteIcon name="ground" /><b>Ground</b><small>5-4-3-2-1</small>
+      <Footprints className="tool-icon" size={34} weight="duotone" color="#5fd39a" aria-hidden="true" /><b>Ground</b><small>5-4-3-2-1</small>
     </button>
   )
 }
@@ -66,7 +66,7 @@ export function WorryTool({ onWorry, onPark }: { onWorry: () => void; onPark: ()
   const n = worries.filter(w => w.status === 'open').length
   return (
     <button className="card tool worry-tool" onClick={n ? onWorry : onPark} aria-label={n ? `${n} parked ${n === 1 ? 'worry' : 'worries'}` : 'Park a worry'}>
-      <CuteIcon name="worry" /><b>Worries</b><small>{n ? `${n} parked` : 'Park one'}</small>
+      <Jar className="tool-icon" size={34} weight="duotone" color="#b79cff" aria-hidden="true" /><b>Worries</b><small>{n ? `${n} parked` : 'Park one'}</small>
     </button>
   )
 }
