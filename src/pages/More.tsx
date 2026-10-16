@@ -16,6 +16,8 @@ import { JournalList } from '../components/Journal'
 import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
+import { PalTip, resetTips } from '../components/Pal'
+import { resetCoach } from '../components/Coach'
 import Guard from '../components/Guard'
 import { loadGuard } from '../lib/extras'
 import { APP_VERSION } from '../lib/appInfo.ts'
@@ -38,6 +40,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
   const [msg, setMsg] = useState('')
+  const [tipsBack, setTipsBack] = useState(false)
   const photos = thoughts.flatMap(t => t.photos)
   const meta = session?.user.user_metadata?.name as string | undefined
   const name = meta || session?.user.email?.split('@')[0]
@@ -172,6 +175,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <span className="glass pill-btn">{name ? `Hi, ${name}` : 'Hi there'}</span>
       </div>
 
+      <PalTip id="more" pose="idle">Reminders, Apple Health, your account and everything else live here.</PalTip>
       <div className="list">
         {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
@@ -191,6 +195,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="About & legal" onClick={() => setView('legal')} />
         {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={doSignOut} />}
       </div>
+      <p className="muted small" style={{ textAlign: 'center' }}><button className="linkbtn" onClick={() => { resetTips(); resetCoach(); setTipsBack(true) }} disabled={tipsBack}>{tipsBack ? 'Pal’s tips are back' : 'Show Pal’s tips again'}</button></p>
       <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal {APP_VERSION} · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>
   )

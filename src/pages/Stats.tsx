@@ -1,3 +1,4 @@
+import { PalTip } from '../components/Pal'
 import { useMemo, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
@@ -88,6 +89,7 @@ function Insights() {
 
   return (
     <>
+      <PalTip id="insights" pose="think">Patterns show up after a few check-ins. Keep logging and I’ll point out what I notice.</PalTip>
       <div className="topbar flat">
         <button className="glass round green" aria-label="Previous" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><ChevronLeft /></button>
         <span className="title">{monthLabel(month)}</span>
@@ -134,7 +136,7 @@ function Insights() {
         <div className="muted small" style={{ marginBottom: 6 }}>What helps</div>
         {relief
           ? <p style={{ margin: '0 0 14px' }}><b style={{ color: 'var(--accent)', fontSize: 28 }}>−{relief.avgDrop}</b> points on average (0–10) after calming exercises — helped {relief.helped} of {relief.n} times.</p>
-          : <p className="muted" style={{ margin: '0 0 14px' }}>Use “Anxious right now?” and rate before/after to see which tools work for you.</p>}
+          : <p className="muted" style={{ margin: '0 0 14px' }}>Use the siren button and rate before/after to see which tools work for you.</p>}
         <div className="muted small" style={{ marginBottom: 6 }}>Likely triggers</div>
         {triggers.length ? triggers.map(t => <div key={t.tag} className="row spread" style={{ marginBottom: 6 }}><span>#{t.tag}</span><span className="muted">avg {t.avg}% · {t.n} entries</span></div>)
           : <p className="muted" style={{ margin: '0 0 14px' }}>Tag anxious entries (work, sleep, social…) — patterns appear after a few.</p>}

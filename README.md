@@ -39,7 +39,7 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 ## Anxiety toolkit
 
 - **Home** — the first tab. A switch at the top: **Today** (mood faces, anchors, SOS, today’s entries), **Entries** (the month list with search) and **Journal**. The **+** button opens one menu: *Write* (thought entry, journal entry, park a worry), *Calm & focus* (anxious now, breathe, small step) and *entry for another day*. The + is hidden on More and Breathe.
-- **SOS ("Anxious right now?")** — on the Home tab, Breathe tab and the + menu. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
+- **SOS ("Anxious right now?")** — the red siren button in the action bar of Home and Breathe. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
 - **Thinking traps** — the thought record lists 10 common cognitive distortions with a "try asking" prompt for each, plus tap-to-add reframing questions.
 - **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
 - **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.
@@ -107,6 +107,9 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 1. Push sender edge function + cron
 2. Capacitor iOS shell: native haptics, HealthKit mindful minutes
 3. Insights: emotion trends, before/after intensity
+
+## Home & Pal's tips
+Home's tools strip scrolls sideways: **Thoughts** (all thought entries, month by month, with search) leads, then Journal, Worry time, Focus guard, Sleep, Progress, Summary and Coins. Each section opens with a one-line tip from Pal (dismiss it once and it stays away; More → "Show Pal's tips again"). The app starts on a splash with Pal instead of a bare loading text.
 
 ## Pal & Focus guard
 **Pal** is the mascot (poses and animation strips in `assets/`, `npm run sprites`). On first run Pal walks you through the app. **Focus guard** (iPhone, More → Focus guard): choose apps that stay paused until you do push-ups, squats, a plank, a walk, a minute of breathing or write a line; reps are honour-system. Needs iOS Screen Time + Apple's Family Controls entitlement: see [`docs/SCREENTIME.md`](docs/SCREENTIME.md).

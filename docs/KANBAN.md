@@ -22,6 +22,8 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- SOS is a siren in the Home/Breathe action bar (cards + menu entry removed), no daily-goals card, tools strip starts level with the cards, Pal's corner coach replaces the swipe tip
+- Home tools strip scrolls (Thoughts leads; Sleep/Progress/Summary/Coins no longer buried), Pal tips per section, splash screen, Pal v3 (no centre line), fix: "+N coins" toast could stay forever (its timer was cancelled by later coin changes; e2e fails without the fix)
 - UI: Home tools row (Focus guard · Worry time · Journal) above the anchors, each opens its own screen; Today/Entries/Journal switch removed (month list → *All entries*); Notes-style journal editor (borderless title + growing page, mood/tags in a glass toolbar)
 - Native UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback (device check pending)
 - UX pass: Home tab (Today / Entries / Journal), grouped + menu, uniform tab icons, calendar fix

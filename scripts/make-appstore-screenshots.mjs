@@ -45,7 +45,7 @@ async function capture(fn) {
   const ctx = await browser.newContext({ viewport: { width: 440, height: 956 }, deviceScaleFactor: 3, permissions: ['notifications', 'microphone'] })
   await ctx.addInitScript(nativeStub)
   await ctx.addInitScript(([t, s, w, j, a]) => {
-    localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, smallsteps: 9 }))
+    localStorage.setItem('bp.onboarded', '1'); localStorage.setItem('bp.coach.done', '1'); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, smallsteps: 9 }))
     if (!localStorage.getItem('bp.thoughts')) { localStorage.setItem('bp.thoughts', JSON.stringify(t)); localStorage.setItem('bp.sessions', JSON.stringify(s)); localStorage.setItem('bp.worries', JSON.stringify(w)); localStorage.setItem('bp.journal', JSON.stringify(j)); localStorage.setItem('bp.anchors', JSON.stringify(a)) }
   }, [thoughts, sessions, worries, journal, anchors])
   const p = await ctx.newPage()
@@ -56,12 +56,12 @@ async function capture(fn) {
 const tab = (p, n) => p.click(`.tab >> text=${n}`)
 
 const SHOTS = [
-  ['01-check-in', 'Check in with one tap', p => p.waitForSelector('.quickmood, .today')],
+  ['01-check-in', 'Check in with one tap', async p => { await p.waitForSelector('.quickmood, .today'); await p.click('.pal-tip [aria-label="Hide this tip"]').catch(() => {}) }],
   ['02-calm', 'Calm your body in minutes', async p => { await tab(p, 'Breathe'); await p.click('text=Start'); await p.waitForTimeout(5200) }],
   ['03-calendar', 'See your month at a glance', p => tab(p, 'Calendar')],
   ['04-worries', 'Park worries, plan one small step', async p => { await tab(p, 'More'); await p.click('.li >> text=Worry time'); await p.waitForTimeout(300) }],
   ['05-progress', 'Proof you’re growing', async p => { await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")') }],
-  ['06-journal', 'A private place to write', async p => { await p.click('.home-seg >> text=Journal') }],
+  ['06-journal', 'A private place to write', async p => { await p.click('.tool >> text=Journal'); await p.waitForSelector('.overlay .title') }],
 ]
 
 const frame = (png, caption, [W, H]) => `<!doctype html><meta charset=utf-8><style>

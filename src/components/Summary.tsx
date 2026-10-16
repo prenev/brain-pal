@@ -1,3 +1,4 @@
+import { PalTip } from './Pal'
 import { useMemo, useState } from 'react'
 import { Share2 } from 'lucide-react'
 import { useStore } from '../lib/store'
@@ -29,6 +30,7 @@ export default function Summary() {
 
   return (
     <>
+      <PalTip id="summary" pose="idle">Your day, week or month in plain words. Tap share to send it to someone you trust.</PalTip>
       <div className="seg" role="tablist" aria-label="Summary range" style={{ marginBottom: 14 }}>
         {RANGES.map(x => <button key={x.id} role="tab" aria-selected={range === x.id} className={range === x.id ? 'on' : ''} onClick={() => { setRange(x.id); setMsg('') }}>{x.label}</button>)}
       </div>

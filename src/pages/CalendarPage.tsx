@@ -1,3 +1,4 @@
+import { PalTip } from '../components/Pal'
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
@@ -45,6 +46,7 @@ export default function CalendarPage({ onNewOn }: { onNewOn: (d: Date) => void }
         <button className="glass round green" aria-label="Next" disabled={isNow} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><ChevronRight /></button>
       </div>
 
+      <PalTip id="calendar" pose="wave">Tap a day to look back, or tap a + to add how you felt that day.</PalTip>
       <div className="card">
         <div className="cal">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <div className="dow" key={d}>{d}</div>)}

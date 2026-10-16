@@ -377,7 +377,7 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .guard-step.col { flex-direction: column; align-items: stretch; }
 .guard-step .dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 900; font-size: 14px; background: var(--card2); border: 2px solid var(--edge); color: var(--muted); }
 .guard-step .dot.ok { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.small { padding: 8px 14px; min-height: 40px; font-size: 14px; }
+.btn.small { padding: 8px 14px; min-height: 44px; font-size: 14px; }
 .lockbadge { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,93,115,.16); color: var(--danger); border: 2px solid rgba(255,93,115,.5); }
 .lockbadge.open { background: rgba(53,208,127,.16); color: var(--accent); border-color: rgba(53,208,127,.5); }
 .challenge-opt { display: flex; align-items: center; gap: 12px; width: 100%; }
@@ -386,8 +386,9 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .rep-btn { min-height: 72px; font-size: 22px; }
 
 /* Home: secondary tools row */
-.tools-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-.card.tool { margin: 0; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.tools-row { display: flex; gap: 10px; margin: 0 -14px 14px; padding: 2px 14px 8px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.tools-row::-webkit-scrollbar { display: none; }
+.card.tool { flex: 0 0 106px; scroll-snap-align: start; margin: 0; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
 .tool b { font-size: 14px; line-height: 1.15; } .tool .sub { font-size: 12px; font-weight: 700; color: var(--muted); }
 .all-entries { width: 100%; text-align: left; }
 
@@ -410,3 +411,26 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .notes-tools button.on { color: var(--accent); background: rgba(255,255,255,.1); }
 .notes-count { flex: 1; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
 .notes-panel { bottom: calc(var(--safe-b) + 66px); left: 10px; right: 10px; max-width: 620px; padding: 14px; border-radius: 24px; }
+
+/* ---- splash ---- */
+.splash { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 6px; background: var(--bg); text-align: center; }
+.splash h1 { margin: 6px 0 0; font-size: 32px; letter-spacing: -.01em; }
+.splash p { margin: 0; color: var(--muted); font-weight: 700; }
+.card.tool.lead { border-color: var(--accent); }
+
+.pal-tip { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.pal-tip .bubble { position: relative; flex: 1; background: var(--card); border: 2px solid var(--edge); border-radius: 16px; padding: 9px 12px; font-size: 14px; font-weight: 700; line-height: 1.3; }
+.pal-tip .bubble::before { content: ''; position: absolute; left: -7px; top: 50%; width: 11px; height: 11px; background: var(--card); border-left: 2px solid var(--edge); border-bottom: 2px solid var(--edge); transform: translateY(-50%) rotate(45deg); }
+.pal-tip .x { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); flex: none; }
+
+/* SOS siren in the action bar */
+.round.sos { color: #fff; background: rgba(255,93,115,.22); border-color: rgba(255,93,115,.7); }
+.round.sos svg { color: #ff6b81; }
+/* tools strip starts exactly where the cards below start (the snap would otherwise pin the first tile to the screen edge) */
+.tools-row { scroll-padding-inline: 14px; }
+/* Pal's coach: bottom-right, above the + button, says what to do */
+.coach { position: fixed; right: 12px; bottom: calc(max(12px, calc(var(--safe-b) - 4px)) + 156px); z-index: 25; display: flex; align-items: flex-end; gap: 4px; max-width: min(340px, calc(100vw - 24px)); }
+.native-tabs .coach { bottom: calc(var(--native-tab-h, 0px) + 92px); }
+.coach .bubble { position: relative; background: var(--card); border: 2px solid var(--accent); border-radius: 18px; padding: 12px 14px; font-weight: 700; line-height: 1.35; box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: rise .3s cubic-bezier(.2,.9,.3,1); }
+.coach .bubble::after { content: ''; position: absolute; right: -9px; bottom: 22px; width: 14px; height: 14px; background: var(--card); border-right: 2px solid var(--accent); border-top: 2px solid var(--accent); transform: rotate(45deg); }
+.coach .row { margin-top: 10px; justify-content: space-between; }

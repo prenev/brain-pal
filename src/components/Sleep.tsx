@@ -1,3 +1,4 @@
+import { PalTip } from './Pal'
 import { useMemo, useState } from 'react'
 import Face from './Face'
 import { useStore } from '../lib/store'
@@ -44,6 +45,7 @@ export default function Sleep() {
 
   return (
     <>
+      <PalTip id="sleep" pose="sleepy">{native ? 'Connect Apple Health to see last night next to your mood.' : 'Log last night by hand and I’ll show how sleep and mood go together.'}</PalTip>
       {native && !sleepOn && <div className="card">
         <b>Show your sleep from Apple Health</b>
         <p className="muted small">Brain Pal can read your sleep (for example from your Apple Watch) to show it next to your mood. It reads <i>only</i> sleep, keeps it on this device, and never sends it anywhere. You can disconnect any time.</p>
