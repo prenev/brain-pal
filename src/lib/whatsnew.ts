@@ -5,9 +5,9 @@ export interface Release { version: string; items: { emoji: string; title: strin
 export const RELEASES: Release[] = [
   { version: '1.0.0', items: [
     { emoji: 'sparkles', title: 'Meet Wobbi', text: 'Your little brain buddy now cheers you on, and gives a tip in every section.' },
-    { emoji: 'shield', title: 'Focus guard', text: 'Pause the apps that eat your time until you do push-ups, a walk, or a minute of breathing. (Pro)' },
-    { emoji: 'cloud', title: 'Works offline, syncs if you want', text: 'No account needed. Sign in only if you want your data on every device. (Pro)' },
-    { emoji: 'sleep', title: 'Sleep, summaries and proof', text: 'Apple Watch sleep, weekly summaries and before-and-after proof of your progress. (Pro)' },
+    { emoji: 'shield', title: 'Focus guard', text: 'Pause the apps that eat your time until you do push-ups, a walk, or a minute of breathing.' },
+    { emoji: 'cloud', title: 'Works offline, syncs if you want', text: 'No account needed. Sign in only if you want your data on every device.' },
+    { emoji: 'sleep', title: 'Sleep, summaries and proof', text: 'Apple Watch sleep, weekly summaries and before-and-after proof of your progress. (Proof and week/month summaries are Pro)' },
   ] },
 ]
 

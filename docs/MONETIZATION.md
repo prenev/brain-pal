@@ -16,12 +16,15 @@
 Common pattern: **core free, depth/sync/polish paid, annual cheaper than monthly, 3–7 day trial, restore button, no dark patterns.** You asked for monthly: it is built; add an annual plan later (it converts better and lowers churn).
 
 ## What is Pro, what is free (and why)
-| Free forever | Pro |
+**Current setting (launch): the paywall guards one thing, *advanced analytics*.** Everything else is free while the app finds its audience; re-gating a feature later is a one-line change in `src/lib/pro.ts` (`PRO_FEATURES` + a `ProGate`).
+| Free forever | Pro (advanced analytics) |
 |---|---|
-| SOS siren, breathing, grounding, crisis support (**safety is never sold**) | Sync across devices (account) |
-| Mood check-ins, thought records, journal, worry time, calendar | Focus guard (Screen Time) |
-| Reminders, coins/themes, Today summary, 3 daily anchors, skill levels | Sleep insights (Apple Watch) |
-| Export or delete your data (**your data is never held hostage**) | Weekly + monthly summaries, proof of progress, 4th and 5th anchor |
+| SOS siren, breathing, grounding, crisis support (**safety is never sold**) | Before-and-after **proof** cards (Progress) |
+| Mood check-ins, thought records, journal, worry time, calendar | **Weekly + monthly summaries** (Summary → Week/Month) |
+| Reminders, coins/themes, Today summary, 5 daily anchors, skill levels | |
+| Focus guard (Screen Time), sleep insights (Apple Watch), sync across devices | |
+| Export or delete your data (**your data is never held hostage**) | |
+Earlier plan (kept for later): gate Focus guard, sleep, sync and the 4th/5th anchor again once there are enough users to make a paywall worth it.
 Rationale: Pro features are the ones with real running cost (sync/servers), real novelty (Focus guard), or "power-user depth" (insights). A free user still gets a complete, kind app; a paying user gets more *depth*, not the right to feel safe.
 
 ## Price and trial
@@ -40,12 +43,12 @@ Rationale: Pro features are the ones with real running cost (sync/servers), real
 - `ios-native/MindfulPlugin.swift`: StoreKit 2 (`proProducts`, `proPurchase`, `proRestore`, `proStatus`, plus `Transaction.updates`). Only **verified** transactions count (`test-ios` fails if `.unverified` appears).
 - `src/components/Pro.tsx`: `ProGate`, the paywall, `PaywallProvider`. Gates: Focus guard, Sleep, week/month Summary, Progress proof, 4th anchor, Sync sign-in.
 - `ios-native/BrainPal.storekit`: local StoreKit test config (Xcode: Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration) so you can test purchases without the store.
-- Offline first: no sign-in screen at launch; the account is an optional Pro step; first sign-in auto-moves on-device data into the account.
+- Offline first: no sign-in screen at launch; the account is optional (sync is free for now); first sign-in auto-moves on-device data into the account.
 
 ## Not built / honest limits
 - **No server-side receipt validation.** The device trusts StoreKit's verified local entitlement (standard for indie apps). Someone with a jailbroken phone could bypass it; that is acceptable at this scale. Add App Store Server Notifications + a webhook if you ever need cross-device entitlement or refund handling.
 - The web/PWA build has **no purchases** (Apple rules: digital goods on iOS use IAP). It shows "Pro is part of the iPhone app".
-- A lapsed subscriber who is already signed in keeps their session (data is never held hostage); new sign-ins need Pro.
+- A lapsed subscriber who is already signed in keeps their session (data is never held hostage).
 - Real StoreKit purchase, restore and renewal have **not** been run on a device (CI compiles the Swift; the JS side is tested with the simulated bridge).
 
 ## Owner steps (App Store Connect), in order

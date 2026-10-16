@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Camera, Check, ChevronLeft, ChevronUp, Images, Plus, Search, X } from 'lucide-react'
+import { Camera, ChevronLeft, Images, Plus, X } from 'lucide-react'
 import { IconGrid } from '../components/ui'
+import { PalSays } from '../components/Pal'
 import VoiceRecorder from '../components/VoiceRecorder'
 import Support from '../components/Support'
 import { AiError, aiEnabled, looksLikeCrisis, suggestReframes, type Structured } from '../lib/gemini'
@@ -11,12 +12,22 @@ import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
 import { rankByUse, shortList, STARTER_EMOTIONS } from '../lib/today.ts'
 import type { AudioClip, EmotionRating } from '../lib/types'
+import type { PoseName } from '../lib/pal.ts'
 
 const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16)
 const fmtWhen = (d: Date) => {
   const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 864e5)
   const day = days === 0 ? 'Today' : days === 1 ? 'Yesterday' : d.toLocaleDateString(undefined, { weekday: 'short' })
   return `${day}, ${d.getDate()} ${d.toLocaleDateString(undefined, { month: 'short' })} at ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+}
+
+type StepId = 'feel' | 'happened' | 'thought' | 'kinder' | 'finish'
+const SAY: Record<StepId, { pose: PoseName; text: string }> = {
+  feel: { pose: 'idle', text: 'Which feelings are here? Pick as many as fit.' },
+  happened: { pose: 'think', text: 'What was going on? A few words is plenty.' },
+  thought: { pose: 'worried', text: 'What went through your mind? Write it like you thought it.' },
+  kinder: { pose: 'love', text: 'Now be kind: what would you tell a friend who thought this?' },
+  finish: { pose: 'cheer', text: 'Nearly there! Tags and photos are optional.' },
 }
 
 export default function NewEntry({ date, onClose, onSaved, initialMood = null }: { date: Date; onClose: () => void; onSaved: () => void; initialMood?: number | null }) {
@@ -26,15 +37,10 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const [mood, setMood] = useState<number | null>(initialMood)
   const [emotions, setEmotions] = useState<EmotionRating[]>([])
   const [tags, setTags] = useState<string[]>([])
-  const [q, setQ] = useState('')
   const [allEmos, setAllEmos] = useState(false)
   const [allTagsShown, setAllTagsShown] = useState(false)
-  const [emoOpen, setEmoOpen] = useState(true)
-  const [tagOpen, setTagOpen] = useState(true)
   const [situation, setSituation] = useState('')
   const [thought, setThought] = useState('')
-  const [internal, setInternal] = useState('')
-  const [external, setExternal] = useState('')
   const [alt, setAlt] = useState('')
   const [outcome, setOutcome] = useState<number | null>(null)
   const [traps, setTraps] = useState<string[]>([])
@@ -44,15 +50,15 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const [ideas, setIdeas] = useState<string[]>([])
   const [ideaBusy, setIdeaBusy] = useState(false)
   const [ideaErr, setIdeaErr] = useState('')
+  const [step, setStep] = useState<StepId>('feel')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const match = (o: string) => !q || o.includes(q.toLowerCase())
   // Short lists first (your most-used, else sensible starters); searching or "More" shows everything.
   const rankedEmos = useMemo(() => rankByUse(EMOTIONS, thoughts.map(t => t.emotions.map(e => e.name)), { starters: STARTER_EMOTIONS }), [thoughts])
   const rankedTags = useMemo(() => rankByUse(allTags, thoughts.map(t => t.tags)), [thoughts, allTags])
-  const emoOptions = useMemo(() => (q || allEmos ? rankedEmos : shortList(rankedEmos, emotions.map(e => e.name))).filter(match), [q, allEmos, rankedEmos, emotions])
-  const tagOptions = useMemo(() => (q || allTagsShown ? rankedTags : shortList(rankedTags, tags)).filter(match), [q, allTagsShown, rankedTags, tags])
+  const emoOptions = useMemo(() => (allEmos ? rankedEmos : shortList(rankedEmos, emotions.map(e => e.name))), [allEmos, rankedEmos, emotions])
+  const tagOptions = useMemo(() => (allTagsShown ? rankedTags : shortList(rankedTags, tags)), [allTagsShown, rankedTags, tags])
   const peak = Math.max(0, ...emotions.map(e => e.intensity))
   const setEmos = (names: string[]) => setEmotions(names.map(n => emotions.find(e => e.name === n) ?? { name: n, intensity: 60 }))
   const addCustom = (kind: 'emotion' | 'tag') => {
@@ -60,15 +66,15 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
     if (!n) return
     kind === 'emotion' ? setEmos([...emotions.map(e => e.name), n]) : setTags([...new Set([...tags, n])])
   }
-  const customEmos = emotions.map(e => e.name).filter(n => !EMOTIONS.includes(n) && match(n))
-  const customTags = tags.filter(n => !allTags.includes(n) && match(n))
+  const customEmos = emotions.map(e => e.name).filter(n => !EMOTIONS.includes(n))
+  const customTags = tags.filter(n => !allTags.includes(n))
 
-  const crisis = looksLikeCrisis([thought, situation, internal, external, alt, clip?.transcript ?? ''].join(' '))
+  const crisis = looksLikeCrisis([thought, situation, alt, clip?.transcript ?? ''].join(' '))
 
   /** Merge an AI-structured transcript into the form without overwriting what the user already wrote. */
   function applyStructured(r: Structured) {
     setSituation(v => v || r.situation); setThought(v => v || r.thought)
-    setInternal(v => v || r.internalBehaviour); setExternal(v => v || r.externalBehaviour); setAlt(v => v || r.alternateThought)
+    setAlt(v => v || r.alternateThought)
     setEmotions(cur => [...cur, ...r.emotions.filter(e => !cur.some(c => c.name === e.name))])
     setTraps(cur => [...new Set([...cur, ...r.distortions])]); setTags(cur => [...new Set([...cur, ...r.tags])])
     setFilled(true)
@@ -90,12 +96,18 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
     try {
       await addThought({
         mood: mood!, createdAt: when.toISOString(), situation: situation.trim(), thought: thought.trim(), emotions,
-        internalBehaviour: internal.trim(), externalBehaviour: external.trim(), alternateThought: alt.trim(),
+        internalBehaviour: '', externalBehaviour: '', alternateThought: alt.trim(),
         outcomeIntensity: outcome, tags, distortions: traps, photoFiles: files, audioClip: clip,
       })
       onSaved()
     } catch (e: any) { setError(e?.message ?? 'Could not save'); setSaving(false) }
   }
+
+  // The kinder-thought step only appears once there is a thought to look at again.
+  const steps: StepId[] = ['feel', 'happened', 'thought', ...(thought.trim() ? ['kinder' as const] : []), 'finish']
+  const at = Math.max(0, steps.indexOf(step))
+  const go = (d: 1 | -1) => { const n = at + d; if (n < 0) setMood(null); else if (n < steps.length) setStep(steps[n]) }
+  const filledHere: Record<StepId, boolean> = { feel: emotions.length > 0, happened: !!situation.trim() || !!clip, thought: !!thought.trim() || traps.length > 0, kinder: !!alt.trim(), finish: true }
 
   if (mood === null) return (
     <div className="overlay"><div className="inner mood-stage">
@@ -114,89 +126,102 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
     </div></div>
   )
 
+  const last = step === 'finish'
   return (
-    <div className="overlay"><div className="inner">
-      <div className="topbar" style={{ background: 'linear-gradient(#000 70%, transparent)' }}>
-        <div className="glass pill-btn" style={{ padding: '0 10px 0 6px', gap: 4 }}>
-          <button className="round" aria-label="Back" style={{ width: 40, color: 'var(--accent)' }} onClick={onClose}><ChevronLeft size={26} /></button>
-          <button aria-label="Change mood" onClick={() => setMood(null)}><Face mood={mood} size={38} /></button>
+    <div className="overlay wiz"><div className="inner wiz-inner">
+      <div className="wiz-head">
+        <button className="glass round" aria-label="Close" onClick={onClose}><X size={24} /></button>
+        <div className="wiz-prog" role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={at + 1}>
+          {steps.map((s, i) => <i key={s} className={i <= at ? 'on' : ''} />)}
         </div>
-        <button className="glass pill-btn" disabled={saving} onClick={save}>
-          <span className="round" style={{ width: 40, height: 40, background: 'var(--accent)', color: '#04130a' }}><Check size={22} /></span>{saving ? 'Saving…' : 'Save'}
-        </button>
+        <button className="wiz-face" aria-label="Change mood" onClick={() => setMood(null)}><Face mood={mood} size={42} /></button>
       </div>
 
-      <div className="searchbar"><Search size={22} /><input placeholder="Search emotions & tags…" value={q} onChange={e => setQ(e.target.value)} /></div>
-      <h1 style={{ textAlign: 'center', fontSize: 28, margin: '24px 0' }}>What’s going on?</h1>
+      <div className="wiz-body" key={step}>
+        <PalSays pose={SAY[step].pose} size={72}>{SAY[step].text}</PalSays>
+        {crisis && <div role="alert"><Support /></div>}
 
-      <div className="card">
-        <div className="card-head"><h3 style={{ fontWeight: 500 }}>Emotions</h3>
-          <div className="row"><button className="icon-btn dark" aria-label="Add emotion" onClick={() => addCustom('emotion')}><Plus size={22} /></button>
-            <button className="icon-btn dark" aria-label="Collapse" onClick={() => setEmoOpen(!emoOpen)}><ChevronUp size={22} style={{ transform: emoOpen ? '' : 'rotate(180deg)' }} /></button></div></div>
-        {emoOpen && <IconGrid options={[...emoOptions, ...customEmos]} value={emotions.map(e => e.name)} onChange={setEmos} />}
-        {emoOpen && !q && <button type="button" className="linkbtn morebtn" onClick={() => setAllEmos(!allEmos)}>{allEmos ? 'Show fewer' : `More emotions (${EMOTIONS.length - emoOptions.length})`}</button>}
-        {emoOpen && emotions.length > 0 && <>
-          <div className="hr" />
-          {emotions.map(e => (
-            <div key={e.name} style={{ marginBottom: 6 }}>
-              <div className="row spread"><span>{e.name}</span><b>{e.intensity}%</b></div>
-              <input type="range" min={0} max={100} value={e.intensity} aria-label={`${e.name} intensity`}
-                onChange={ev => setEmotions(emotions.map(x => x.name === e.name ? { ...x, intensity: +ev.target.value } : x))} />
+        {step === 'feel' && <div className="wiz-card">
+          <IconGrid options={[...emoOptions, ...customEmos]} value={emotions.map(e => e.name)} onChange={setEmos} />
+          <div className="row spread" style={{ marginTop: 4 }}>
+            <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllEmos(!allEmos)}>{allEmos ? 'Show fewer' : `More emotions (${EMOTIONS.length - emoOptions.length})`}</button>
+            <button className="linkbtn" aria-label="Add emotion" onClick={() => addCustom('emotion')}><Plus size={16} style={{ display: 'inline', verticalAlign: -3 }} /> Add your own</button>
+          </div>
+          {emotions.length > 0 && <>
+            <div className="hr" />
+            <p className="muted small" style={{ margin: '0 0 8px' }}>How strong?</p>
+            {emotions.map(e => (
+              <div key={e.name} style={{ marginBottom: 8 }}>
+                <div className="row spread"><span>{e.name}</span><b>{e.intensity}%</b></div>
+                <input type="range" min={0} max={100} value={e.intensity} aria-label={`${e.name} intensity`}
+                  onChange={ev => setEmotions(emotions.map(x => x.name === e.name ? { ...x, intensity: +ev.target.value } : x))} />
+              </div>
+            ))}
+          </>}
+        </div>}
+
+        {step === 'happened' && <>
+          <label className="field"><span className="sr-only">Situation</span><textarea className="input wiz-text" autoFocus value={situation} onChange={e => setSituation(e.target.value)} placeholder="What was happening?" /></label>
+          <VoiceRecorder clip={clip} onChange={setClip} onFill={applyStructured} />
+          {filled && <p role="status" style={{ color: 'var(--accent)', margin: '4px 6px', fontWeight: 800 }}>✨ Filled in from your memo. Review as you go.</p>}
+        </>}
+
+        {step === 'thought' && <>
+          <label className="field"><span className="sr-only">The thought</span><textarea className="input wiz-text" autoFocus value={thought} onChange={e => setThought(e.target.value)} placeholder="What went through your mind?" /></label>
+          <div className="wiz-card">
+            <b>Does it fit a thinking trap?</b><span className="muted small"> (optional)</span>
+            <div className="chips" style={{ marginTop: 10 }}>{TRAPS.map(t => (
+              <button type="button" key={t.name} className={`chip ${traps.includes(t.name) ? 'on' : ''}`} aria-pressed={traps.includes(t.name)}
+                onClick={() => setTraps(traps.includes(t.name) ? traps.filter(x => x !== t.name) : [...traps, t.name])}>{t.name}</button>))}</div>
+            {TRAPS.filter(t => traps.includes(t.name)).slice(-1).map(t => (
+              <div className="trap" key={t.name} style={{ marginTop: 10 }}><b>{t.name}</b>: {t.blurb}<div className="muted" style={{ marginTop: 4 }}>Try asking: {t.ask}</div></div>))}
+          </div>
+        </>}
+
+        {step === 'kinder' && <>
+          <div className="wiz-quote" aria-label="Your thought">“{thought.trim()}”</div>
+          <label className="field"><span className="sr-only">Alternate thought</span><textarea className="input wiz-text" autoFocus value={alt} onChange={e => setAlt(e.target.value)} placeholder="What would you tell a friend? What’s the evidence?" /></label>
+          <div className="wiz-card">
+            <span className="muted small">Need a nudge? Tap a question.</span>
+            <div style={{ marginTop: 8 }}>{REFRAME_QUESTIONS.slice(0, 4).map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => (a ? a + '\n' : '') + q + ' ')}>{q}</button>)}</div>
+            {aiEnabled() && !crisis && <>
+              <button type="button" className="btn" disabled={ideaBusy} onClick={getIdeas}><Emoji name="sparkles" size={18} style={{ display: 'inline', verticalAlign: -4, marginRight: 6 }} />{ideaBusy ? 'Thinking…' : 'Suggest reframes'}</button>
+              {ideas.map(i => <button type="button" key={i} className="reframe-card" style={{ marginTop: 8 }} onClick={() => setAlt(a => (a ? a + '\n' : '') + i)}>{i}<div className="muted small">Tap to use</div></button>)}
+              {ideaErr && <p role="alert" style={{ color: 'var(--danger)', margin: '8px 0 0' }}>{ideaErr}</p>}
+            </>}
+          </div>
+          {emotions.length > 0 && alt.trim() && <div className="wiz-card">
+            <div className="row spread"><span className="muted small">How strong does it feel now? (was {peak}%)</span><b>{outcome ?? peak}%</b></div>
+            <input type="range" min={0} max={100} value={outcome ?? peak} aria-label="Intensity after reframe" onChange={e => setOutcome(+e.target.value)} />
+          </div>}
+        </>}
+
+        {step === 'finish' && <>
+          <div className="wiz-card">
+            <b>Tags</b><span className="muted small"> (optional)</span>
+            <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />
+            <div className="row spread">
+              {allTags.length > 6 ? <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllTagsShown(!allTagsShown)}>{allTagsShown ? 'Show fewer' : `More tags (${Math.max(0, allTags.length - tagOptions.length)})`}</button> : <span />}
+              <button className="linkbtn" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={16} style={{ display: 'inline', verticalAlign: -3 }} /> Add your own</button>
             </div>
-          ))}
+          </div>
+          <div className="photos-edit">
+            <label><Camera size={22} />Take photo<input hidden type="file" accept="image/*" capture="environment" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
+            <label><Images size={22} />From gallery<input hidden type="file" accept="image/*" multiple onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
+          </div>
+          {files.length > 0 && <div className="photos">{files.map((f, i) => (
+            <div key={i} style={{ position: 'relative' }}><img src={URL.createObjectURL(f)} alt="" style={{ height: 96, borderRadius: 14 }} />
+              <button className="icon-btn" aria-label="Remove photo" style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, background: '#000a' }} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={16} /></button></div>))}</div>}
+          {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
         </>}
       </div>
 
-      <div className="card">
-        <div className="card-head"><h3 style={{ fontWeight: 500 }}>Tags</h3>
-          <div className="row"><button className="icon-btn dark" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={22} /></button>
-            <button className="icon-btn dark" aria-label="Collapse" onClick={() => setTagOpen(!tagOpen)}><ChevronUp size={22} style={{ transform: tagOpen ? '' : 'rotate(180deg)' }} /></button></div></div>
-        {tagOpen && <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />}
-        {tagOpen && !q && allTags.length > 6 && <button type="button" className="linkbtn morebtn" onClick={() => setAllTagsShown(!allTagsShown)}>{allTagsShown ? 'Show fewer' : `More tags (${Math.max(0, allTags.length - tagOptions.length)})`}</button>}
+      <div className="wiz-foot">
+        <button className="btn" aria-label="Back" onClick={() => go(-1)}><ChevronLeft size={22} style={{ display: 'block' }} /></button>
+        {last
+          ? <button className="btn primary" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
+          : <button className="btn primary" style={{ flex: 1 }} onClick={() => go(1)}>{filledHere[step] ? 'Next' : 'Skip'}</button>}
       </div>
-
-      {crisis && <div role="alert"><Support /></div>}
-
-      <VoiceRecorder clip={clip} onChange={setClip} onFill={applyStructured} />
-      {filled && <p role="status" style={{ color: 'var(--accent)', margin: '-6px 6px 14px', fontWeight: 800 }}>✨ Filled in from your memo — review and edit below.</p>}
-
-      <div className="card">
-        <div className="card-head"><h3 style={{ fontWeight: 500 }}>Thought record</h3></div>
-        <label className="field"><span>Situation</span><textarea className="input" value={situation} onChange={e => setSituation(e.target.value)} placeholder="What was happening?" /></label>
-        <label className="field"><span>The thought</span><textarea className="input" value={thought} onChange={e => setThought(e.target.value)} placeholder="What went through your mind?" /></label>
-        <div className="field"><span>Thinking traps — does this thought fit any?</span>
-          <div className="chips">{TRAPS.map(t => (
-            <button type="button" key={t.name} className={`chip ${traps.includes(t.name) ? 'on' : ''}`} aria-pressed={traps.includes(t.name)}
-              onClick={() => setTraps(traps.includes(t.name) ? traps.filter(x => x !== t.name) : [...traps, t.name])}>{t.name}</button>))}</div>
-          {TRAPS.filter(t => traps.includes(t.name)).map(t => (
-            <div className="trap" key={t.name} style={{ marginTop: 8 }}><b>{t.name}</b> — {t.blurb}<div className="muted" style={{ marginTop: 4 }}>Try asking: {t.ask}</div></div>))}
-        </div>
-        <label className="field"><span>Internal reaction</span><textarea className="input" value={internal} onChange={e => setInternal(e.target.value)} placeholder="Body sensations, urges, what you told yourself…" /></label>
-        <label className="field"><span>External behaviour</span><textarea className="input" value={external} onChange={e => setExternal(e.target.value)} placeholder="What did you actually do or say?" /></label>
-        <div className="field"><span>Questions that help you reframe (tap to add)</span>
-          {REFRAME_QUESTIONS.map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => (a ? a + '\n' : '') + q + ' ')}>{q}</button>)}
-        </div>
-        {aiEnabled() && !crisis && thought.trim() && <div className="field">
-          <button type="button" className="btn" disabled={ideaBusy} onClick={getIdeas}><Emoji name="sparkles" size={18} style={{ display: 'inline', verticalAlign: -4, marginRight: 6 }} />{ideaBusy ? 'Thinking…' : 'Suggest reframes'}</button>
-          {ideas.map(i => <button type="button" key={i} className="reframe-card" style={{ marginTop: 8 }} onClick={() => setAlt(a => (a ? a + '\n' : '') + i)}>{i}<div className="muted small">Tap to use</div></button>)}
-          {ideaErr && <p role="alert" style={{ color: 'var(--danger)', margin: '8px 0 0' }}>{ideaErr}</p>}
-        </div>}
-        <label className="field"><span>Alternate thought</span><textarea className="input" value={alt} onChange={e => setAlt(e.target.value)} placeholder="What would you tell a friend? What’s the evidence?" /></label>
-        {emotions.length > 0 && alt.trim() && <div>
-          <div className="row spread"><span className="muted small">Feeling now (was {peak}%)</span><b>{outcome ?? peak}%</b></div>
-          <input type="range" min={0} max={100} value={outcome ?? peak} aria-label="Intensity after reframe" onChange={e => setOutcome(+e.target.value)} />
-        </div>}
-      </div>
-
-      <div className="row" style={{ margin: '22px 6px 12px' }}><Camera size={26} /><span style={{ fontSize: 20 }}>Photo</span></div>
-      <div className="photos-edit">
-        <label><Camera size={24} />Take Photo<input hidden type="file" accept="image/*" capture="environment" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-        <label><Images size={24} />From Gallery<input hidden type="file" accept="image/*" multiple onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-      </div>
-      {files.length > 0 && <div className="photos">{files.map((f, i) => (
-        <div key={i} style={{ position: 'relative' }}><img src={URL.createObjectURL(f)} alt="" style={{ height: 96, borderRadius: 14 }} />
-          <button className="icon-btn" aria-label="Remove photo" style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, background: '#000a' }} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={16} /></button></div>))}</div>}
-      {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
     </div></div>
   )
 }

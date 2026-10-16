@@ -1,5 +1,4 @@
 import { PalTip } from './Pal'
-import { ProGate } from './Pro'
 import { useMemo, useState } from 'react'
 import Face from './Face'
 import { useStore } from '../lib/store'
@@ -17,7 +16,7 @@ const dow = (date: string, style: 'short' | 'narrow' = 'short') => new Date(`${d
 const eveningToClock = (m: number) => { const t = (m + 18 * 60) % 1440; return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}` }
 
 /** Last night, the week at a glance, consistency, and (with enough data) how sleep and mood relate. Apple Watch data via Apple Health, or a manual log. */
-export default function Sleep() { return <ProGate feature="sleep"><SleepView /></ProGate> }
+export default function Sleep() { return <SleepView /> }
 
 function SleepView() {
   const { sleepNights, sleepOn, connectSleepNow, disconnectSleepNow, syncSleepNow, addManualNight, deleteManualNight, thoughts } = useStore()

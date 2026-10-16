@@ -190,7 +190,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       <div className="list">
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Wobbi Pro" value={pro ? 'Active' : 'Upgrade'} onClick={() => openPaywall()} />
         {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
-        {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value={pro ? 'Off' : 'Pro'} onClick={() => (pro ? openLogin() : openPaywall('sync'))} />}
+        {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value="Off" onClick={() => openLogin()} />}
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />

@@ -70,13 +70,18 @@ const tab = (p, name) => p.click(`.tab >> text=${name}`)
 const idbKeys = p => p.evaluate(() => new Promise(res => { const r = indexedDB.open('brainpal-media'); r.onerror = () => res([]); r.onsuccess = () => { const db = r.result; if (!db.objectStoreNames.contains('blobs')) return res([]); const q = db.transaction('blobs').objectStore('blobs').getAllKeys(); q.onsuccess = () => res(q.result) } }))
 const reload = async p => { await p.reload(); await p.waitForSelector('.topbar') }
 
+const nextStep = p => p.click('.wiz-foot .btn.primary')
+const toStep = async (p, n) => { for (let i = 0; i < n; i++) await nextStep(p) }          // feel → happened → thought → (kinder) → finish
 async function newEntry(p, { mood = 3, emotion, thought } = {}) {
   await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry')
-  await p.click(`.faces button >> nth=${5 - mood}`)
+  await p.click(`.faces button >> nth=${5 - mood}`); await p.waitForSelector('.wiz-body')
   if (emotion) await p.click(`.ig >> text=${emotion}`)
-  if (thought) await p.fill('textarea[placeholder="What went through your mind?"]', thought)
+  if (thought) { await toStep(p, 2); await p.fill('textarea[placeholder="What went through your mind?"]', thought) }
 }
-const save = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar') }
+const save = async p => {
+  if (await p.locator('.wiz-foot').count()) { while (!(await p.locator('.wiz-foot .btn.primary:has-text("Save")').count())) await nextStep(p) }
+  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar')
+}
 async function connectAi(p) {
   await tab(p, 'More'); await p.click('.li >> text=AI helper')
   await p.click('[role=switch]'); await p.fill('input[type=password]', 'TEST-KEY')
@@ -84,7 +89,7 @@ async function connectAi(p) {
   await p.click('[aria-label=Back]'); await tab(p, 'Home')
 }
 async function record(p, secs = 1.6) {
-  await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio')
+  await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio', { state: 'attached' })
 }
 
 const opened = []
@@ -157,9 +162,9 @@ test('a mood-only entry saves, and hostile text is rendered as text', async () =
 
 test('crisis wording shows support options and blocks AI suggestions', async () => {
   const s = await open(); await connectAi(s.page)
-  await newEntry(s.page, { mood: 1 })
-  await s.page.fill('textarea[placeholder="What went through your mind?"]', 'I want to kill myself')
+  await newEntry(s.page, { mood: 1, thought: 'I want to kill myself' })
   await s.page.waitForSelector('text=You don’t have to do this alone')
+  await toStep(s.page, 1); await s.page.waitForSelector('textarea[placeholder^="What would you tell"]'); await s.page.waitForSelector('text=You don’t have to do this alone')   // the support card follows them to the next step
   assert.equal(await s.page.locator('text=Suggest reframes').count(), 0)
   assert.ok(!s.gemini.calls.some(c => c.url.includes('generateContent') && c.body.includes('kill myself')), 'crisis text must never be sent to the AI')
   await done(s)
@@ -167,14 +172,14 @@ test('crisis wording shows support options and blocks AI suggestions', async () 
 
 test('voice memo: record, play, transcribe by hand, persist across reload, free storage on delete', async () => {
   const s = await open(); const p = s.page
-  await newEntry(p, { mood: 3 }); await record(p)
+  await newEntry(p, { mood: 3 }); await toStep(p, 1); await record(p)
   assert.ok(await p.evaluate(() => document.querySelector('audio').src.startsWith('blob:')))
   await p.fill('textarea[placeholder^="Type it yourself"]', 'typed transcript')
   await save(p)
   await p.waitForSelector('.entry >> text=Voice memo')
   assert.equal((await idbKeys(p)).filter(k => String(k).startsWith('audio-')).length, 1)
   await reload(p); await p.click('.entry')
-  await p.waitForSelector('.entry audio'); await p.waitForSelector('.etranscript >> text=typed transcript')
+  await p.waitForSelector('.entry audio', { state: 'attached' }); await p.waitForSelector('.etranscript >> text=typed transcript')
   const size = await p.evaluate(async () => (await (await fetch(document.querySelector('.entry audio').src)).blob()).size)
   assert.ok(size > 500, `audio blob should survive reload (got ${size} bytes)`)
   p.once('dialog', d => d.accept()); await p.click('text=Delete entry'); await p.waitForTimeout(400)
@@ -184,7 +189,7 @@ test('voice memo: record, play, transcribe by hand, persist across reload, free 
 
 test('voice memo: cancel discards, and AI controls stay hidden until enabled', async () => {
   const s = await open(); const p = s.page
-  await newEntry(p, { mood: 3 })
+  await newEntry(p, { mood: 3 }); await toStep(p, 1)
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.click('button:has-text("Cancel")')
   await p.waitForSelector('text=● Record'); assert.equal(await p.locator('audio').count(), 0)
   await record(p); assert.equal(await p.locator('button:has-text("Transcribe")').count(), 0)
@@ -196,22 +201,25 @@ test('Gemini (mocked): connect, transcribe, fill thought record, reframes, trans
   await connectAi(p)
   assert.ok(s.gemini.calls.every(c => c.headers['x-goog-api-key'] === 'TEST-KEY'), 'key must travel in the header only')
   assert.ok(s.gemini.calls.some(c => c.url.includes('gemini-3.5-flash:generateContent')), 'picks the best model that works')
-  await newEntry(p, { mood: 2 }); await record(p)
+  await newEntry(p, { mood: 2 }); await toStep(p, 1); await record(p)
   await p.click('button:has-text("Transcribe")'); await p.waitForFunction(t => document.querySelector('textarea[placeholder^="Tap"]')?.value === t || [...document.querySelectorAll('textarea')].some(x => x.value === t), TRANSCRIPT)
   assert.ok(s.gemini.calls.some(c => c.body.includes('"mime_type":"audio/wav"')), 'audio is converted to WAV before upload')
   await p.click('button:has-text("Fill my thought record")'); await p.waitForSelector('text=Filled in from your memo')
+  await p.click('.wiz-foot [aria-label=Back]'); await p.waitForSelector('.ig')                       // feel step
+  assert.equal(await p.locator('.ig.on').count(), 1, 'only allow-listed emotions are applied (bogus dropped)')
+  await toStep(p, 2)                                                                                // thought step
   assert.equal(await p.inputValue('textarea[placeholder="What went through your mind?"]'), STRUCTURED.thought)
-  assert.equal(await p.locator('.card:has(h3:has-text("Emotions")) .ig.on').count(), 1, 'only allow-listed emotions are applied (bogus dropped)')
-  assert.equal(await p.locator('.card:has(h3:has-text("Tags")) .ig.on').count(), 1, 'allow-listed tag applied, bogus tag dropped')
   assert.equal(await p.locator('.chip.on >> text=catastrophizing').count(), 1)
+  await toStep(p, 1)                                                                                // kinder step (there is a thought now)
   await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card')
   assert.equal(await p.locator('.reframe-card').count(), 3)
   await p.click('.reframe-card >> nth=0')
   assert.match(await p.inputValue('textarea[placeholder^="What would you tell"]'), /I have prepared/)
+  await toStep(p, 1); assert.equal(await p.locator('.ig.on').count(), 1, 'allow-listed tag applied, bogus tag dropped')
   await save(p)
   await p.click('.entry'); await p.waitForSelector('.etranscript >> text=presentation tomorrow')
   // a memo saved without a transcript can be transcribed afterwards
-  await newEntry(p, { mood: 3 }); await record(p); await save(p)
+  await newEntry(p, { mood: 3 }); await toStep(p, 1); await record(p); await save(p)
   await p.click('.tool >> text=Thoughts')       // Home shows only the latest entry of the day; the full list is one tap away
   await p.locator('.overlay .entry >> text=Voice memo').first().click()
   await p.click('.overlay .entry button:has-text("Transcribe")')
@@ -293,8 +301,8 @@ test('Today card: one tap logs a mood (undo / add details), then points at what 
   await p.waitForSelector('[aria-label="Log mood: bad"]')              // asks again once the entry is undone
   await p.click('[aria-label="Log mood: awful"]'); await p.waitForSelector('.entry')
   await p.click('.toast-row >> text=Add details')                      // swaps the quick entry for the full editor, mood kept
-  await p.waitForSelector('text=What’s going on?'); await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary')
-  await p.waitForSelector('.topbar'); assert.equal(await p.locator('.entry').count(), 1, 'quick entry was replaced, not duplicated')
+  await p.waitForSelector('.wiz-body'); await save(p)
+  assert.equal(await p.locator('.entry').count(), 1, 'quick entry was replaced, not duplicated')
   await reload(p); assert.equal(await p.locator('.entry').count(), 1)
   await done(s)
 })
@@ -315,15 +323,14 @@ test('emotion and tag lists start short, learn what you use, and "More" / search
   const mk = (i, emo) => ({ id: 'e' + i, createdAt: new Date(Date.now() - i * 864e5).toISOString(), mood: 3, situation: '', thought: 'x', emotions: [{ name: emo, intensity: 50 }], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: ['money'], distortions: [], photos: [] })
   const s = await open({ 'bp.thoughts': [mk(1, 'bored'), mk(2, 'bored'), mk(3, 'bored')] }); const p = s.page
   await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=2')
-  const emo = p.locator('.card:has(h3:has-text("Emotions")) .ig'), tags = p.locator('.card:has(h3:has-text("Tags")) .ig')
-  await p.waitForSelector('.card:has(h3:has-text("Emotions")) .ig'); assert.equal(await emo.count(), 6)
-  assert.equal(await emo.first().innerText().then(t => t.trim().toLowerCase()), 'bored', 'your most-used emotion leads')
-  assert.equal(await p.locator('.card:has(h3:has-text("Emotions")) .ig:has-text("anxious")').count(), 1, 'sensible starters are still there')
-  assert.equal(await tags.count(), 6); assert.equal(await tags.first().innerText().then(t => t.trim().toLowerCase()), 'money')
-  await p.click('text=/More emotions \\(\\d+\\)/'); assert.equal(await emo.count(), 19)
-  await p.click('text=Show fewer'); assert.equal(await emo.count(), 6)
-  await p.fill('.searchbar input', 'sad'); await p.waitForFunction(() => document.querySelectorAll('.card .ig').length > 0)
-  assert.ok(await p.locator('.card:has(h3:has-text("Emotions")) .ig:has-text("sad")').count() >= 1, 'search looks through the full list')
+  await p.waitForSelector('.wiz-body')
+  const ig = p.locator('.ig')
+  assert.equal(await ig.count(), 6); assert.equal(await ig.first().innerText().then(t => t.trim().toLowerCase()), 'bored', 'your most-used emotion leads')
+  assert.equal(await p.locator('.ig:has-text("anxious")').count(), 1, 'sensible starters are still there')
+  await p.click('text=/More emotions \\(\\d+\\)/'); assert.equal(await ig.count(), 19)
+  await p.click('text=Show fewer'); assert.equal(await ig.count(), 6)
+  await toStep(p, 3); await p.waitForSelector('text=Add your own')                                  // feel → happened → thought → finish: tags live on the last step
+  assert.equal(await ig.count(), 6); assert.equal(await ig.first().innerText().then(t => t.trim().toLowerCase()), 'money')
   await done(s)
 })
 
@@ -685,6 +692,20 @@ test('cloud sync: offline changes wait safely and sync later; the later edit win
   await done(A); await done(B)
 })
 
+test('cloud sync: an edit made while a sync is already running is not forgotten (it is retried, not left waiting for the next change)', async () => {
+  const account = fakeAccount()
+  const A = await openCloud({ signedIn: true, account, seed: { ...seenAll, 'bp.journal': [{ id: 'j1', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'A note', body: 'before', mood: null, tags: [], prompt: null }] } }); const a = A.page
+  await until(() => hasDoc(account, 'journal'))
+  account.down = true; account.delay = 1000                                              // offline AND slow: a run hangs for a few seconds, then fails
+  await moreRoot(a); await a.click('.li >> text=Account'); await a.click('button:has-text("Sync now")'); await a.waitForSelector('text=Syncing your journal')
+  await a.click('[aria-label=Back]'); await a.click('.li >> text=Journal'); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'edited mid-sync'); await a.click('button:has-text("Save")')   // the run above is still in flight
+  await moreRoot(a); await a.click('.li >> text=Account')
+  await a.waitForSelector('[aria-label="Sync status"] >> text=/1 change is safe on this device/', { timeout: 40000 })
+  account.down = false; account.delay = 0; await a.click('button:has-text("Sync now")')
+  await until(() => account.rows.get('journal|j1')?.data?.body === 'edited mid-sync')
+  await done(A)
+})
+
 test('cloud sync: data that predates sync is pushed on first sign-in; sign-out clears this device (and warns about unsynced changes)', async () => {
   const account = fakeAccount()
   const entry = { id: 'old-j', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Older entry', body: 'written before sync existed', mood: null, tags: [], prompt: null }
@@ -772,8 +793,8 @@ test('SOS flow records relief and Stats reflects it; breathing session logs', as
 
 test('photos attach, persist and show in the gallery', async () => {
   const s = await open(); const p = s.page
-  await newEntry(p, { mood: 4 })
-  await p.setInputFiles('label:has-text("From Gallery") input', { name: 'a.png', mimeType: 'image/png', buffer: PNG })
+  await newEntry(p, { mood: 4 }); await toStep(p, 3)
+  await p.setInputFiles('label:has-text("From gallery") input', { name: 'a.png', mimeType: 'image/png', buffer: PNG })
   await p.waitForSelector('.photos img'); await save(p)
   await reload(p); await tab(p, 'More'); await p.click('.li >> text=Photo Gallery'); await p.waitForSelector('.gallery img')
   assert.ok(await p.evaluate(async () => (await (await fetch(document.querySelector('.gallery img').src)).blob()).size) > 0)
@@ -1224,27 +1245,28 @@ test('Wobbi’s corner coach: first visit only, three bubbles in the bottom-righ
 })
 
 const lockOf = p => p.locator('.pro-lock')
-test('Pro (web): features show a friendly lock, the paywall says Pro lives in the iPhone app, and safety is never locked', async () => {
+test('Pro (web): advanced analytics shows a friendly lock (everything else is free), the paywall says Pro lives in the iPhone app, and safety is never locked', async () => {
   const s = await open(null, { pro: false }); const p = s.page
   assert.equal(await p.locator('[aria-label^="Anxious right now"]').count(), 1, 'SOS is always there')
-  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Focus guard/)
+  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('text=Blocking apps is part of the iPhone app'); assert.equal(await p.locator('.pro-lock').count(), 0, 'Focus guard is free for now'); await p.click('[aria-label=Back]')
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Advanced analytics/)
   await p.click('.pro-lock button:has-text("Unlock with Pro")'); await p.waitForSelector('[aria-label="Wobbi Pro"]')
   assert.match(await p.locator('[aria-label="Wobbi Pro"]').innerText(), /Pro is part of the iPhone app/); assert.equal(await p.locator('button:has-text("Subscribe"), button:has-text("Start free trial")').count(), 0, 'no purchase button on the web')
-  await p.click('[aria-label="Wobbi Pro"] [aria-label=Close]'); await p.click('[aria-label=Back]')
+  await p.click('[aria-label="Wobbi Pro"] [aria-label=Close]')
   // always free: breathing, SOS flow, export, support
   await tab(p, 'Breathe'); await p.waitForSelector('button:has-text("Start")'); await p.click('[aria-label^="Anxious right now"]'); await p.waitForSelector('input[aria-label="Anxiety right now, 0 to 10"]'); await p.click('[aria-label=Close]')
   await tab(p, 'More'); for (const r of ['Export data', 'Get support']) assert.equal(await p.locator(`.li:has-text("${r}")`).count(), 1, `${r} stays free`)
   await done(s)
 })
 
-test('Pro (iPhone): gates sit exactly where promised, the paywall shows price, trial, disclosure and links; buying unlocks; cancelling and restoring behave', async () => {
+test('Pro (iPhone): only advanced analytics is gated, the paywall shows price, trial, disclosure and links; buying unlocks; cancelling and restoring behave', async () => {
   const s = await open({ 'bp.anchors': ['a', 'b', 'c'].map((l, i) => ({ id: l, label: 'Anchor ' + l, order: i })), 'bp.thoughts': [rec('t', 0)] }, { native: true, pro: false, time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  // free: levels + Today summary + 3 anchors; locked: proof, week/month, sleep, guard, a 4th anchor, sync
-  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('h2:has-text("Your skills")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Proof you’re improving/)
+  // free: levels, Today summary, sleep, Focus guard, all five anchors, sync; locked (advanced analytics): proof cards and the week/month summaries
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('h2:has-text("Your skills")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Advanced analytics/)
   await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('.summary'); await p.click('.seg[aria-label="Summary range"] >> text=This week'); await p.waitForSelector('.pro-lock'); assert.equal(await p.locator('.summary').count(), 0)
   await p.click('.seg[aria-label="Summary range"] >> text=Today'); await p.waitForSelector('.summary')
-  await p.click('[role=tab]:has-text("Sleep")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Sleep insights/)
-  await tab(p, 'Home'); await p.click('text=Edit'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /More than 3 daily anchors/); await p.click('button:has-text("Done")')
+  await p.click('[role=tab]:has-text("Sleep")'); await p.waitForSelector('text=Apple Health'); assert.equal(await p.locator('.pro-lock').count(), 0, 'sleep is free')
+  await tab(p, 'Home'); await p.click('text=Edit'); await p.waitForSelector('text=Ideas'); assert.equal(await p.locator('.pro-lock').count(), 0, 'a 4th and 5th anchor are free'); await p.click('button:has-text("Done")')
   await tab(p, 'More')
   // paywall
   await p.click('.li >> text=Wobbi Pro'); await p.waitForSelector('[aria-label="Wobbi Pro"]')
@@ -1266,23 +1288,23 @@ test('Pro (iPhone): an ended subscription locks again (the store is the authorit
   const s = await open(null, { native: true, pro: false, reply: { 'Mindful.proStatus': { active: false } } }); const p = s.page
   await p.evaluate(() => localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: Date.now() + 864e5, checkedAt: Date.now() })))
   await reload(p); await p.waitForFunction(() => JSON.parse(localStorage.getItem('bp.pro')).active === false)                 // the App Store says it ended
-  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.pro-lock'); await done(s)
+  await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('.pro-lock'); await done(s)
   const t = await open(null, { native: true, pro: false, reply: { 'Mindful.proStatus': { __reject: 'OFFLINE', message: 'no network' } } }); const q = t.page
   await q.evaluate(() => localStorage.setItem('bp.pro', JSON.stringify({ active: true, until: Date.now() + 864e5, checkedAt: Date.now() })))
-  await reload(q); await q.click('.tool >> text=Focus guard'); await q.waitForSelector('text=Not available in this build'); assert.equal(await q.locator('.pro-lock').count(), 0, 'cached Pro survives an unreachable store')
+  await reload(q); await tab(q, 'Stats'); await q.click('[role=tab]:has-text("Progress")'); await q.waitForSelector('h2:has-text("Your skills")'); assert.equal(await q.locator('.pro-lock').count(), 0, 'cached Pro survives an unreachable store')
   await done(t)
 })
 
-test('offline first: the app needs no account; sign-in is an optional Pro step you can walk away from', async () => {
+test('offline first: the app needs no account; sign-in is optional and you can walk away from it', async () => {
   const A = await openCloud({ signedIn: false }); const a = A.page
   await a.click('button:has-text("Not now — keep using it offline")'); await tab(a, 'Home'); await a.waitForSelector('[aria-label="Log mood: good"]')
   await a.click('[aria-label="Log mood: good"]'); await a.waitForSelector('.entry'); await tab(a, 'More')
   assert.equal(await a.locator('.li:has-text("Sync across devices")').count(), 1); assert.equal(await a.locator('.li:has-text("Storage") .val').innerText(), 'This device')
   assert.equal(await a.locator('button:has-text("Sign out")').count(), 0, 'nothing to sign out of')
   await done(A)
-  const B = await openCloud({ signedIn: false, pro: false, gotoLogin: false }); const b = B.page            // not Pro: sync is part of Pro and opens the paywall, not the sign-in form
-  await tab(b, 'More'); assert.match(await b.locator('.li:has-text("Sync across devices") .val').innerText(), /Pro/); await b.click('.li >> text=Sync across devices')
-  await b.waitForSelector('[aria-label="Wobbi Pro"]'); assert.equal(await b.locator('form.card').count(), 0, 'no sign-in form without Pro'); await b.click('[aria-label="Wobbi Pro"] [aria-label=Close]')
+  const B = await openCloud({ signedIn: false, pro: false, gotoLogin: false }); const b = B.page            // sync is free for now: no Pro needed to reach the sign-in form
+  await tab(b, 'More'); assert.equal(await b.locator('.li:has-text("Sync across devices") .val').innerText(), 'Off'); await b.click('.li >> text=Sync across devices')
+  await b.waitForSelector('form.card'); assert.equal(await b.locator('[aria-label="Wobbi Pro"]').count(), 0, 'no paywall in front of sync')
   await done(B)
 })
 
@@ -1321,11 +1343,11 @@ const SESSION = { access_token: JWT, refresh_token: 'rt', token_type: 'bearer', 
 
 const DOC_KINDS = ['journal', 'anchor', 'anchor_check', 'focus', 'manual_night', 'purchase', 'rituals', 'theme']
 /** A fake `user_docs` table shared by every "device" that is given the same object. It enforces the same rules as the real table. */
-const fakeAccount = () => ({ rows: new Map(), down: false, posts: 0 })
+const fakeAccount = () => ({ rows: new Map(), down: false, posts: 0, delay: 0 })
 async function openCloud({ providers = { email: true, google: true, apple: true }, native = false, reply, signedIn = false, account = null, seed = null, pro = true, gotoLogin = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const seen = { token: [], authorize: [] }
-  await ctx.route('http://127.0.0.1:9/**', route => {
+  await ctx.route('http://127.0.0.1:9/**', async route => {
     const req = route.request(), url = new URL(req.url())
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' }
     const json = (o, status = 200) => route.fulfill({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(o) })
@@ -1336,6 +1358,7 @@ async function openCloud({ providers = { email: true, google: true, apple: true 
     if (url.pathname === '/auth/v1/user') return json(USER)
     if (url.pathname === '/auth/v1/logout') return route.fulfill({ status: 204, headers: cors })
     if (url.pathname === '/rest/v1/user_docs' && account) {
+      if (account.delay) await new Promise(r => setTimeout(r, account.delay))            // a slow network: lets a test edit while a sync is in flight
       if (account.down) return route.abort('failed')
       if (req.method() === 'GET') return json([...account.rows.values()])
       if (req.method() === 'POST') {
@@ -1433,12 +1456,12 @@ for (const [name, fn] of selected) {
   try { await fn(); console.log(`✓ ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`) }
   catch (e) {
     failed++; console.log(`✗ ${name}\n    ${String(e.message ?? e).split('\n').slice(0, 6).join('\n    ')}`)
-    const pg = opened.at(-1)   // failure evidence: screenshot + visible text
-    if (pg && !pg.isClosed()) {
+    for (const [i, pg] of opened.entries()) {   // failure evidence for every open page: screenshot + visible text
+      if (pg.isClosed()) continue
       mkdirSync(new URL('../test-results/', import.meta.url), { recursive: true })
-      const f = name.replace(/\W+/g, '-').slice(0, 50)
+      const f = name.replace(/\W+/g, '-').slice(0, 50) + (opened.length > 1 ? `-${i}` : '')
       await pg.screenshot({ path: new URL(`../test-results/${f}.png`, import.meta.url).pathname }).catch(() => {})
-      console.log('    page text:', JSON.stringify((await pg.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 1500)))
+      console.log(`    page ${i} text:`, JSON.stringify((await pg.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 1200)))
     }
   }
   opened.length = 0

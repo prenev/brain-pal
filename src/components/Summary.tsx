@@ -37,7 +37,7 @@ export default function Summary() {
       <div className="seg" role="tablist" aria-label="Summary range" style={{ marginBottom: 14 }}>
         {RANGES.map(x => <button key={x.id} role="tab" aria-selected={range === x.id} className={range === x.id ? 'on' : ''} onClick={() => { setRange(x.id); setMsg('') }}>{x.label}</button>)}
       </div>
-      {range !== 'day' && !pro ? <ProGate feature="summary" compact>{null}</ProGate> : <div className="card summary" aria-label={`${r.label} summary`}>
+      {range !== 'day' && !pro ? <ProGate feature="analytics" compact>{null}</ProGate> : <div className="card summary" aria-label={`${r.label} summary`}>
         <ul>{lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
         <button className="btn" onClick={share}><Share2 size={18} style={{ display: 'inline', verticalAlign: -3 }} /> Share</button>
         {msg && <p className="small" role="status" style={{ marginBottom: 0 }}>{msg}</p>}

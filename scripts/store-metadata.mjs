@@ -44,7 +44,7 @@ SLEEP (OPTIONAL)
 • Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Wobbi only reads sleep, only if you allow it, and it never leaves your device.
 
 BRAIN PAL PRO (OPTIONAL MONTHLY SUBSCRIPTION)
-• Unlock sync across devices, Focus guard, sleep insights, weekly and monthly summaries, proof of progress and more daily anchors.
+• Unlock advanced analytics: before-and-after proof of your progress, plus weekly and monthly summaries.
 • The SOS siren, breathing, crisis support, check-ins, journal, worry time, reminders and exporting your data are always free.
 • Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically each month unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings → your name → Subscriptions.
 • Terms of Service: https://prenev.github.io/brain-pal/terms.html · Privacy Policy: https://prenev.github.io/brain-pal/privacy.html
@@ -82,7 +82,7 @@ Where to find things:
 
 Health data: HealthKit is used only to (1) save breathing sessions as Mindful Minutes and (2) read sleep analysis if the user opts in. Health data is never uploaded or used for advertising. Privacy policy: ${SITE}/privacy.html
 
-In-app purchase: Wobbi Pro, an auto-renewing monthly subscription (product com.brainpal.app.pro.monthly, StoreKit 2). To test: Settings of the sandbox account, then More → Wobbi Pro (or tap any locked feature, e.g. Home → Focus guard). Restore purchases is on the paywall. The SOS siren, breathing, crisis support and data export are never locked.
+In-app purchase: Wobbi Pro, an auto-renewing monthly subscription (product com.brainpal.app.pro.monthly, StoreKit 2). To test: Settings of the sandbox account, then More → Wobbi Pro (or tap a locked feature: Home → Progress or Summary → Week). Restore purchases is on the paywall. The SOS siren, breathing, crisis support and data export are never locked.
 
 Native features beyond a web view: native tab bar, Taptic Engine haptics, on-device scheduled notifications, HealthKit, Sign in with Apple, system web authentication.
 

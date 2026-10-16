@@ -109,7 +109,7 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 3. Insights: emotion trends, before/after intensity
 
 ## Offline first, optional Pro
-No account is needed: the app opens straight on Home and everything works on the device. **Wobbi Pro** (optional monthly subscription on iPhone) adds sync across devices, Focus guard, sleep insights, weekly/monthly summaries, proof of progress and more anchors. The SOS siren, breathing, crisis support, check-ins, journal and data export are always free. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
+No account is needed: the app opens straight on Home and everything works on the device. **Wobbi Pro** (optional monthly subscription on iPhone) currently unlocks **advanced analytics** only (before-and-after proof of progress and weekly/monthly summaries); everything else, including Focus guard, sleep, sync and all five anchors, is free for now. The SOS siren, breathing, crisis support, check-ins, journal and data export are always free. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
 
 ## Home & Wobbi's tips
 Home's tools strip scrolls sideways: **Thoughts** (all thought entries, month by month, with search) leads, then Journal, Worry time, Focus guard, Sleep, Progress, Summary and Coins. Each section opens with a one-line tip from Wobbi (dismiss it once and it stays away; More → "Show Wobbi's tips again"). The app starts on a splash with Wobbi instead of a bare loading text.
