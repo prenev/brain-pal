@@ -30,8 +30,8 @@ assert.doesNotMatch(all, /\b(best|#1|number one|free forever|top rated)\b/i, 'no
 assert.doesNotMatch(LISTING.keywords, /brain|pal/i, 'the app name is already indexed')
 assert.match(LISTING.description, /not medical care/i); assert.match(LISTING.description, /emergency number/i)
 for (const u of [LISTING.support_url, LISTING.privacy_url, LISTING.marketing_url]) assert.match(u, /^https:\/\//)
-assert.match(LISTING.privacy_url, /\/privacy\.html$/); assert.match(LISTING.support_url, /\/support\.html$/)
-assert.match(LISTING.description, /renews automatically/i); assert.match(LISTING.description, /terms\.html/); assert.match(LISTING.description, /privacy\.html/); assert.match(LISTING.description, /always free/i)
+assert.match(LISTING.privacy_url, /\/privacy\/$/); assert.match(LISTING.support_url, /\/support\/$/)
+assert.match(LISTING.description, /renews automatically/i); assert.match(LISTING.description, /wobbi\.app\/terms\//); assert.match(LISTING.description, /wobbi\.app\/privacy\//); assert.match(LISTING.description, /always free/i)
 assert.match(REVIEW.notes, /Restore purchases/); assert.match(REVIEW.notes, /com\.brainpal\.app\.pro\.monthly/)
 assert.match(REVIEW.notes, /no account is needed/i); assert.match(REVIEW.notes, /Delete account/)
 
