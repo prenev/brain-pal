@@ -108,3 +108,11 @@ export const saveFx = (f: FxSettings) => write(K_FX, f)
 const K_COIN_HW = 'bp.coins.hw'
 export const loadCoinHighWater = (): number => { const v = read<unknown>(K_COIN_HW, 0); return typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0 }
 export const saveCoinHighWater = (n: number) => write(K_COIN_HW, n)
+
+// Focus: pomodoro settings + to-dos (device-only for now)
+import { normalizePomo, normalizeTodos, type PomoSettings, type Todo } from './pomodoro.ts'
+const K_POMO = 'bp.pomo', K_TODOS = 'bp.todos'
+export const loadPomo = (): PomoSettings => normalizePomo(read<unknown>(K_POMO, null))
+export const savePomo = (s: PomoSettings) => write(K_POMO, s)
+export const loadTodos = (): Todo[] => normalizeTodos(read<unknown>(K_TODOS, []))
+export const saveTodos = (t: Todo[]) => write(K_TODOS, t)

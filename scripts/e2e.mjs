@@ -504,19 +504,19 @@ const todayEntry = () => rec('today', 0)
 const middayToday = () => { const d = new Date(); d.setHours(12, 0, 0, 0); return d }
 test('small step: pick a step from your worry plan, settle, focus (pause is free), finish — it counts everywhere', async () => {
   const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.worries': [plan('w1', 'Email the landlord'), plan('w2', 'Book the dentist', 1)], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }, { time: middayToday() }); const p = s.page
-    await p.waitForSelector('.highlights >> text=A small step is waiting: Email the landlord')   // newest plan first
-  await p.click('.hl'); await p.waitForSelector('[aria-label="One small step"]')
+    await p.waitForSelector('.worry-tile >> text=A small step is waiting: Email the landlord')   // newest plan first
+  await p.click('.tile-step'); await p.waitForSelector('[aria-label="One small step"]')
   assert.equal(await p.locator('.step-choice').count(), 2); await p.click('.step-choice:has-text("Email the landlord")')
   await p.click('[role=radio]:has-text("5 min")'); await p.click('button:has-text("Start")')
   await p.waitForSelector('button:has-text("Skip — start now")'); await p.click('button:has-text("Skip — start now")')   // the minute of calm is optional
   const clock = p.locator('[role=timer]'); await clock.waitFor(); assert.match(await clock.innerText(), /0[45]:[0-5]\d/)
   await p.clock.fastForward('02:00'); await p.waitForFunction(() => /0[23]:[0-5]\d/.test(document.querySelector('[role=timer]').textContent))
-  await p.click('button:has-text("Pause")'); await p.waitForSelector('text=Paused — take as long as you need.')
+  await p.click('.overlay button:has-text("Pause")'); await p.waitForSelector('text=Paused — take as long as you need.')
   const frozen = await clock.innerText(); await p.clock.fastForward('30:00'); assert.equal(await clock.innerText(), frozen, 'a paused timer does not move, however long you wait')
   await p.click('button:has-text("Resume")'); await p.clock.fastForward('04:00')
   await p.waitForSelector('text=Done — nice.'); assert.match(await p.locator('[aria-label="One small step"] .card').innerText(), /“Email the landlord”/)
   await p.click('button:has-text("Close")')
-  await p.waitForSelector('.highlights >> text=Book the dentist'); assert.equal(await p.locator('.highlights >> text=Email the landlord').count(), 0, 'a finished step leaves the list')
+  await p.waitForSelector('.worry-tile >> text=Book the dentist'); assert.equal(await p.locator('.worry-tile >> text=Email the landlord').count(), 0, 'a finished step leaves the list')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Small steps: level 1"]')
   await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=/You finished 1 small step \\(\\d+ minutes? of focus\\)\\./')
   await done(s)
@@ -524,7 +524,7 @@ test('small step: pick a step from your worry plan, settle, focus (pause is free
 
 test('small step: stopping early is neutral and never counts as finished; your own step works', async () => {
   const s = await open({ 'bp.thoughts': [todayEntry()], 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9 } }); const p = s.page
-  assert.equal(await p.locator('.highlights >> text=small step').count(), 0, 'nothing is suggested without a plan')
+  assert.equal(await p.locator('.worry-tile >> text=small step').count(), 0, 'nothing is suggested without a plan')
   await fabMenu(p); await p.click('.sheet-item >> text=Start a small step'); await p.waitForSelector('.chip:has-text("Write one sentence")')
   assert.equal(await p.isDisabled('button:has-text("Start")'), true, 'needs a step first'); await p.fill('input[placeholder^="e.g. Open"]', 'Open the tax form'); await p.click('button:has-text("Start")')
   await p.click('button:has-text("Skip — start now")'); await p.waitForSelector('[role=timer]'); await p.waitForSelector('h1:has-text("Open the tax form")')
@@ -1025,21 +1025,24 @@ test('every interactive control has an accessible name', async () => {
   await done(s)
 })
 
-test('home: how-are-you-feeling is always first, three one-line tools, anchors, every entry of today, no + button, no title, coins in the app bar', async () => {
+test('home: layout is mood → anchors → Focus-guard tile → worry tile → Journal / Sleep / Focus → today’s entries; no + button, no title, coins in the app bar', async () => {
   const s = await open({ 'bp.thoughts': [rec('t1', 0, { thought: 'today thought' }), rec('t2', 0, { thought: 'second today' }), rec('t3', 3, { thought: 'older thought' })] }); const p = s.page
   await p.waitForSelector('.tools-row')
   assert.equal(await p.locator('.tab[aria-current=true]').innerText(), 'Home')
   assert.equal(await p.locator('.topbar .title').count(), 0, 'no "Home" title in the app bar')
   assert.equal(await p.locator('.fab').count(), 0, 'no + button on Home')
   assert.ok(await p.evaluate(() => document.querySelector('.topbar').nextElementSibling.matches('.today')), 'the mood card is first, even after logging today')
-  assert.deepEqual(await p.$$eval('.tool b', els => els.map(e => e.textContent)), ['Journal', 'Worry time', 'Focus guard'])
+  const order = await p.evaluate(() => [...document.querySelector('.app').children].map(e => e.className.split(' ').find(c => ['topbar', 'today', 'anchors', 'anchor-empty', 'guard-tile', 'worry-tile', 'tools-row', 'entry'].includes(c)) ?? e.className.split(' ')[0]).filter((c, i, a) => c !== a[i - 1]))
+  assert.deepEqual(order.map(c => (c === 'anchor-empty' ? 'anchors' : c === 'linkbtn' ? 'more-today' : c)), ['topbar', 'today', 'anchors', 'guard-tile', 'worry-tile', 'tools-row', 'entry', 'more-today'], JSON.stringify(order))
+  assert.deepEqual(await p.$$eval('.tool b', els => els.map(e => e.textContent)), ['Journal', 'Sleep', 'Focus'])
   assert.ok(await p.$$eval('.tool b', els => els.every(e => e.getBoundingClientRect().height < 24)), 'every tool label is a single line')
   assert.equal(await p.locator('.coin-pill').count(), 1); await p.click('.coin-pill'); await p.waitForSelector('.overlay .title >> text=Coins'); await p.click('[aria-label=Back]')
   assert.equal(await p.locator('.entry').count(), 2, 'Home lists every entry from today, not just the latest')
   assert.equal(await p.locator('text=rough patch').count(), 0, 'no rough-patch card')
   await p.click('.tool >> text=Journal'); await p.waitForSelector('[aria-label="New journal entry"]'); assert.equal(await p.locator('text=Write something').count(), 0, 'the Write button became the + button'); await p.click('[aria-label=Back]')
-  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('.overlay .title >> text=Focus guard'); await p.click('[aria-label=Back]')
-  await p.click('.tool >> text=Worry time'); await p.waitForSelector('.overlay >> text=Parked'); await p.click('[aria-label=Back]')
+  await p.click('.guard-tile'); await p.waitForSelector('.overlay .title >> text=Focus guard'); await p.click('[aria-label=Back]')
+  await p.click('.worry-tile'); await p.waitForSelector('.sheet textarea'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })         // nothing parked yet: the tile invites you to park one
+  await p.click('.tool >> text=Sleep'); await p.waitForSelector('.overlay .title >> text=Sleep'); await p.click('[aria-label=Back]')
   await p.click('.more-today'); await p.waitForFunction(() => document.querySelectorAll('.overlay .entry').length === 3); await p.click('[aria-label=Back]')    // "All entries"
   await tab(p, 'Calendar'); await p.click('.fab')
   const labels = await p.$$eval('.sheet .sheet-label', els => els.map(e => e.textContent))
@@ -1051,16 +1054,56 @@ test('home: how-are-you-feeling is always first, three one-line tools, anchors, 
   await done(s)
 })
 
-test('home: tapping a face opens the entry flow with that mood; "just save my mood" logs it; highlights show sleep, worries and a planned step', async () => {
+test('home: tapping a face opens the entry flow with that mood and "just save my mood" logs it; the worry tile shows what is parked; Sleep shows last night', async () => {
   const night = (asleepMin) => ({ date: new Date().toISOString().slice(0, 10), start: 0, end: 1, asleepMin, inBedMin: asleepMin + 20, awakeMin: 20, deepMin: 60, remMin: 80, coreMin: asleepMin - 140, unspecifiedMin: 0, efficiency: 90, source: 'manual', quality: null })
-  const s = await open({ 'bp.sleep.manual': [night(250)], 'bp.worries': [{ id: 'w1', createdAt: new Date().toISOString(), text: 'the deadline', status: 'open', action: null, reviewedAt: null }] }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.waitForSelector('.highlights')
-  const hl = await p.locator('.hl').allInnerTexts(); assert.match(hl[0], /Sleep was low last night: 4h 10m/); assert.match(hl[1], /1 parked worry is waiting/)
-  await p.click('.hl >> text=parked worry'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
+  const w = (id, text) => ({ id, createdAt: new Date().toISOString(), text, status: 'open', action: null, reviewedAt: null })
+  const s = await open({ 'bp.sleep.manual': [night(250)], 'bp.worries': [w('w1', 'the deadline'), w('w2', 'rent is due'), w('w3', 'my friend seems upset')] }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.waitForSelector('.worry-tile.has')
+  assert.match(await p.locator('.worry-tile').innerText(), /3 worries parked/); assert.match(await p.locator('.worry-tile').innerText(), /the deadline/); assert.match(await p.locator('.worry-tile').innerText(), /\+1 more/)
+  assert.match(await p.locator('.tool:has-text("Sleep") small').innerText(), /4h 10m/, 'last night under Sleep')
+  await p.click('.tile-main'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
   await p.click('[aria-label="Log mood: bad"]'); await p.waitForSelector('.wiz-body'); assert.match(await p.locator('.wiz-face').getAttribute('aria-label'), /Change mood/)
   await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
   assert.equal(await p.locator('.today').count(), 1, 'the mood card is still there after logging'); assert.equal(await p.locator('.entry').count(), 1)
   await reload(p); assert.equal(await p.locator('.entry').count(), 1)
+  await done(s)
+})
+
+test('home: the Focus-guard tile shows what is blocked (or invites you to add apps) and opens Focus guard', async () => {
+  const web = await open(null); await web.page.waitForSelector('.guard-tile.web'); assert.match(await web.page.locator('.guard-tile').innerText(), /iPhone app/); await done(web)
+  const none = await open(null, { native: true, reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 0 } } }); const n = none.page
+  await n.waitForSelector('.guard-tile.empty'); assert.match(await n.locator('.guard-tile').innerText(), /Add apps/); await n.click('.guard-tile'); await n.waitForSelector('.overlay .title >> text=Focus guard'); await done(none)
+  const on = await open({ 'bp.guard': { enabled: true, challenges: ['pushups'], unlockMinutes: 10, appCount: 3 } }, { native: true, reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 3, unlockedUntil: null } } }); const o = on.page
+  await o.waitForSelector('.guard-tile.locked'); assert.match(await o.locator('.guard-tile').innerText(), /3 apps blocked/); await done(on)
+  const open1 = await open({ 'bp.guard': { enabled: true, challenges: ['pushups'], unlockMinutes: 10, appCount: 1 } }, { native: true, reply: { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 1, unlockedUntil: Date.now() + 8 * 60_000 } } })
+  await open1.page.waitForSelector('.guard-tile.open'); assert.match(await open1.page.locator('.guard-tile').innerText(), /1 app open for [78] more min/); await done(open1)
+})
+
+test('Focus: pomodoro runs focus → short break (by itself), counts the block, long break after four; tasks come from the to-do list; the list persists', async () => {
+  const s = await open({ 'bp.levels.seen': { calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 } }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page      // (levels pre-seen: finishing blocks would otherwise open the level-up moment)
+  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo')
+  assert.equal(await p.locator('.pomo-ring b').innerText(), '25:00')
+  // to-dos: add, validate, pick, persist
+  await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("Write what you want to get done")')
+  await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Call the dentist'); await p.click('[aria-label="Add to-do"]')
+  await p.fill('[aria-label="New to-do"]', 'call the dentist'); await p.click('[aria-label="Add to-do"]'); await p.waitForSelector('[role=alert]:has-text("already on the list")')
+  assert.equal(await p.locator('.todos li').count(), 2)
+  await p.click('.todo-text >> text=Write the report'); await p.waitForSelector('.pomo-task >> text=Write the report')
+  await p.click('.pomo-ctl .btn.primary'); await p.waitForSelector('.pomo-ctl >> text=Pause')
+  await p.clock.fastForward(10 * 60_000); assert.match(await p.locator('.pomo-ring b').innerText(), /^1[45]:/, 'ten minutes in')
+  await p.click('.pomo-ctl .btn.primary'); await p.waitForSelector('.pomo-ctl >> text=Resume'); const frozen = await p.locator('.pomo-ring b').innerText(); await p.clock.fastForward(5 * 60_000); assert.equal(await p.locator('.pomo-ring b').innerText(), frozen, 'pausing freezes the clock')
+  await p.click('.pomo-ctl .btn.primary'); await p.clock.fastForward(16 * 60_000)
+  await p.waitForSelector('.pomo-ring span >> text=Short break'); assert.equal(await p.locator('.pomo-dots i.on').count(), 1); assert.match(await p.locator('.pomo-ring b').innerText(), /^0[45]:/, 'the break started by itself')
+  assert.match(await p.locator('.todo-text:has-text("Write the report")').innerText(), /1/, 'the block counts on its task')
+  await p.clock.fastForward(6 * 60_000); await p.waitForSelector('.pomo-ring span >> text=Focus')
+  for (let i = 0; i < 3; i++) { await p.clock.fastForward(26 * 60_000); if (i < 2) await p.clock.fastForward(6 * 60_000) }
+  await p.waitForSelector('.pomo-ring span >> text=Long break'); assert.equal(await p.locator('.pomo-dots i.on').count(), 4)
+  // finished blocks count as focus sessions everywhere (progress, coins)
+  assert.equal((await p.evaluate(() => JSON.parse(localStorage.getItem('bp.focus')).filter(f => f.completed && f.step.startsWith('Pomodoro')).length)), 4)
+  // checking a task off removes it from the timer; it all survives a reload
+  await p.click('[aria-label="Done: Write the report"]'); await p.waitForSelector('.todos li.done')
+  await reload(p); await p.click('.tool >> text=Focus'); assert.equal(await p.locator('.todos li').count(), 2); assert.equal(await p.locator('.todos li.done').count(), 1)
+  p.once('dialog', d => d.accept()); await p.click('[aria-label="Remove Call the dentist"]'); assert.equal(await p.locator('.todos li').count(), 1)
   await done(s)
 })
 
@@ -1360,7 +1403,7 @@ const lockOf = p => p.locator('.pro-lock')
 test('Pro (web): advanced analytics shows a friendly lock (everything else is free), the paywall says Pro lives in the iPhone app, and safety is never locked', async () => {
   const s = await open(null, { pro: false }); const p = s.page
   assert.equal(await p.locator('[aria-label^="Anxious right now"]').count(), 1, 'SOS is always there')
-  await p.click('.tool >> text=Focus guard'); await p.waitForSelector('text=Blocking apps is part of the iPhone app'); assert.equal(await p.locator('.pro-lock').count(), 0, 'Focus guard is free for now'); await p.click('[aria-label=Back]')
+  await p.click('.guard-tile'); await p.waitForSelector('text=Blocking apps is part of the iPhone app'); assert.equal(await p.locator('.pro-lock').count(), 0, 'Focus guard is free for now'); await p.click('[aria-label=Back]')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('.pro-lock'); assert.match(await lockOf(p).innerText(), /Advanced analytics/)
   await p.click('.pro-lock button:has-text("Unlock with Pro")'); await p.waitForSelector('[aria-label="Wobbi Pro"]')
   assert.match(await p.locator('[aria-label="Wobbi Pro"]').innerText(), /Pro is part of the iPhone app/); assert.equal(await p.locator('button:has-text("Subscribe"), button:has-text("Start free trial")').count(), 0, 'no purchase button on the web')

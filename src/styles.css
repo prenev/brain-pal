@@ -589,3 +589,44 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .stepper button { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; color: var(--accent); }
 .stepper button:disabled { color: #4b5d80; } .stepper b { text-align: center; font-variant-numeric: tabular-nums; }
 .anchors-streak { margin: 8px 0 0; text-align: center; }
+
+/* ---- Home tiles (Focus guard, worries) ---- */
+.home-tile { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px 16px; border-radius: 22px; margin-bottom: 14px; }
+.guard-tile { background: linear-gradient(135deg, rgba(74,168,255,.2), rgba(155,123,255,.16)); border-color: rgba(74,168,255,.5); }
+.guard-tile.locked { background: linear-gradient(135deg, rgba(53,208,127,.16), rgba(74,168,255,.14)); border-color: rgba(53,208,127,.5); }
+.guard-tile.open { background: linear-gradient(135deg, rgba(255,166,61,.18), rgba(74,168,255,.1)); border-color: rgba(255,166,61,.5); }
+.worry-tile { background: linear-gradient(135deg, rgba(155,123,255,.18), rgba(255,93,115,.08)); border-color: rgba(155,123,255,.45); }
+.worry-tile.has { flex-direction: column; align-items: stretch; gap: 10px; }
+.tile-main { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; }
+.tile-art { width: 58px; height: 58px; border-radius: 18px; flex: none; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.1); }
+.tile-body { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.tile-body b { font-size: 18px; letter-spacing: -.01em; }
+.tile-sub { color: #b8c4e0; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.tile-sub .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; background: var(--accent); box-shadow: 0 0 8px currentColor; } .dot.lock { color: var(--accent); } .dot.open { background: var(--orange, #ffa63d); color: var(--orange, #ffa63d); }
+.tile-cta { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 9px 13px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #04130a); font-weight: 900; font-size: 14px; border-bottom: 3px solid var(--accent-dark); }
+.tile-go { flex: none; color: var(--muted); }
+.tile-lines { display: grid; gap: 2px; } .tile-lines span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d3dcf2; font-weight: 700; font-size: 14px; } .tile-lines em { font-style: normal; color: var(--muted); font-size: 13px; font-weight: 800; }
+.tile-step { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); text-align: left; font-weight: 700; font-size: 14px; }
+.card.tool small { color: var(--muted); font-size: 11.5px; font-weight: 800; margin-top: -2px; }
+
+/* ---- Focus: pomodoro + to-do ---- */
+.pomo { --pc: var(--accent); text-align: center; }
+.pomo.short { --pc: var(--blue, #4aa8ff); } .pomo.long { --pc: #9b7bff; }
+.pomo .seg button { display: grid; gap: 1px; padding: 8px 4px; } .pomo .seg small { font-size: 12px; font-weight: 800; opacity: .75; }
+.pomo-ring { position: relative; width: 230px; height: 230px; margin: 18px auto 8px; }
+.pomo-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); } .pomo-ring circle { fill: none; stroke: var(--card2); stroke-width: 7; }
+.pomo-ring .fg { stroke: var(--pc); stroke-linecap: round; transition: stroke-dashoffset .3s linear, stroke .4s; }
+.pomo-ring > div { position: absolute; inset: 0; display: grid; place-content: center; gap: 2px; }
+.pomo-ring b { font-size: 52px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; } .pomo-ring span { color: var(--pc); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; }
+.pomo-task { margin: 4px 0 14px; min-height: 22px; } .pomo-task b { color: var(--text, #e8eefc); }
+.pomo-ctl { display: flex; gap: 10px; } .pomo-ctl .btn { display: grid; place-items: center; }
+.pomo-dots { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
+.pomo-dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--card2); border: 2px solid var(--edge); } .pomo-dots i.on { background: var(--accent); border-color: var(--accent); }
+.todos ul { list-style: none; margin: 10px 0 0; padding: 0; } .todos li { display: flex; align-items: center; gap: 8px; border-top: 2px solid var(--edge); }
+.todo-add { display: flex; gap: 8px; margin-top: 12px; } .todo-add .input { flex: 1; } .todo-add .btn { width: 52px; display: grid; place-items: center; padding: 0; }
+.tickbox-btn { padding: 12px 4px 12px 2px; } .todos .tickbox { width: 26px; height: 26px; border-width: 3px; }
+.todos li.done .tickbox { background: var(--accent); border-color: var(--accent); }
+.todo-text { flex: 1; min-width: 0; text-align: left; padding: 13px 0; font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; } .todo-text em { font-style: normal; color: var(--muted); font-size: 13px; }
+.todos li.done .todo-text { color: var(--muted); text-decoration: line-through; } .todos li.focus .todo-text { color: var(--accent); }
+.todos li.focus { background: linear-gradient(90deg, rgba(53,208,127,.1), transparent); border-radius: 12px; }
+.todo-empty { display: flex; align-items: center; gap: 10px; margin-top: 10px; }

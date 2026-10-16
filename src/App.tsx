@@ -27,6 +27,7 @@ import { unseenReleases } from './lib/whatsnew.ts'
 import { APP_VERSION } from './lib/appInfo.ts'
 import { PaywallProvider, usePaywallOpen } from './components/Pro'
 import Sleep from './components/Sleep'
+import FocusHub from './components/FocusHub'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
 import Wallet from './components/Wallet'
@@ -72,7 +73,7 @@ function Shell() {
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
   useEffect(() => { noteFirstSeen() }, [])
   const [tab, setTab] = useState<Tab>('entries')
-  const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | null>(null)   // full-screen pages opened from Home
+  const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
@@ -137,7 +138,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} />}
+        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onPark={() => setPark(true)} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -185,6 +186,7 @@ function Shell() {
       {screen === 'guard' && <Screen title="Focus guard" onClose={() => setScreen(null)}><Guard /></Screen>}
       {screen === 'journal' && <Screen title="Journal" onClose={() => setScreen(null)}><JournalList onOpen={e => setJournalOpen({ entry: e })} onWrite={() => setJournalOpen({})} /></Screen>}
       {(screen === 'thoughts' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
+      {screen === 'focus' && <Screen title="Focus" onClose={() => setScreen(null)}><FocusHub /></Screen>}
       {screen === 'sleep' && <Screen title="Sleep" onClose={() => setScreen(null)}><Sleep /></Screen>}
       {screen === 'progress' && <Screen title="Progress" onClose={() => setScreen(null)}><Progress /></Screen>}
       {screen === 'summary' && <Screen title="Summary" onClose={() => setScreen(null)}><Summary /></Screen>}

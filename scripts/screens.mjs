@@ -232,6 +232,17 @@ await session('http://localhost:4173', true, async (p, snap) => {   // not Pro: 
   await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('.pro-lock'); await snap('pro-locked'); await p.click('.pro-lock button'); await p.waitForSelector('[aria-label="Wobbi Pro"]'); await snap('paywall')
 }, { native: true, pro: false })
 
+await session('http://localhost:4173', true, async (p, snap) => {   // Home tiles on the iPhone app (Focus guard locked, worries parked) + the Focus hub
+  await p.evaluate(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4, unlockedUntil: null } }; localStorage.setItem('bp.guard', JSON.stringify({ enabled: true, challenges: ['pushups', 'breathe'], unlockMinutes: 10, appCount: 4 })) })
+  await p.reload(); await p.waitForSelector('.guard-tile.locked'); await snap('home-guard-locked')
+  await p.click('.tool >> text=Focus'); await p.waitForSelector('.pomo'); await snap('focus-hub')
+  await p.fill('[aria-label="New to-do"]', 'Write the report'); await p.click('[aria-label="Add to-do"]'); await p.fill('[aria-label="New to-do"]', 'Reply to Sam'); await p.click('[aria-label="Add to-do"]')
+  await p.click('.todo-text >> text=Write the report'); await p.click('.pomo-ctl .btn.primary'); await snap('focus-hub-running')
+}, { native: true })
+await session('http://localhost:4173', false, async (p, snap) => {   // empty states: Focus guard on the web, nothing parked
+  await snap('home-empty-tiles')
+})
+
 await local.close(); await cloud.close(); await browser.close()
 
 // contact sheet

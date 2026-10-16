@@ -2,30 +2,31 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Search, Siren } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import MoodCard from '../components/MoodCard'
-import Highlights from '../components/Highlights'
+import { GuardTile, WorryTile } from '../components/HomeTiles'
+import { fmtDuration } from '../lib/sleep.ts'
 import { AnchorCard, AnchorsManager } from '../components/Anchors'
 import { Screen, Sheet } from '../components/ui'
 import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
-import { loadGuard } from '../lib/extras'
 import { monthLabel } from '../components/ui'
 import EntryCard from '../components/EntryCard'
 import { PalEmpty, PalTip } from '../components/Pal'
 
 const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
-export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'guard' | 'sleep' | 'progress' | 'summary' | 'coins'
+export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'guard' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus'
 
-/** Home: how are you feeling (always first), today's highlights, three tools, anchors, and everything you logged today. */
-export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorry, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onStep: () => void }) {
-  const { thoughts, deleteThought, streak, coins } = useStore()
+/** Home, top to bottom: how you feel, today's anchors, the Focus-guard tile, the worry tile, Journal / Sleep / Focus, then everything logged today. */
+export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorry, onPark, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onPark: () => void; onStep: () => void }) {
+  const { thoughts, deleteThought, streak, coins, sleepNights } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
-  const tools: { id: HomeTool; emoji: string; label: string; badge?: string }[] = [
+  const night = sleepNights[0]?.date === todayKey ? sleepNights[0] : null
+  const tools: { id: HomeTool; emoji: string; label: string; sub?: string }[] = [
     { id: 'journal', emoji: 'notebook', label: 'Journal' },
-    { id: 'worry', emoji: 'worry', label: 'Worry time' },
-    { id: 'guard', emoji: 'shield', label: 'Focus guard', badge: loadGuard().enabled ? 'On' : undefined },
+    { id: 'sleep', emoji: 'sleep', label: 'Sleep', sub: night ? fmtDuration(night.asleepMin) : undefined },
+    { id: 'focus', emoji: 'rocket', label: 'Focus' },
   ]
 
   return (
@@ -40,15 +41,16 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       </div>
 
       <MoodCard onPick={onCompose} />
-      <Highlights onGo={g => (g === 'sleep' ? onTool('sleep') : g === 'worry' ? onWorry() : g === 'step' ? onStep() : onCompose(3))} />
+      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
+      <GuardTile onOpen={() => onTool('guard')} />
+      <WorryTile onWorry={onWorry} onPark={onPark} onStep={onStep} />
       <div className="tools-row" role="group" aria-label="Tools">
         {tools.map(t => (
           <button key={t.id} className="card tool" onClick={() => onTool(t.id)}>
-            <Emoji name={t.emoji} size={30} /><b>{t.label}</b>{t.badge && <i className="badge" aria-label={t.badge}>{t.badge}</i>}
+            <Emoji name={t.emoji} size={30} /><b>{t.label}</b>{t.sub && <small>{t.sub}</small>}
           </button>
         ))}
       </div>
-      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
       {today.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
       <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries</button>
 
