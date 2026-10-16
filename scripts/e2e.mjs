@@ -500,7 +500,7 @@ test('journal: crisis wording shows support, corrupted journal data is ignored, 
   await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'I want to end my life')
   await p.waitForSelector('[role=alert] >> text=You don’t have to do this alone')
   await p.fill('[aria-label="Journal entry"]', 'Feeling a bit better now.'); await saveJournalEntry(p)
-  await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')
+  await p.waitForSelector('.anchors-mini'); await p.click('.anchors-mini'); await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')   // the only anchor is done, so the card is collapsed until opened
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Journaling: level 1"]')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=You wrote 1 journal entry.')
   await done(s)
