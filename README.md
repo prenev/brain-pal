@@ -38,7 +38,8 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 
 ## Anxiety toolkit
 
-- **SOS ("Anxious right now?")** — on the Entries tab, Breathe tab and the + menu. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
+- **Home** — the first tab. A switch at the top: **Today** (mood faces, anchors, SOS, today’s entries), **Entries** (the month list with search) and **Journal**. The **+** button opens one menu: *Write* (thought entry, journal entry, park a worry), *Calm & focus* (anxious now, breathe, small step) and *entry for another day*. The + is hidden on More and Breathe.
+- **SOS ("Anxious right now?")** — on the Home tab, Breathe tab and the + menu. Rate anxiety 0–10 → pick slow breathing (in 4 / out 6), 5-4-3-2-1 grounding or box breathing → re-rate and see the change. Results feed *Stats → Anxiety Insights*.
 - **Thinking traps** — the thought record lists 10 common cognitive distortions with a "try asking" prompt for each, plus tap-to-add reframing questions.
 - **Insights** — likely triggers (tags), common traps, time of day, and how much the exercises help you.
 - **Support** — crisis lines and a gentle nudge after a rough patch. This is a self-help tool, not medical care.

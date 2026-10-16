@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, ArrowLeft, Pencil, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
+import { Plus, ArrowLeft, House, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Sheet } from './components/ui'
 import { StoreProvider, useStore } from './lib/store'
 import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
-import Entries from './pages/Entries'
+import Entries, { type HomeView } from './pages/Entries'
 import Stats from './pages/Stats'
 import CalendarPage from './pages/CalendarPage'
 import Breathe from './pages/Breathe'
@@ -21,9 +21,9 @@ import Onboarding from './components/Onboarding'
 import type { JournalEntry } from './lib/journal.ts'
 
 type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
-// Line icons for the tab bar; Entries keeps the Fluent nib as the app's signature.
-const TABS: { id: Tab; label: string; icon: LucideIcon | 'nib' }[] = [
-  { id: 'entries', label: 'Entries', icon: 'nib' },
+// One family of line icons for the tab bar, so every tab has the same weight and size.
+const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
+  { id: 'entries', label: 'Home', icon: House },
   { id: 'stats', label: 'Stats', icon: ChartColumn },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
   { id: 'breathe', label: 'Breathe', icon: Wind },
@@ -45,6 +45,7 @@ function Shell() {
     if (prev !== null && coins > prev) { setCoinToast(coins - prev); const t = setTimeout(() => setCoinToast(0), 2600); return () => clearTimeout(t) }
   }, [ready, coins])
   const [tab, setTab] = useState<Tab>('entries')
+  const [homeView, setHomeView] = useState<HomeView>('today')
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
@@ -63,7 +64,7 @@ function Shell() {
       const route = (e as CustomEvent<string>).detail
       if (route === 'breathe') setTab('breathe')
       else if (route === 'journal') setJournalOpen({})
-      else if (route === 'checkin' || route === 'anchors') setTab('entries')
+      else if (route === 'checkin' || route === 'anchors') { setHomeView('today'); setTab('entries') }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
@@ -95,7 +96,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries view={homeView} setView={setHomeView} onJournal={e => setJournalOpen({ entry: e })} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -106,11 +107,11 @@ function Shell() {
         <nav className="tabbar" aria-label="Main">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} className={`tab ${tab === id ? 'on' : ''}`} aria-current={tab === id} onClick={() => { setMoreView(null); setTab(id) }}>
-              {Icon === 'nib' ? <Emoji name="nib" size={26} style={{ filter: 'drop-shadow(0 0 1.5px rgba(255,255,255,.55))' }} /> : <Icon size={24} strokeWidth={2.2} />}{label}
+              <Icon size={24} strokeWidth={2.2} />{label}
             </button>
           ))}
         </nav>
-        <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={3} /></button>
+        {tab !== 'more' && tab !== 'breathe' && <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={3} /></button>}
       </div>
 
       {menu && (
@@ -123,20 +124,24 @@ function Shell() {
               start(new Date(y, m - 1, d, n.getHours(), n.getMinutes()))
             }} />
           </> : <>
-            <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
+            <div className="sheet-label first">Write</div>
+            <button className="sheet-item" onClick={() => start(new Date())}><span className="ic"><Emoji name="nib" size={30} /></span>Thought entry</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setHomeView('journal'); setTab('entries'); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Journal entry</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
-            <button className="sheet-item" onClick={() => { setMenu(false); setFocusOpen(true) }}><span className="ic"><Emoji name="rocket" size={30} /></span>Start a small step</button>
-            <button className="sheet-item" onClick={() => { setMenu(false); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Write in journal</button>
+            <div className="sheet-label">Calm &amp; focus</div>
+            <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setTab('breathe') }}><span className="ic"><Emoji name="wind" size={30} /></span>Start breathing</button>
-            <div className="sheet-label">Create Entry</div>
-            <button className="sheet-item" onClick={() => setOtherDay(true)}><span className="ic"><Emoji name="calendar" size={30} /></span>Other day</button>
-            <button className="sheet-item" onClick={() => start(yesterday())}><span className="ic"><Emoji name="past" size={30} /></span>Yesterday</button>
-            <button className="btn primary" onClick={() => start(new Date())}><Pencil size={20} style={{ display: 'inline', verticalAlign: -3 }} /> Today</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setFocusOpen(true) }}><span className="ic"><Emoji name="rocket" size={30} /></span>Start a small step</button>
+            <div className="sheet-label">Entry for another day</div>
+            <div className="row" style={{ gap: 10 }}>
+              <button className="btn" style={{ flex: 1 }} onClick={() => start(yesterday())}>Yesterday</button>
+              <button className="btn" style={{ flex: 1 }} onClick={() => setOtherDay(true)}>Other day</button>
+            </div>
           </>}
         </Sheet>
       )}
       {sos && <Sos onStep={() => setFocusOpen(true)} onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
-      {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setHomeView('entries'); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
       {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}

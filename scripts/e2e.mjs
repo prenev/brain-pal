@@ -67,7 +67,7 @@ const idbKeys = p => p.evaluate(() => new Promise(res => { const r = indexedDB.o
 const reload = async p => { await p.reload(); await p.waitForSelector('.topbar') }
 
 async function newEntry(p, { mood = 3, emotion, thought } = {}) {
-  await p.click('.fab'); await p.click('.sheet .btn.primary >> text=Today')
+  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry')
   await p.click(`.faces button >> nth=${5 - mood}`)
   if (emotion) await p.click(`.ig >> text=${emotion}`)
   if (thought) await p.fill('textarea[placeholder="What went through your mind?"]', thought)
@@ -77,7 +77,7 @@ async function connectAi(p) {
   await tab(p, 'More'); await p.click('.li >> text=AI helper')
   await p.click('[role=switch]'); await p.fill('input[type=password]', 'TEST-KEY')
   await p.click('text=Save & test'); await p.waitForSelector('text=/Connected — using/')
-  await p.click('[aria-label=Back]'); await tab(p, 'Entries')
+  await p.click('[aria-label=Back]'); await tab(p, 'Home')
 }
 async function record(p, secs = 1.6) {
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio')
@@ -89,7 +89,7 @@ const test = (name, fn) => tests.push([name, fn])
 
 test('every screen renders without errors', async () => {
   const s = await open()
-  for (const t of ['Entries', 'Stats', 'Calendar', 'Breathe', 'More']) { await tab(s.page, t); await s.page.waitForTimeout(150) }
+  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) { await tab(s.page, t); await s.page.waitForTimeout(150) }
   for (const row of ['Worry time', 'AI helper', 'Photo Gallery', 'Reminders', 'Get support', 'Apple Health']) {
     await tab(s.page, 'More')
     if (row === 'Worry time') { await s.page.click('.li >> text=Worry time'); await s.page.waitForSelector('text=Parked'); await s.page.click('[aria-label=Back]'); continue }
@@ -98,20 +98,22 @@ test('every screen renders without errors', async () => {
   await done(s)
 })
 
-test('tab bar: every icon is visible whether selected or not; Entries uses the Fluent nib', async () => {
+test('tab bar: every icon is visible whether selected or not; all five share one line-icon style and size', async () => {
   const s = await open(); const p = s.page
-  for (const sel of ['Entries', 'More']) {
-    await tab(p, sel)
+  for (const sel of ['Home', 'More']) {
+    await tab(p, sel); await p.waitForTimeout(400)      // let the colour transition between selected / not selected finish
     const icons = await p.$$eval('.tab', tabs => tabs.map(t => {
       const svg = t.querySelector('svg'), r = svg.getBoundingClientRect(), [cr, cg, cb] = getComputedStyle(t).color.match(/\d+/g).map(Number)
-      return { label: t.textContent, on: t.classList.contains('on'), w: r.width, light: (cr + cg + cb) / 3, fluent: svg.getAttribute('viewBox') === '0 0 32 32' }
+      return { label: t.textContent, on: t.classList.contains('on'), w: +svg.getAttribute('width'), light: (cr + cg + cb) / 3, fluent: svg.getAttribute('viewBox') === '0 0 32 32' }
     }))
     assert.equal(icons.length, 5)
     for (const i of icons) {
       assert.ok(i.w >= 20, `${i.label} icon is rendered`)
-      if (!i.fluent) assert.ok(i.light > 150 || i.on, `${i.label} icon is light enough to see on the dark bar when not selected`)
+      assert.ok(i.light > 150 || i.on, `${i.label} icon is light enough to see on the dark bar when not selected`)
     }
-    assert.deepEqual(icons.filter(i => i.fluent).map(i => i.label), ['Entries'])
+    assert.equal(icons.filter(i => i.fluent).length, 0, 'no odd-one-out icon')
+    assert.equal(new Set(icons.map(i => Math.round(i.w))).size, 1, 'every tab icon is the same size')
+    assert.deepEqual(icons.map(i => i.label), ['Home', 'Stats', 'Calendar', 'Breathe', 'More'])
   }
   await done(s)
 })
@@ -135,7 +137,7 @@ test('create, persist, expand and delete an entry', async () => {
   await reload(s.page)
   await s.page.click('.entry'); await s.page.waitForSelector('text=Thinking traps'); assert.ok(await s.page.locator('.entry .chip >> text=catastrophizing').count())
   s.page.once('dialog', d => d.accept()); await s.page.click('text=Delete entry')
-  await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.waitForSelector('text=No entries this month')
+  await s.page.click('.home-seg >> text=Entries'); await s.page.waitForSelector('text=No entries this month'); await reload(s.page); await s.page.click('.home-seg >> text=Entries'); await s.page.waitForSelector('text=No entries this month')
   await done(s)
 })
 
@@ -306,7 +308,7 @@ test('Today card follows your anchors and parked worries', async () => {
 test('emotion and tag lists start short, learn what you use, and "More" / search reveal the rest', async () => {
   const mk = (i, emo) => ({ id: 'e' + i, createdAt: new Date(Date.now() - i * 864e5).toISOString(), mood: 3, situation: '', thought: 'x', emotions: [{ name: emo, intensity: 50 }], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: ['money'], distortions: [], photos: [] })
   const s = await open({ 'bp.thoughts': [mk(1, 'bored'), mk(2, 'bored'), mk(3, 'bored')] }); const p = s.page
-  await p.click('.fab'); await p.click('.sheet .btn.primary >> text=Today'); await p.click('.faces button >> nth=2')
+  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=2')
   const emo = p.locator('.card:has(h3:has-text("Emotions")) .ig'), tags = p.locator('.card:has(h3:has-text("Tags")) .ig')
   await p.waitForSelector('.card:has(h3:has-text("Emotions")) .ig'); assert.equal(await emo.count(), 6)
   assert.equal(await emo.first().innerText().then(t => t.trim().toLowerCase()), 'bored', 'your most-used emotion leads')
@@ -394,7 +396,7 @@ test('Summary: plain-language day / week / month recap you can share', async () 
 })
 
 
-const openJournal = async p => { await p.click('.fab'); await p.click('.sheet-item >> text=Write in journal'); await p.waitForSelector('[aria-label="Journal entry"]') }
+const openJournal = async p => { await p.click('.fab'); await p.click('.sheet-item >> text=Journal entry'); await p.waitForSelector('[aria-label="Journal entry"]') }
 const saveJournalEntry = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate >> text=Saved to your journal'); await p.click('.celebrate .btn'); await p.waitForSelector('.topbar') }
 
 test('journal: write, list, search, filter, edit, delete — and it persists', async () => {
@@ -453,7 +455,7 @@ test('journal: crisis wording shows support, corrupted journal data is ignored, 
   await openJournal(p); await p.fill('[aria-label="Journal entry"]', 'I want to end my life')
   await p.waitForSelector('[role=alert] >> text=You don’t have to do this alone')
   await p.fill('[aria-label="Journal entry"]', 'Feeling a bit better now.'); await saveJournalEntry(p)
-  await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')
+  await p.click('.home-seg >> text=Today'); await p.waitForSelector('[role=checkbox][aria-label="Write one line"][aria-checked="true"]')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('[aria-label="Journaling: level 1"]')
   await tab(p, 'Stats'); await p.click('[role=tab]:has-text("Summary")'); await p.waitForSelector('text=You wrote 1 journal entry.')
   await done(s)
@@ -603,7 +605,7 @@ test('coins: a rest day covers a missed day so your streak keeps going (bought i
   await p.selectOption('[aria-label="Day to cover"]', { label: 'Yesterday' }); await p.click('.shop-item:has-text("Rest day") button.primary')
   await p.waitForSelector('text=Rest day added'); await p.waitForSelector('[aria-label="25 coins"]')       // -30, and +10 for the 3-day streak it creates
   await p.waitForSelector('.shop-item:has-text("Rest day") >> text=You need 5 more coins.'); assert.equal(await p.locator('.shop-item:has-text("Rest day") button.primary').isDisabled(), true, 'not enough coins left for another')
-  await tab(p, 'Entries'); await p.waitForSelector('[aria-label="4 day streak"]')
+  await tab(p, 'Home'); await p.waitForSelector('[aria-label="4 day streak"]')
   await reload(p); await p.waitForSelector('[aria-label="4 day streak"]')
   await done(s)
 })
@@ -615,7 +617,7 @@ test('coins: a treat you name yourself, and a quiet +N when you earn', async () 
   await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.shop-item:has-text("My treat") button.primary')
   await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="30 coins"]')
   assert.equal(await p.locator('.coin-toast').count(), 0, 'spending never pops a toast')
-  await tab(p, 'Entries'); await p.click('[aria-label="Log mood: good"]'); await p.waitForSelector('.coin-toast >> text=+5 coins')
+  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.waitForSelector('.coin-toast >> text=+5 coins')
   await done(s)
   const f = await open(seenAll); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
 })
@@ -632,7 +634,7 @@ test('cloud sync: what you write on one device appears on another; edits and del
   const account = fakeAccount()
   const A = await openCloud({ signedIn: true, account, seed: seenAll }); const a = A.page
   await openJournal(a); await a.fill('[aria-label=Title]', 'From my phone'); await a.fill('[aria-label="Journal entry"]', 'Written on device A'); await saveJournalEntry(a)
-  await a.click('text=Choose your daily anchors'); await a.click('.sheet .chip >> text=Drink water'); await a.click('button:has-text("Done")')
+  await a.click('.home-seg >> text=Today'); await a.click('text=Choose your daily anchors'); await a.click('.sheet .chip >> text=Drink water'); await a.click('button:has-text("Done")')
   await until(() => hasDoc(account, 'journal') && hasDoc(account, 'anchor'))
   assert.ok(account.rows.has('rituals|all'), 'settings sync too')
   for (const r of account.rows.values()) assert.equal(r.deleted, r.data === null, 'the shape the real table accepts')
@@ -640,7 +642,7 @@ test('cloud sync: what you write on one device appears on another; edits and del
   const B = await openCloud({ signedIn: true, account, seed: seenAll }); const b = B.page      // a second device, empty
   await tab(b, 'More'); await b.waitForSelector('.li:has-text("Journal") >> text=1')
   await b.click('.li >> text=Journal'); await b.waitForSelector('.jentry:has-text("Written on device A")'); await b.click('[aria-label=Back]')
-  await tab(b, 'Entries'); await b.waitForSelector('[role=checkbox][aria-label="Drink water"]')
+  await tab(b, 'Home'); await b.waitForSelector('[role=checkbox][aria-label="Drink water"]')
 
   await openJournalList(a); await a.click('.jentry'); await a.fill('[aria-label="Journal entry"]', 'Edited on device A'); await a.click('button:has-text("Save")')
   await until(() => bodyOf(account, 'journal') === 'Edited on device A')
@@ -737,8 +739,8 @@ test('tap targets: every control is big enough to hit (>= 24 px, primary control
     const min = primary ? 44 : 24, w = Math.round(r.width), h = Math.round(r.height)
     return (el.matches('[role=switch]') ? h < 28 : (primary ? h < min : Math.min(w, h) < min)) || (!el.matches('[role=switch], input, textarea, select, .chip, .linkbtn') && Math.max(w, h) < 24) ? `${label}: ${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]} "${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24)}" ${w}x${h}` : null
   }).filter(Boolean), label))
-  await scan('Entries'); for (const t of ['Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(120); await scan(t) }
-  await p.click('.fab'); await p.waitForSelector('.sheet'); await scan('menu'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await scan('Home'); for (const t of ['Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(120); await scan(t) }
+  await tab(p, 'Home'); await p.click('.fab'); await p.waitForSelector('.sheet'); await scan('menu'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
   await newEntry(p, { mood: 3 }); await scan('editor')
   if (small.length) console.log('    too small:\n      ' + [...new Set(small)].join('\n      '))
   assert.deepEqual([...new Set(small)], [], 'controls that are too small to tap comfortably')
@@ -785,7 +787,7 @@ test('iPhone app mode: boots without a service worker, styles the status bar, ne
   assert.equal((await p.evaluate(() => navigator.serviceWorker.getRegistrations())).length, 0, 'no service worker inside the app')
   await p.waitForFunction(() => window.__native.some(c => c.plugin === 'StatusBar' && c.method === 'setStyle'))
   assert.equal((await calls(p, 'StatusBar', 'setStyle'))[0].options.style, 'DARK')
-  for (const t of ['Entries', 'Stats', 'Calendar', 'Breathe', 'More']) await tab(p, t)
+  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) await tab(p, t)
   await done(s)
 })
 
@@ -889,10 +891,10 @@ test('iPhone app: tapping a reminder opens the matching tool; unknown targets ar
   const s = await open(null, { native: true }); const p = s.page
   const fire = route => p.evaluate(r => window.__fire('LocalNotifications', 'localNotificationActionPerformed', { notification: { extra: { route: r } } }), route)
   await fire('breathe'); await p.waitForSelector('.tab[aria-current=true]:has-text("Breathe")')
-  await fire('checkin'); await p.waitForSelector('.tab[aria-current=true]:has-text("Entries")')
+  await fire('checkin'); await p.waitForSelector('.tab[aria-current=true]:has-text("Home")')
   await fire('journal'); await p.waitForSelector('[aria-label="Journal entry"]'); await p.click('[aria-label=Back]')
   await fire('https://evil.example'); await fire('<script>'); await p.waitForTimeout(300)
-  assert.equal(await p.locator('[aria-label="Journal entry"]').count(), 0); assert.equal(await p.locator('.tab[aria-current=true]:has-text("Entries")').count(), 1, 'unknown routes do nothing')
+  assert.equal(await p.locator('[aria-label="Journal entry"]').count(), 0); assert.equal(await p.locator('.tab[aria-current=true]:has-text("Home")').count(), 1, 'unknown routes do nothing')
   await done(s)
 })
 
@@ -929,9 +931,46 @@ test('every interactive control has an accessible name', async () => {
     const n = el.getAttribute('aria-label') || el.innerText || el.title || el.labels?.[0]?.innerText || el.placeholder || ''
     return !n.trim()
   }).map(el => `${l}: ${el.outerHTML.slice(0, 90)}`), label)))
-  for (const t of ['Entries', 'Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(100); await scan(t) }
-  await newEntry(p, { mood: 3 }); await scan('editor')
+  for (const t of ['Home', 'Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(100); await scan(t) }
+  await tab(p, 'Home'); await newEntry(p, { mood: 3 }); await scan('editor')
   assert.deepEqual(bad, [], 'controls without an accessible name')
+  await done(s)
+})
+
+test('home: Today / Entries / Journal switch at the top, and the + menu groups what you can add', async () => {
+  const s = await open({ 'bp.thoughts': [rec('t1', 0, { thought: 'today thought' }), rec('t2', 3, { thought: 'older thought' })] }); const p = s.page
+  await p.waitForSelector('.home-seg')
+  assert.equal(await p.locator('.tab[aria-current=true]').innerText(), 'Home', 'the first tab is called Home')
+  assert.equal(await p.locator('.home-seg button[aria-pressed=true]').innerText(), 'Today')
+  assert.equal(await p.locator('.entry').count(), 1, 'Today only shows today’s entries')
+  await p.click('.home-seg >> text=Entries'); assert.equal(await p.locator('.entry').count(), 2, 'Entries shows the whole month')
+  assert.equal(await p.locator('[aria-label="Log mood: good"]').count(), 0, 'the mood picker belongs to Today, not the list')
+  await p.click('.home-seg >> text=Journal'); await p.waitForSelector('text=Write something')
+  assert.equal(await p.locator('.entry').count(), 0)
+  await p.click('.fab')
+  const labels = await p.$$eval('.sheet .sheet-label', els => els.map(e => e.textContent))
+  assert.deepEqual(labels, ['Write', 'Calm & focus', 'Entry for another day'])
+  const items = await p.$$eval('.sheet .sheet-item', els => els.map(e => e.textContent))
+  assert.deepEqual(items, ['Thought entry', 'Journal entry', 'Park a worry', 'I’m anxious right now', 'Start breathing', 'Start a small step'])
+  await p.click('.sheet-item >> text=Journal entry'); await p.waitForSelector('[aria-label="Journal entry"]')
+  await p.fill('[aria-label="Journal entry"]', 'from the menu'); await saveJournalEntry(p)
+  await p.waitForSelector('.jentry >> text=from the menu')
+  await tab(p, 'More'); assert.equal(await p.locator('.fab').count(), 0, 'no + button on More (it sat on top of the settings)')
+  await tab(p, 'Calendar'); assert.equal(await p.locator('.fab').count(), 1)
+  await done(s)
+})
+
+test('layout: calendar days stay in a straight grid with mood faces, and reminder times fit inside their card', async () => {
+  const s = await open({ 'bp.thoughts': [rec('c1', 1), rec('c2', 0, { mood: 2 })] }, { native: true }); const p = s.page
+  await tab(p, 'Calendar'); await p.waitForSelector('.cal .cell')
+  const geo = await p.$$eval('.cal .cell', cells => cells.map(c => { const r = c.getBoundingClientRect(), b = c.querySelector('.bub').getBoundingClientRect(); return { top: Math.round(r.top), w: Math.round(b.width), h: Math.round(b.height) } }))
+  const rows = new Map(); geo.forEach(g => rows.set(g.top, (rows.get(g.top) ?? 0) + 1))
+  assert.ok([...rows.values()].every(n => n === 7), `every row has exactly 7 aligned days (rows: ${[...rows.values()]})`)
+  assert.equal(new Set(geo.map(g => g.w)).size, 1, 'a day with a mood face (and today) is the same size as an empty day'); assert.equal(new Set(geo.map(g => g.h)).size, 1)
+  await tab(p, 'More'); await p.click('.li >> text=Reminders'); await p.waitForSelector('[role=switch][aria-label="Morning breathe"]')
+  await p.click('[role=switch][aria-label="Morning breathe"]'); await p.waitForSelector('input[type=time]')
+  const fit = await p.$eval('input[type=time]', el => { const i = el.getBoundingClientRect(), c = el.closest('.card').getBoundingClientRect(); return { inside: i.right <= c.right + 0.5 && i.left >= c.left - 0.5, i: [i.left, i.right], c: [c.left, c.right] } })
+  assert.ok(fit.inside, `time field stays inside its card ${JSON.stringify(fit)}`)
   await done(s)
 })
 

@@ -76,6 +76,9 @@ async function session(base, seed, fn, { native = false, onboarding = false } = 
 
 await session('http://localhost:4173', true, async (p, snap) => {
   await snap('entries')
+  await p.click('.home-seg >> text=Today'); await snap('home-today')
+  await p.click('.home-seg >> text=Journal'); await snap('home-journal')
+  await p.click('.home-seg >> text=Entries')
   await p.click('[aria-label=Search]'); await p.fill('.searchbar input', 'work'); await snap('entries-search'); await p.click('[aria-label=Search]')
   await p.click('.entry >> nth=0'); await snap('entry-expanded')
   await p.click('.tab >> text=Stats'); await p.evaluate(() => window.scrollTo(0, 0)); await snap('stats')
@@ -110,7 +113,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.li >> text=Get support'); await snap('support'); await p.click('[aria-label=Back]')
   await p.click('.fab'); await snap('new-entry-menu')
   await p.click('.sheet-item >> text=Park a worry'); await p.fill('textarea', 'What if I forget my notes?'); await snap('park-worry'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
-  await p.click('.fab'); await p.click('.btn.primary >> text=Today'); await snap('mood-picker')
+  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await snap('mood-picker')
   await p.click('.datelink'); await snap('mood-picker-date'); await p.click('.datelink')
   await p.click('.faces button >> nth=3'); await p.click('.ig >> text=anxious'); await p.click('.ig >> text=stressed'); await snap('editor-emotions')
   await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await p.locator('text=Thinking traps').scrollIntoViewIfNeeded(); await p.click('.chip >> text=catastrophizing'); await p.click('.chip >> text=mind reading'); await snap('editor-thinking-traps')
@@ -125,7 +128,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
 await session('http://localhost:4173', true, async (p, snap) => {   // AI helper (Gemini mocked)
   await p.click('.tab >> text=More'); await p.click('.li >> text=AI helper'); await p.click('[role=switch]'); await p.fill('input[type=password]', 'demo-key')
   await p.click('text=Save & test'); await p.waitForSelector('text=/Connected/'); await snap('ai-connected'); await p.click('[aria-label=Back]')
-  await p.click('.tab >> text=Entries'); await p.click('.fab'); await p.click('.sheet .btn.primary >> text=Today'); await p.click('.faces button >> nth=3')
+  await p.click('.tab >> text=Home'); await p.click('.fab'); await p.click('.sheet .sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=3')
   await p.locator('h3:has-text("Voice memo")').scrollIntoViewIfNeeded(); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio')
   await p.click('button:has-text("Transcribe")'); await p.waitForFunction(() => [...document.querySelectorAll('textarea')].some(x => x.value.startsWith('I am really worried'))); await snap('ai-transcribed')
   await p.click('button:has-text("Fill my thought record")'); await p.waitForSelector('text=Filled in from your memo'); await snap('ai-filled')
@@ -155,7 +158,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // progress 
 })
 
 await session('http://localhost:4173', true, async (p, snap) => {   // journal
-  await p.click('.fab'); await p.click('.sheet-item >> text=Write in journal'); await p.waitForSelector('[aria-label="Journal entry"]'); await snap('journal-editor-empty')
+  await p.click('.fab'); await p.click('.sheet-item >> text=Journal entry'); await p.waitForSelector('[aria-label="Journal entry"]'); await snap('journal-editor-empty')
   await p.click('text=Need a place to start?'); await p.fill('[aria-label="Title"]', 'A slower morning')
   await p.fill('[aria-label="Journal entry"]', 'Woke up before the alarm. Made tea, sat by the window and just watched the street for ten minutes. Nothing special, but my shoulders dropped for the first time this week.')
   await p.click('[aria-label="Mood: good"]'); await p.click('.chip:has-text("health")'); await snap('journal-editor')
