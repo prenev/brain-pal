@@ -67,7 +67,7 @@ export default function Login() {
     <div className="center-screen">
       <form className="card" style={{ width: 'min(420px, 100%)', padding: 26 }} onSubmit={submit}>
         <div style={{ display: 'grid', placeItems: 'center', marginBottom: 10 }}><Pal pose="wave" motion="wave" size={110} /></div>
-        <h1 style={{ margin: '0 0 4px', textAlign: 'center', fontSize: 28 }}>Brain Pal</h1>
+        <h1 style={{ margin: '0 0 4px', textAlign: 'center', fontSize: 28 }}>Wobbi</h1>
         <p className="muted" style={{ margin: '0 0 20px', textAlign: 'center' }}>{TITLES[mode]}</p>
 
         {mode === 'signup' && <label className="field"><span>Name</span>
@@ -100,7 +100,7 @@ export default function Login() {
           {mode !== 'signin' && mode !== 'recovery' && <a href="#" onClick={e => { e.preventDefault(); go('signin') }} style={{ color: 'var(--accent)' }}>Back to sign in</a>}
         </div>
         {mode !== 'recovery' && <>
-          <p className="muted small" style={{ textAlign: 'center', margin: '16px 0 6px' }}>You don’t need an account. Brain Pal works fully on this device; an account only syncs it between your devices.</p>
+          <p className="muted small" style={{ textAlign: 'center', margin: '16px 0 6px' }}>You don’t need an account. Wobbi works fully on this device; an account only syncs it between your devices.</p>
           <button type="button" className="btn block" onClick={closeLogin}>Not now — keep using it offline</button>
         </>}
       </form>

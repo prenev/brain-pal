@@ -91,3 +91,9 @@ export const loadGuard = (): GuardConfig => normalizeGuard(read<unknown>(K_GUARD
 export const saveGuard = (g: GuardConfig) => write(K_GUARD, g)
 export const loadGuardEvents = (): GuardEvent[] => normalizeEvents(read<unknown>(K_GUARD_EVENTS, []))
 export const saveGuardEvents = (e: GuardEvent[]) => write(K_GUARD_EVENTS, e)
+
+// Rating prompt bookkeeping (device-only)
+import type { ReviewState } from './review.ts'
+const K_REVIEW = 'bp.review'
+export const loadReview = (): ReviewState => { const r = read<Partial<ReviewState> | null>(K_REVIEW, null); return { firstSeen: r?.firstSeen ?? null, lastAsked: r?.lastAsked ?? null, asks: r?.asks ?? 0 } }
+export const saveReview = (r: ReviewState) => write(K_REVIEW, r)

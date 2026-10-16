@@ -30,6 +30,8 @@ import Sleep from './components/Sleep'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
 import Wallet from './components/Wallet'
+import { levelCard } from './lib/share.ts'
+import { askForReviewIfHappy, noteFirstSeen } from './lib/reviewAsk'
 import type { JournalEntry } from './lib/journal.ts'
 
 type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
@@ -64,6 +66,7 @@ function Shell() {
   }, [ready, coins])
   // Its own timer: a later change in coins (spending, undoing an entry) must never cancel the hide.
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
+  useEffect(() => { noteFirstSeen() }, [])
   const [tab, setTab] = useState<Tab>('entries')
   const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
@@ -82,12 +85,16 @@ function Shell() {
   useEffect(() => {
     const go = (e: Event) => {
       const route = (e as CustomEvent<string>).detail
-      if (route === 'breathe') setTab('breathe')
+      if (route === 'sos') { setScreen(null); setSos(true) }
+      else if (route === 'breathe') setTab('breathe')
       else if (route === 'journal') setJournalOpen({})
       else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
+
+  // A celebration is a happy moment: the only time we may ask for a rating (rarely; see lib/review.ts).
+  useEffect(() => { if (cel) askForReviewIfHappy() }, [cel])
 
   // Quiet level-up moment: remembers the levels you've already seen, celebrates one rise at a time, never on first run.
   useEffect(() => {
@@ -103,12 +110,14 @@ function Shell() {
     if (quiet.length || up) save({ ...seen, ...Object.fromEntries(quiet.map(u => [u.skill, u.to])), ...(up ? { [up.skill]: up.to } : {}) })
     if (!up) return
     const def = SKILLS.find(s => s.id === up.skill)!
-    setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count) })
+    setCel({ emoji: def.emoji, title: `${def.name} → Level ${up.to}`, sub: evidenceLine(up.skill, up.count), card: levelCard(def.name, up.to) })
   }, [ready, loginOpen, recovery, cel, levels])
 
   // iPhone app: the real UIKit tab bar. Hidden whenever a sheet / full-screen flow is open or before the app proper shows.
   const paywallOpen = usePaywallOpen()
-  const overlayOpen = paywallOpen || !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const [immersive, setImmersive] = useState(false)
+  useEffect(() => { const f = (e: Event) => setImmersive(!!(e as CustomEvent<boolean>).detail); window.addEventListener('bp:immersive', f); return () => window.removeEventListener('bp:immersive', f) }, [])
+  const overlayOpen = paywallOpen || immersive || !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
   const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || loginOpen || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
   if (!ready) return <Splash />

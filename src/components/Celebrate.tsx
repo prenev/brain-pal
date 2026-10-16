@@ -1,15 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { ShareCardSheet } from './ShareSheet'
+import { streakCard, type ShareCard } from '../lib/share.ts'
 import { Emoji } from '../lib/emoji'
 import Pal from './Pal'
 import { burst } from '../lib/confetti'
 import { hapticSuccess } from '../lib/haptics'
 import { useStore } from '../lib/store'
 
-export interface Celebration { emoji: string; title: string; sub: string }
+export interface Celebration { emoji: string; title: string; sub: string; card?: ShareCard }
 
 /** "Lesson complete"-style reward screen: big emoji, streak, one chunky button. */
 export default function Celebrate({ c, onClose }: { c: Celebration; onClose: () => void }) {
   const { streak } = useStore()
+  const [sharing, setSharing] = useState(false)
+  const card = c.card ?? (streak.current >= 3 ? streakCard(streak.current) : null)
   useEffect(() => { burst(); hapticSuccess() }, [])
   return (
     <div className="overlay celebrate" role="dialog" aria-modal aria-label={c.title}>
@@ -27,7 +31,8 @@ export default function Celebrate({ c, onClose }: { c: Celebration; onClose: () 
             </div>
           </div>
         </div>
-        <div className="cel-foot"><button className="btn primary block" onClick={onClose}>Continue</button></div>
+        <div className="cel-foot">{card && <button className="btn block" style={{ marginBottom: 10 }} onClick={() => setSharing(true)}>Share</button>}<button className="btn primary block" onClick={onClose}>Continue</button></div>
+      {sharing && card && <ShareCardSheet card={card} onClose={() => setSharing(false)} />}
       </div>
     </div>
   )

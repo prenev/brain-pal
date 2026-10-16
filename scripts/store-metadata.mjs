@@ -3,11 +3,11 @@
 export const SITE = 'https://prenev.github.io/brain-pal'
 
 export const LISTING = {
-  name: 'Brain Pal: Mood & Calm',                       // ≤ 30
+  name: 'Wobbi: Mood & Calm',                       // ≤ 30
   subtitle: 'Diary, journal & calm toolkit',            // ≤ 30
   promotional_text: 'One-tap mood check-ins, a private journal, slow breathing and a gentle plan for worries. No ads, no tracking, works without an account.', // ≤ 170, can be changed any time without review
   keywords: 'mood,journal,diary,anxiety,breathing,cbt,worry,gratitude,habits,sleep,calm,thoughts,selfcare,mindful', // ≤ 100 incl. commas, never the app name or other brands
-  description: `Brain Pal is a friendly, private mood diary and calming toolkit. Check in with how you feel in one tap, write things down, breathe, and take one small step at a time.
+  description: `Wobbi is a friendly, private mood diary and calming toolkit. Check in with how you feel in one tap, write things down, breathe, and take one small step at a time.
 
 CHECK IN IN ONE TAP
 • Tap a face to log your mood — add details only when you want to.
@@ -41,10 +41,10 @@ REMINDERS THAT RESPECT YOU
 • Breathe at 07:00 and again at night, or whenever suits you. Reminders skip themselves once you have already done the thing.
 
 SLEEP (OPTIONAL)
-• Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Brain Pal only reads sleep, only if you allow it, and it never leaves your device.
+• Connect Apple Health to see last night’s sleep, from Apple Watch or iPhone, next to your mood. Wobbi only reads sleep, only if you allow it, and it never leaves your device.
 
 BRAIN PAL PRO (OPTIONAL MONTHLY SUBSCRIPTION)
-• Unlock sync across devices, Focus guard, sleep insights, weekly and monthly summaries, proof of progress and more daily anchors.
+• Unlock advanced analytics: before-and-after proof of your progress, plus weekly and monthly summaries.
 • The SOS siren, breathing, crisis support, check-ins, journal, worry time, reminders and exporting your data are always free.
 • Payment is charged to your Apple ID at confirmation of purchase. The subscription renews automatically each month unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings → your name → Subscriptions.
 • Terms of Service: https://prenev.github.io/brain-pal/terms.html · Privacy Policy: https://prenev.github.io/brain-pal/privacy.html
@@ -54,8 +54,8 @@ PRIVATE BY DESIGN
 • No ads. No analytics. No tracking. We never sell your data.
 • AI helpers are off by default and use your own key. Anything that looks like self-harm is never sent to an AI; support options are shown instead.
 
-Brain Pal is a self-help tool and is not medical care. It does not diagnose or treat any condition. If you might be in danger, call your local emergency number.`,   // ≤ 4000
-  release_notes: 'Welcome to Brain Pal 1.0 — mood check-ins, journal, breathing, worry time, daily anchors, sleep and progress, all private on your device.', // ≤ 4000
+Wobbi is a self-help tool and is not medical care. It does not diagnose or treat any condition. If you might be in danger, call your local emergency number.`,   // ≤ 4000
+  release_notes: 'Welcome to Wobbi 1.0 — mood check-ins, journal, breathing, worry time, daily anchors, sleep and progress, all private on your device.', // ≤ 4000
   support_url: `${SITE}/support.html`,
   marketing_url: SITE,
   privacy_url: `${SITE}/privacy.html`,
@@ -73,7 +73,7 @@ export const APP = {
 export const REVIEW = {
   first_name: '', last_name: '', email_address: '', phone_number: '',   // OWNER (Apple may contact you during review)
   demo_user: '', demo_password: '',                                    // none needed: the app works without an account
-  notes: `Brain Pal is a self-help mood diary and calming toolkit. No account is needed: everything works on the device, so there are no demo credentials.
+  notes: `Wobbi is a self-help mood diary and calming toolkit. No account is needed: everything works on the device, so there are no demo credentials.
 
 Where to find things:
 • Home tab → tap a face to log a mood; the + button opens the menu (thought entry, journal entry, park a worry, breathing, "anxious right now").
@@ -82,7 +82,7 @@ Where to find things:
 
 Health data: HealthKit is used only to (1) save breathing sessions as Mindful Minutes and (2) read sleep analysis if the user opts in. Health data is never uploaded or used for advertising. Privacy policy: ${SITE}/privacy.html
 
-In-app purchase: Brain Pal Pro, an auto-renewing monthly subscription (product com.brainpal.app.pro.monthly, StoreKit 2). To test: Settings of the sandbox account, then More → Brain Pal Pro (or tap any locked feature, e.g. Home → Focus guard). Restore purchases is on the paywall. The SOS siren, breathing, crisis support and data export are never locked.
+In-app purchase: Wobbi Pro, an auto-renewing monthly subscription (product com.brainpal.app.pro.monthly, StoreKit 2). To test: Settings of the sandbox account, then More → Wobbi Pro (or tap a locked feature: Home → Progress or Summary → Week). Restore purchases is on the paywall. The SOS siren, breathing, crisis support and data export are never locked.
 
 Native features beyond a web view: native tab bar, Taptic Engine haptics, on-device scheduled notifications, HealthKit, Sign in with Apple, system web authentication.
 

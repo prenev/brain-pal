@@ -16,6 +16,7 @@ import { JournalList } from '../components/Journal'
 import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
+import { Stickers, inviteFriend } from '../components/ShareSheet'
 import { useOpenPaywall } from '../components/Pro'
 import { usePro } from '../lib/proStore'
 import { resetTips } from '../components/Pal'
@@ -39,7 +40,7 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
 
 export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
   const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard'>(initial)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'legal' | 'guard' | 'stickers'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -48,6 +49,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
   const [showNews, setShowNews] = useState(false)
   useEffect(() => { if (mode !== 'cloud' && view === 'account') setView(null) }, [mode, view])     // signed out: leave the account page
   const { pro } = usePro()
+  const [inviteMsg, setInviteMsg] = useState('')
   const openPaywall = useOpenPaywall()
   const photos = thoughts.flatMap(t => t.photos)
   const meta = session?.user.user_metadata?.name as string | undefined
@@ -81,7 +83,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       const r = await enablePush(hour)
       setRem(getReminder())
       setMsg(r === 'ok' ? `Reminder set for ${fmtHour(hour)}.` : r === 'unsupported'
-        ? (isIOS() && !isStandalone() ? 'On iPhone: tap Share → Add to Home Screen, then open Brain Pal from there.' : 'This browser does not support notifications.')
+        ? (isIOS() && !isStandalone() ? 'On iPhone: tap Share → Add to Home Screen, then open Wobbi from there.' : 'This browser does not support notifications.')
         : STATUS[r])
     } catch (e: any) { setMsg(e.message) }
   }
@@ -106,7 +108,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Coins', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -127,6 +129,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'support' && <Support />}
       {view === 'legal' && <Legal />}
       {view === 'guard' && <Guard />}
+      {view === 'stickers' && <Stickers />}
       {view === 'ai' && <AiSettings />}
       {view === 'account' && <>
         <div className="card" aria-label="Sync status">
@@ -156,14 +159,14 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       </>}
       {view === 'health' && (isNative() ? <div className="card">
         <p style={{ marginTop: 0 }}>Save your breathing and grounding sessions to Apple Health as <b>Mindful Minutes</b>.</p>
-        <p className="muted small">Sessions are only ever <i>written</i>. The one thing Brain Pal can <i>read</i> is your sleep, and only if you turn that on under Stats → Sleep.</p>
+        <p className="muted small">Sessions are only ever <i>written</i>. The one thing Wobbi can <i>read</i> is your sleep, and only if you turn that on under Stats → Sleep.</p>
         <Toggle label="Save sessions to Apple Health" on={health} onChange={async on => {
           setHealthMsg('')
           if (!on) { disconnectHealth(); setHealth(false); return }
           try {
             const r = await connectHealth()
             setHealth(r === 'ok')
-            setHealthMsg(r === 'ok' ? 'Connected. New sessions will appear in Health → Mindfulness.' : r === 'denied' ? 'Permission was declined. You can allow it in Settings → Health → Data Access → Brain Pal.' : 'Apple Health isn’t available on this device.')
+            setHealthMsg(r === 'ok' ? 'Connected. New sessions will appear in Health → Mindfulness.' : r === 'denied' ? 'Permission was declined. You can allow it in Settings → Health → Data Access → Wobbi.' : 'Apple Health isn’t available on this device.')
           } catch (e: any) { setHealthMsg(e?.message ?? 'Could not connect.') }
         }} />
         {health && <button className="btn" style={{ marginTop: 10 }} onClick={async () => { const n = await syncAll(sessions); setHealthMsg(n ? `Saved ${n} past session${n === 1 ? '' : 's'} to Apple Health.` : 'Everything is already saved.') }}>Save past sessions</button>}
@@ -185,9 +188,9 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       </div>
 
       <div className="list">
-        <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Brain Pal Pro" value={pro ? 'Active' : 'Upgrade'} onClick={() => openPaywall()} />
+        <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Wobbi Pro" value={pro ? 'Active' : 'Upgrade'} onClick={() => openPaywall()} />
         {mode === 'cloud' && <Row icon={<Emoji name="sunglasses" size={30} />} color="var(--card2)" label="Account" value={name} onClick={() => setView('account')} />}
-        {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value={pro ? 'Off' : 'Pro'} onClick={() => (pro ? openLogin() : openPaywall('sync'))} />}
+        {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value="Off" onClick={() => openLogin()} />}
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins" value={String(coins)} onClick={() => setView('coins')} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />
@@ -202,12 +205,15 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       <div className="list">
         <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Storage" value={mode === 'cloud' ? 'Synced' : 'This device'} />
         <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Export data" onClick={exportJson} />
+        <Row icon={<Emoji name="heartfire" size={30} />} color="var(--card2)" label="Invite a friend" onClick={async () => setInviteMsg((await inviteFriend()) === 'saved' ? 'Invite text copied.' : '')} />
+        <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="Wobbi stickers" onClick={() => setView('stickers')} />
         <Row icon={<Emoji name="tada" size={30} />} color="var(--card2)" label="What’s new" onClick={() => setShowNews(true)} />
         <Row icon={<Emoji name="sparkles" size={30} />} color="var(--card2)" label="About & legal" onClick={() => setView('legal')} />
         {mode === 'cloud' && <Row icon={<LogOut size={24} />} color="var(--card2)" label="Sign out" onClick={doSignOut} />}
       </div>
-      <p className="muted small" style={{ textAlign: 'center' }}><button className="linkbtn" onClick={() => { resetTips(); resetCoach(); setTipsBack(true) }} disabled={tipsBack}>{tipsBack ? 'Pal’s tips are back' : 'Show Pal’s tips again'}</button></p>
-      <p className="muted small" style={{ textAlign: 'center' }}>Brain Pal {APP_VERSION} · {thoughts.length} entries · {sessions.length} breathing sessions</p>
+      {inviteMsg && <p className="muted small" role="status" style={{ textAlign: 'center' }}>{inviteMsg}</p>}
+      <p className="muted small" style={{ textAlign: 'center' }}><button className="linkbtn" onClick={() => { resetTips(); resetCoach(); setTipsBack(true) }} disabled={tipsBack}>{tipsBack ? 'Wobbi’s tips are back' : 'Show Wobbi’s tips again'}</button></p>
+      <p className="muted small" style={{ textAlign: 'center' }}>Wobbi {APP_VERSION} · {thoughts.length} entries · {sessions.length} breathing sessions</p>
     </>
   )
 }

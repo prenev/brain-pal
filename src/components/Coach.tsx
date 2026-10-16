@@ -13,14 +13,14 @@ const STEPS: { pose: PoseName; text: string }[] = [
   { pose: 'think', text: 'Tap + whenever you want to write, park a worry or breathe. The red siren up top is for when anxiety spikes.' },
 ]
 
-/** Pal in the bottom-right corner explains the app in three bubbles, once. */
+/** Wobbi in the bottom-right corner explains the app in three bubbles, once. */
 export default function Coach({ onDone }: { onDone: () => void }) {
   const [i, setI] = useState(0)
   const last = i === STEPS.length - 1
   const finish = () => { try { localStorage.setItem(KEY, '1') } catch { /* ignore */ } onDone() }
   const step = STEPS[i]
   return (
-    <div className="coach" role="dialog" aria-label="Tips from Pal">
+    <div className="coach" role="dialog" aria-label="Tips from Wobbi">
       <div className="bubble">
         <span aria-live="polite">{step.text}</span>
         <div className="row">

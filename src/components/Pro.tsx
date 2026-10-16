@@ -5,7 +5,7 @@ import { Emoji } from '../lib/emoji'
 import { burst } from '../lib/confetti'
 import { isIOSApp } from '../lib/native'
 import { ALWAYS_FREE, DISCLOSURE, featureInfo, PRO_FEATURES, priceLine, type ProFeature } from '../lib/pro.ts'
-import { buyPro, loadProduct, refreshPro, restorePro, usePro, type BuyResult } from '../lib/proStore'
+import { buyPro, loadProduct, redeemCode, refreshPro, restorePro, usePro, type BuyResult } from '../lib/proStore'
 import { SITE_URL } from '../lib/legal.ts'
 
 const Ctx = createContext<{ open: (f?: ProFeature) => void; isOpen: boolean }>({ open: () => {}, isOpen: false })
@@ -60,10 +60,10 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
   const link = (path: string) => `${SITE_URL}/${path}`
 
   return (
-    <div className="overlay paywall" role="dialog" aria-modal aria-label="Brain Pal Pro"><div className="inner">
+    <div className="overlay paywall" role="dialog" aria-modal aria-label="Wobbi Pro"><div className="inner">
       <div className="topbar" style={{ background: 'none' }}>
         <span style={{ width: 50 }} />
-        <span className="title">Brain Pal Pro</span>
+        <span className="title">Wobbi Pro</span>
         <button className="glass round" aria-label="Close" onClick={onClose}><X size={24} /></button>
       </div>
 
@@ -76,7 +76,7 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
         <div style={{ textAlign: 'center' }}>
           <Pal pose="love" size={130} />
           <h1 style={{ fontSize: 28, margin: '6px 0 4px' }}>{feature ? featureInfo(feature).title : 'Go further with Pro'}</h1>
-          <p className="muted" style={{ margin: 0 }}>{feature ? featureInfo(feature).blurb : 'Support Brain Pal and unlock everything below.'}</p>
+          <p className="muted" style={{ margin: 0 }}>{feature ? featureInfo(feature).blurb : 'Support Wobbi and unlock everything below.'}</p>
         </div>
         <div className="card" style={{ marginTop: 14 }} aria-label="What Pro includes">
           {PRO_FEATURES.map(f => <div key={f.id} className={`pro-row ${f.id === feature ? 'on' : ''}`}><Emoji name={f.emoji} size={26} /><span><b>{f.title}</b><span className="muted small" style={{ display: 'block' }}>{f.blurb}</span></span></div>)}
@@ -91,7 +91,7 @@ function Paywall({ feature, onClose }: { feature?: ProFeature; onClose: () => vo
           <p style={{ textAlign: 'center', fontWeight: 800, margin: '8px 0 0' }}>{priceLine(product)}</p>
           <p className="small" role="status" style={{ textAlign: 'center', minHeight: 20 }}>{msg}</p>
           <div className="row" style={{ justifyContent: 'center', gap: 16 }}>
-            <button className="linkbtn" disabled={busy} onClick={restore}>Restore purchases</button>
+            <button className="linkbtn" disabled={busy} onClick={restore}>Restore purchases</button> · <button className="linkbtn" onClick={() => void redeemCode()}>Have a code?</button>
           </div>
           <p className="muted small" style={{ lineHeight: 1.45 }}>{DISCLOSURE(product?.price ?? null)}</p>
           <p className="small" style={{ textAlign: 'center' }}>

@@ -6,7 +6,7 @@ const KEY = 'bp.seenVersion'
 export const seenVersion = (): string | null => { try { return localStorage.getItem(KEY) } catch { return null } }
 export const markSeen = (v: string) => { try { localStorage.setItem(KEY, v) } catch { /* ignore */ } }
 
-/** After an update: Pal tells you what's new, once. Also reachable any time from More → What's new. */
+/** After an update: Wobbi tells you what's new, once. Also reachable any time from More → What's new. */
 export default function WhatsNew({ releases, onClose }: { releases: Release[]; onClose: () => void }) {
   return (
     <div className="overlay" role="dialog" aria-modal aria-label="What’s new"><div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>

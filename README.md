@@ -1,4 +1,4 @@
-# Brain Pal
+# Wobbi
 
 Mood diary with CBT thought records: pick a mood, tag emotions, log the situation → thought → internal/external behaviour → alternate thought, plus box breathing with haptic pulses, streaks, calendar, stats, tags and photos. Dark, glass-style UI laid out like a classic mood-tracker app. An installable PWA: runs in any browser, and on iPhone via **Share → Add to Home Screen**.
 
@@ -109,13 +109,13 @@ CI (`.github/workflows/ci.yml`) runs type-check, unit tests, build and e2e on ev
 3. Insights: emotion trends, before/after intensity
 
 ## Offline first, optional Pro
-No account is needed: the app opens straight on Home and everything works on the device. **Brain Pal Pro** (optional monthly subscription on iPhone) adds sync across devices, Focus guard, sleep insights, weekly/monthly summaries, proof of progress and more anchors. The SOS siren, breathing, crisis support, check-ins, journal and data export are always free. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
+No account is needed: the app opens straight on Home and everything works on the device. **Wobbi Pro** (optional monthly subscription on iPhone) currently unlocks **advanced analytics** only (before-and-after proof of progress and weekly/monthly summaries); everything else, including Focus guard, sleep, sync and all five anchors, is free for now. The SOS siren, breathing, crisis support, check-ins, journal and data export are always free. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
 
-## Home & Pal's tips
-Home's tools strip scrolls sideways: **Thoughts** (all thought entries, month by month, with search) leads, then Journal, Worry time, Focus guard, Sleep, Progress, Summary and Coins. Each section opens with a one-line tip from Pal (dismiss it once and it stays away; More → "Show Pal's tips again"). The app starts on a splash with Pal instead of a bare loading text.
+## Home & Wobbi's tips
+Home's tools strip scrolls sideways: **Thoughts** (all thought entries, month by month, with search) leads, then Journal, Worry time, Focus guard, Sleep, Progress, Summary and Coins. Each section opens with a one-line tip from Wobbi (dismiss it once and it stays away; More → "Show Wobbi's tips again"). The app starts on a splash with Wobbi instead of a bare loading text.
 
-## Pal & Focus guard
-**Pal** is the mascot (poses and animation strips in `assets/`, `npm run sprites`). On first run Pal walks you through the app. **Focus guard** (iPhone, More → Focus guard): choose apps that stay paused until you do push-ups, squats, a plank, a walk, a minute of breathing or write a line; reps are honour-system. Needs iOS Screen Time + Apple's Family Controls entitlement: see [`docs/SCREENTIME.md`](docs/SCREENTIME.md).
+## Wobbi & Focus guard
+**Wobbi** is the mascot (poses and animation strips in `assets/`, `npm run sprites`). On first run Wobbi walks you through the app. **Focus guard** (iPhone, More → Focus guard): choose apps that stay paused until you do push-ups, squats, a plank, a walk, a minute of breathing or write a line; reps are honour-system. Needs iOS Screen Time + Apple's Family Controls entitlement: see [`docs/SCREENTIME.md`](docs/SCREENTIME.md).
 
 ## Publishing to the App Store
 Everything needed is prepared: icon, screenshots, listing text, privacy policy/terms/support pages, privacy manifest and release automation. Start with [`docs/APPSTORE.md`](docs/APPSTORE.md) and run `npm run store:check` to see what only you can fill in.

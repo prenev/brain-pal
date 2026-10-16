@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Lock, LockOpen, X } from 'lucide-react'
 import Pal, { PalSays } from './Pal'
-import { ProGate } from './Pro'
 import BreathRunner from './BreathRunner'
 import { Toggle } from './ui'
 import { burst } from '../lib/confetti'
@@ -9,6 +8,8 @@ import { chime, haptic, hapticSuccess } from '../lib/haptics'
 import { useStore } from '../lib/store'
 import { guardClear, guardLock, guardPickApps, guardRequestAuth, guardStatus, guardSupported, guardUnlock, type GuardStatus } from '../lib/guardNative'
 import { loadGuard, loadGuardEvents, saveGuard, saveGuardEvents } from '../lib/extras'
+import { ShareCardSheet } from './ShareSheet'
+import { canShareGuard, guardCard, guardTotals } from '../lib/share.ts'
 import { addRep, canEnable, CHALLENGES, challengeOf, DEFAULT_GUARD, isUnlocked, minutesLeft, MIN_REP_GAP_MS, newReps, repsDone, UNLOCK_OPTIONS, weekStats, type Challenge, type ChallengeId, type GuardConfig, type GuardEvent } from '../lib/guard.ts'
 import type { BreathPattern } from '../lib/types'
 
@@ -34,7 +35,7 @@ export function useGuardRelock() {
 }
 
 /** More → Focus guard: setup, status, and the way to earn time. */
-export default function Guard() { return <ProGate feature="guard"><GuardSetup /></ProGate> }
+export default function Guard() { return <GuardSetup /> }
 
 function GuardSetup() {
   const { config, update, events, record } = useGuardState()
@@ -51,6 +52,8 @@ function GuardSetup() {
   const now = Date.now()
   const unlocked = isUnlocked(until, now)
   const week = useMemo(() => weekStats(events, new Date()), [events])
+  const totals = useMemo(() => guardTotals(events), [events])
+  const [sharing, setSharing] = useState(false)
   const ready = native && !!status?.available
 
   async function allow() { setMsg(''); const r = await guardRequestAuth(); setMsg(r.authorized ? '' : r.error ? `Screen Time access wasn’t granted: ${r.error}` : 'Screen Time access wasn’t granted.'); refresh() }
@@ -128,6 +131,11 @@ function GuardSetup() {
       </>}
 
       {msg && <p className="small" role="alert" style={{ color: 'var(--danger)' }}>{msg}</p>}
+      {canShareGuard(totals) && <div className="card row spread" aria-label="Brain rot beaten">
+        <div><b>Brain rot, beaten</b><div className="muted small">{totals.reps ? `${totals.reps} reps` : `${totals.challenges} ${totals.challenges === 1 ? 'challenge' : 'challenges'}`} done before opening your apps{totals.minutes ? ` · ${totals.minutes} min earned` : ''}</div></div>
+        <button className="btn" onClick={() => setSharing(true)}>Share</button>
+      </div>}
+      {sharing && <ShareCardSheet card={guardCard(totals)} onClose={() => setSharing(false)} />}
       {week.challenges > 0 && <p className="muted small" style={{ textAlign: 'center' }}>This week: {week.challenges} {week.challenges === 1 ? 'activity' : 'activities'}{week.reps ? ` · ${week.reps} reps` : ''}</p>}
       <p className="muted small" style={{ textAlign: 'center' }}>Reps are on the honour system, so only do what feels safe for you. You can always switch the guard off.</p>
 

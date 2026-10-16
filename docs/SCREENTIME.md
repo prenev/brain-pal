@@ -1,6 +1,6 @@
 # Focus guard (anti brain-rot) — how it works and what you must do
 
-**What it is:** in the iPhone app, *More → Focus guard*. You pick the apps that eat your time (with Apple's own picker). They stay paused (iOS shows its "Screen Time" shield) until you earn a few minutes in Brain Pal with a quick activity: push-ups, squats, plank, a walk, a minute of slow breathing, or one honest journal line. You choose which activities count and how long you earn (5/10/15/30 min). Switch it off any time: it never traps you.
+**What it is:** in the iPhone app, *More → Focus guard*. You pick the apps that eat your time (with Apple's own picker). They stay paused (iOS shows its "Screen Time" shield) until you earn a few minutes in Wobbi with a quick activity: push-ups, squats, plank, a walk, a minute of slow breathing, or one honest journal line. You choose which activities count and how long you earn (5/10/15/30 min). Switch it off any time: it never traps you.
 
 **Built and tested here (web + simulated bridge):** the pure rules (`src/lib/guard.ts`, `scripts/test-guard.mjs`), the setup / status / challenge screens (`src/components/Guard.tsx`), the honour-system rep counter (taps faster than ~1/second don't count), persistence, practice mode on the web, and the full flow against the simulated iOS bridge (3 e2e tests).
 
@@ -13,8 +13,8 @@
 2. Test on a real iPhone (iOS 16+): allow → choose apps → switch on → open a chosen app (you should see the shield) → earn time → app opens → after the time, lock again.
 
 ## Known limits (be honest with yourself and with users)
-- **Re-locking while Brain Pal is closed.** Unlock removes the shield; re-lock happens when Brain Pal next comes to the front (and via "Lock again now"). For automatic re-lock you need a small **DeviceActivity Monitor extension** (a second Xcode target + an App Group to share the selection). Not included in v1: it can't be wired or tested without a Mac. Sketch: schedule `DeviceActivityCenter.startMonitoring` for the unlock window and, in `intervalDidEnd`, re-apply the shield from the shared selection.
-- **The shield screen** is iOS's default. Customising its text/button ("Open Brain Pal") needs Shield Configuration/Action extensions (same story).
+- **Re-locking while Wobbi is closed.** Unlock removes the shield; re-lock happens when Wobbi next comes to the front (and via "Lock again now"). For automatic re-lock you need a small **DeviceActivity Monitor extension** (a second Xcode target + an App Group to share the selection). Not included in v1: it can't be wired or tested without a Mac. Sketch: schedule `DeviceActivityCenter.startMonitoring` for the unlock window and, in `intervalDidEnd`, re-apply the shield from the shared selection.
+- **The shield screen** is iOS's default. Customising its text/button ("Open Wobbi") needs Shield Configuration/Action extensions (same story).
 - Reps are honour-system by design; we can't verify push-ups. We say so in the app.
 - iOS lets people turn off Screen Time restrictions in Settings. This is a nudge you set up for yourself, not parental control.
 - iPhone only. The web/PWA can't block anything (practice mode only).

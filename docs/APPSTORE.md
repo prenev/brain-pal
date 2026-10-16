@@ -1,4 +1,4 @@
-# Publishing Brain Pal to the App Store
+# Publishing Wobbi to the App Store
 
 Everything here was prepared and checked as far as a Linux sandbox allows. **What is verified, what is not, and what only you can do is spelled out in §1.** Apple renames menu items now and then; the *questions* stay the same.
 
@@ -39,14 +39,14 @@ Everything here was prepared and checked as far as a Linux sandbox allows. **Wha
 1. `src/lib/legal.ts` → `OWNER`: `developerName`, `contactEmail`, `governingLaw` (e.g. "the laws of England and Wales").
 2. `scripts/store-metadata.mjs` → `APP.copyright` (e.g. `2026 Jane Doe`) and `REVIEW` (your name, e-mail, phone — Apple may call you).
 3. `npm run site && npm run store:meta && npm test`, commit, push.
-4. **Trademark / name check** (15 min, do not skip): search "Brain Pal" in the App Store, Google Play, [USPTO](https://tmsearch.uspto.gov), [EUIPO](https://euipo.europa.eu/eSearch/) and [WIPO Global Brand DB](https://branddb.wipo.int). If another mental-health/health app uses the same or a confusingly similar name, change it **now** (name lives in `scripts/store-metadata.mjs`, `Info.plist` `CFBundleDisplayName`, `src/lib/legal.ts`). Apple also rejects a name already taken by another app.
+4. **Trademark / name check** (15 min, do not skip): search "Wobbi" in the App Store, Google Play, [USPTO](https://tmsearch.uspto.gov), [EUIPO](https://euipo.europa.eu/eSearch/) and [WIPO Global Brand DB](https://branddb.wipo.int). If another mental-health/health app uses the same or a confusingly similar name, change it **now** (name lives in `scripts/store-metadata.mjs`, `Info.plist` `CFBundleDisplayName`, `src/lib/legal.ts`). Apple also rejects a name already taken by another app.
 
 ### Step 2 — Put the legal pages online (5 min)
 GitHub repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**. Then merge to `main` (or run the *Legal site (GitHub Pages)* workflow). Pages go live at **https://prenev.github.io/brain-pal/** with `privacy.html`, `terms.html`, `support.html`, `licenses.html`. Check with `npm run store:check -- --online`.
 *(If the repo is private, Pages needs a paid GitHub plan; otherwise host the `site/` folder anywhere (Netlify, Cloudflare Pages) and change `SITE_URL` in `src/lib/legal.ts` and `SITE` in `scripts/store-metadata.mjs`.)*
 
 ### Step 3 — Apple Developer portal (10 min) · developer.apple.com → Certificates, Identifiers & Profiles
-1. **Identifiers → + → App IDs → App**. Description *Brain Pal*, **Bundle ID (Explicit): `com.brainpal.app`**.
+1. **Identifiers → + → App IDs → App**. Description *Wobbi*, **Bundle ID (Explicit): `com.brainpal.app`**.
 2. Tick capabilities: **HealthKit** (leave "Clinical Health Records" and "Background Delivery" **off**), **Sign in with Apple**. (Nothing else: no Push, no iCloud, no In-App Purchase.)
 3. If you use Google sign-in you already did the Google console part (`docs/SUPABASE.md`).
 
@@ -54,7 +54,7 @@ GitHub repo → **Settings → Pages → Build and deployment → Source: GitHub
 | Field | Answer |
 |---|---|
 | Platforms | iOS |
-| Name | `Brain Pal: Mood & Calm` (if taken: `Brain Pal – Mood & Calm`, or pick another) |
+| Name | `Wobbi: Mood & Calm` (if taken: `Wobbi – Mood & Calm`, or pick another) |
 | Primary language | English (U.S.) |
 | Bundle ID | `com.brainpal.app` (pick it from the list; appears after Step 3) |
 | SKU | `brainpal-ios-1` (anything unique, never shown) |
@@ -155,7 +155,7 @@ Screenshot captions: *Check in with one tap · Calm your body in minutes · See 
 
 ## 6. "Will Daylio / anyone sue us?" — what protects you, honestly
 Ideas and features (mood diary, calendar, streaks, breathing timers, CBT thought records) are not owned by anyone. What *is* protected is specific expression: names, logos, artwork, text, screens' exact look (trade dress), code. So:
-- **Name** — "Brain Pal" is ours to the extent nobody else has it: do the §3 Step 1 search. Never use another app's name anywhere (metadata, keywords, description, screenshots) — a test fails if a known competitor name appears.
+- **Name** — "Wobbi" is ours to the extent nobody else has it: do the §3 Step 1 search. Never use another app's name anywhere (metadata, keywords, description, screenshots) — a test fails if a known competitor name appears.
 - **Art** — the brain mascot/icon is original. Emoji are Microsoft **Fluent Emoji (MIT)** — attribution + licence text ship in the app. Font Nunito is **OFL**. Icons Lucide (**ISC**).
 - **Code and copy** — written from scratch; no competitor assets or text were copied.
 - **Look** — chunky rounded dark UI is a common visual idiom, but keep it ours: don't adopt another brand's mascot, exact colour system, sound or character; don't imitate a competitor's screenshots layout.

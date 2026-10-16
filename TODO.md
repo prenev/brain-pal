@@ -24,8 +24,8 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Stats → Sleep → *Connect Apple Health sleep*: last night's hours and (with a Watch) Deep/REM/Core match what the Health app shows *(Phase 10)*
 - [ ] Delete-account function end-to-end on a throwaway account
 
-## Brain Pal Pro (docs/MONETIZATION.md)
-- [ ] App Store Connect: **Paid Apps Agreement + bank + tax**; create subscription group *Brain Pal Pro* with **com.brainpal.app.pro.monthly** ($4.99/month, 1-week free trial), attach it to the version you submit
+## Wobbi Pro (docs/MONETIZATION.md)
+- [ ] App Store Connect: **Paid Apps Agreement + bank + tax**; create subscription group *Wobbi Pro* with **com.brainpal.app.pro.monthly** ($4.99/month, 1-week free trial), attach it to the version you submit
 - [ ] Create a **sandbox tester**, buy / cancel / restore on your iPhone (or use `ios-native/BrainPal.storekit` in Xcode), tell me anything odd
 - [ ] Apply for the **App Store Small Business Program** (15% fee)
 - [ ] Decide the price (suggested $4.99/month; annual plan next)
@@ -37,7 +37,7 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 
 ## App Store (everything else is prepared — follow docs/APPSTORE.md §3; `npm run store:check` shows what's blank)
 - [ ] Fill in **your name, public contact e-mail, governing law, copyright, App Review contact** (`src/lib/legal.ts` → `OWNER`; `scripts/store-metadata.mjs` → `APP.copyright`, `REVIEW`), then `npm run site && npm run store:meta`, commit
-- [ ] **Trademark / name search for "Brain Pal"** (App Store, USPTO, EUIPO, WIPO) — change the name now if it collides
+- [ ] **Trademark / name search for "Wobbi"** (App Store, USPTO, EUIPO, WIPO) — change the name now if it collides
 - [ ] GitHub repo → Settings → **Pages → Source: GitHub Actions** (publishes the privacy policy / terms / support pages the App Store links to)
 - [ ] developer.apple.com → App ID `com.brainpal.app` with **HealthKit** + **Sign in with Apple**
 - [ ] App Store Connect → new app (name, SKU, bundle id) → **App Privacy** questionnaire (answers in docs/APPSTORE.md §3 step 6) → **EU trader status** → age rating
@@ -45,3 +45,14 @@ Short and honest. Tick them off; delete when done. The agent adds to this list w
 - [ ] Replace the marketing screenshots with real-device ones if you prefer (same captions), then submit for review
 
 - [ ] **iPhone: check the native Liquid Glass tab bar** (docs/IOS.md → "Native tab bar"): glass look on iOS 26, taps switch tabs, hides behind sheets, nothing cut off at the bottom, + button position. Tell me if it should be the floating capsule (needs a UITabBarController shell).
+
+## Marketing (docs/MARKETING.md §16)
+- [ ] Decide the budget level (§12) and who is the face of the brand (you on camera? Wobbi only?)
+- [ ] Buy the domain + reserve @handles (TikTok, Instagram, YouTube, X) once the name check passes
+- [ ] Open Apple Search Ads and App Store Connect analytics access; create offer codes for creators/therapists
+- [ ] Recruit one licensed clinical advisor for a "reviewed by" line
+- [ ] Build the creator list (200 micro-creators) and approve the claims fact sheet (§11)
+- [ ] Device check for sharing/Siri: say "I'm anxious in Wobbi" (should open SOS); share a card + a sticker to Messages; rating prompt appears after a celebration on a TestFlight build older than 7 days; "Have a code?" opens Apple's redeem sheet
+- [ ] After the app is live: paste the App Store link into `APP_STORE_URL` (`src/lib/share.ts`) so invites/cards point to the store
+- [ ] Widgets + Apple Watch need a Mac session (tell me when you have one)
+- [ ] **Renamed to Wobbi** (app + mascot). Do the trademark/name search for "Wobbi" (docs/APPSTORE.md §3) before App Store Connect; technical ids stay `com.brainpal.app`, `brainpal://` and the repo name `brain-pal` on purpose (changing them breaks sign-in redirects/purchases)

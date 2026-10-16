@@ -37,7 +37,9 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "proProducts", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "proPurchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "proRestore", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "proStatus", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "proStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "proRedeemCode", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -280,7 +282,7 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
-    // MARK: Brain Pal Pro (StoreKit 2, auto-renewing monthly subscription)
+    // MARK: Wobbi Pro (StoreKit 2, auto-renewing monthly subscription)
     // Apple verifies every transaction; we never see card details. Product id must equal PRODUCT_ID in src/lib/pro.ts.
     private static let proId = "com.brainpal.app.pro.monthly"
 
@@ -351,6 +353,27 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do { try await AppStore.sync() } catch { /* the entitlement check below still reports what Apple knows */ }
             call.resolve(await self.proStatusDict())
+        }
+    }
+
+    /// Apple's own "Redeem code" sheet (offer codes for creators, friends, therapists). The entitlement arrives through the usual status check.
+    @objc func proRedeemCode(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard #available(iOS 16.0, *), let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else { call.resolve(["shown": false]); return }
+            Task {
+                do { try await AppStore.presentOfferCodeRedeemSheet(in: scene); call.resolve(["shown": true]) }
+                catch { call.resolve(["shown": false]) }
+            }
+        }
+    }
+
+    /// The system rating prompt. iOS decides whether to show it (and limits it to a few times a year); JS only asks at happy moments.
+    @objc func requestReview(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                SKStoreReviewController.requestReview(in: scene)
+            }
+            call.resolve()
         }
     }
 

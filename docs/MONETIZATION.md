@@ -1,4 +1,4 @@
-# Monetisation: Brain Pal Pro (monthly subscription, Apple devices)
+# Monetisation: Wobbi Pro (monthly subscription, Apple devices)
 
 **Decision:** one optional auto-renewing **monthly subscription** through Apple In-App Purchase (StoreKit 2), with a 7-day free trial. The app stays genuinely useful for free, works fully **offline with no account**, and the things that keep people safe or are their own data are **never** behind the paywall.
 
@@ -16,12 +16,15 @@
 Common pattern: **core free, depth/sync/polish paid, annual cheaper than monthly, 3–7 day trial, restore button, no dark patterns.** You asked for monthly: it is built; add an annual plan later (it converts better and lowers churn).
 
 ## What is Pro, what is free (and why)
-| Free forever | Pro |
+**Current setting (launch): the paywall guards one thing, *advanced analytics*.** Everything else is free while the app finds its audience; re-gating a feature later is a one-line change in `src/lib/pro.ts` (`PRO_FEATURES` + a `ProGate`).
+| Free forever | Pro (advanced analytics) |
 |---|---|
-| SOS siren, breathing, grounding, crisis support (**safety is never sold**) | Sync across devices (account) |
-| Mood check-ins, thought records, journal, worry time, calendar | Focus guard (Screen Time) |
-| Reminders, coins/themes, Today summary, 3 daily anchors, skill levels | Sleep insights (Apple Watch) |
-| Export or delete your data (**your data is never held hostage**) | Weekly + monthly summaries, proof of progress, 4th and 5th anchor |
+| SOS siren, breathing, grounding, crisis support (**safety is never sold**) | Before-and-after **proof** cards (Progress) |
+| Mood check-ins, thought records, journal, worry time, calendar | **Weekly + monthly summaries** (Summary → Week/Month) |
+| Reminders, coins/themes, Today summary, 5 daily anchors, skill levels | |
+| Focus guard (Screen Time), sleep insights (Apple Watch), sync across devices | |
+| Export or delete your data (**your data is never held hostage**) | |
+Earlier plan (kept for later): gate Focus guard, sleep, sync and the 4th/5th anchor again once there are enough users to make a paywall worth it.
 Rationale: Pro features are the ones with real running cost (sync/servers), real novelty (Focus guard), or "power-user depth" (insights). A free user still gets a complete, kind app; a paying user gets more *depth*, not the right to feel safe.
 
 ## Price and trial
@@ -29,7 +32,7 @@ Rationale: Pro features are the ones with real running cost (sync/servers), real
 - Apple takes 30% (15% in year two of a subscriber's life, and 15% for everyone under the **App Store Small Business Program**: apply for it, it needs revenue under US$1M/yr).
 
 ## Paywall principles (so it is honest and App-Review-safe)
-1. Shown only when someone taps something locked, or More → Brain Pal Pro. Never at launch, never during SOS, never mid-crisis.
+1. Shown only when someone taps something locked, or More → Wobbi Pro. Never at launch, never during SOS, never mid-crisis.
 2. States price, billing period, trial, auto-renew terms and how to cancel (Apple guideline 3.1.2), with Terms, Privacy and Apple's EULA links, and a working **Restore purchases**.
 3. Says plainly what stays free. No fake urgency, no countdowns, no guilt copy.
 4. Locked features show a preview card (what it is), not a blank screen.
@@ -40,17 +43,17 @@ Rationale: Pro features are the ones with real running cost (sync/servers), real
 - `ios-native/MindfulPlugin.swift`: StoreKit 2 (`proProducts`, `proPurchase`, `proRestore`, `proStatus`, plus `Transaction.updates`). Only **verified** transactions count (`test-ios` fails if `.unverified` appears).
 - `src/components/Pro.tsx`: `ProGate`, the paywall, `PaywallProvider`. Gates: Focus guard, Sleep, week/month Summary, Progress proof, 4th anchor, Sync sign-in.
 - `ios-native/BrainPal.storekit`: local StoreKit test config (Xcode: Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration) so you can test purchases without the store.
-- Offline first: no sign-in screen at launch; the account is an optional Pro step; first sign-in auto-moves on-device data into the account.
+- Offline first: no sign-in screen at launch; the account is optional (sync is free for now); first sign-in auto-moves on-device data into the account.
 
 ## Not built / honest limits
 - **No server-side receipt validation.** The device trusts StoreKit's verified local entitlement (standard for indie apps). Someone with a jailbroken phone could bypass it; that is acceptable at this scale. Add App Store Server Notifications + a webhook if you ever need cross-device entitlement or refund handling.
 - The web/PWA build has **no purchases** (Apple rules: digital goods on iOS use IAP). It shows "Pro is part of the iPhone app".
-- A lapsed subscriber who is already signed in keeps their session (data is never held hostage); new sign-ins need Pro.
+- A lapsed subscriber who is already signed in keeps their session (data is never held hostage).
 - Real StoreKit purchase, restore and renewal have **not** been run on a device (CI compiles the Swift; the JS side is tested with the simulated bridge).
 
 ## Owner steps (App Store Connect), in order
 1. **Business**: accept the *Paid Apps Agreement*, add bank + tax info (without this, subscriptions can't go live).
-2. **Monetization → Subscriptions**: create a group **"Brain Pal Pro"**; add **Brain Pal Pro (monthly)**, product ID **`com.brainpal.app.pro.monthly`**, duration 1 month, price $4.99 (pick your storefront prices), **Introductory offer: free, 1 week**; fill localisation (display name + description), add a review screenshot of the paywall.
+2. **Monetization → Subscriptions**: create a group **"Wobbi Pro"**; add **Wobbi Pro (monthly)**, product ID **`com.brainpal.app.pro.monthly`**, duration 1 month, price $4.99 (pick your storefront prices), **Introductory offer: free, 1 week**; fill localisation (display name + description), add a review screenshot of the paywall.
 3. Add the subscription to the version you submit ("In-App Purchases and Subscriptions" section) so review tests it.
 4. **Sandbox testers**: Users and Access → Sandbox → create one; sign into it on the iPhone (Settings → App Store → Sandbox Account); test buy, cancel, restore, expiry (sandbox months last ~5 minutes).
 5. Apply for the **Small Business Program** (15% fee).

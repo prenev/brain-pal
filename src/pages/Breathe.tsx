@@ -50,7 +50,7 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
       </div>
 
       {running
-        ? <div className="card"><BreathRunner pattern={pattern} cycles={cycles} vibrate={vibrate} sound={sound} onFinish={finish} /></div>
+        ? <BreathRunner pattern={pattern} cycles={cycles} vibrate={vibrate} sound={sound} onFinish={finish} />
         : <>
           {done && <div className="card" style={{ textAlign: 'center' }}><Emoji name="lotus" size={64} /><div style={{ fontWeight: 900, fontSize: 20, marginTop: 6 }}>Nice work!</div><div className="muted">{done.cycles} rounds · {Math.floor(done.sec / 60)}m {done.sec % 60}s logged</div></div>}
           <PalTip id="breathe" pose="breatheIn">Pick a pattern and follow the circle. A long, slow breath out is the secret.</PalTip>

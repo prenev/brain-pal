@@ -16,7 +16,7 @@ export default function Settings() {
         denied: 'Notifications are blocked. Enable them in your browser/iOS settings.',
         unconfigured: 'Permission granted, but push needs Supabase + a VAPID key (see README).',
         unsupported: /iPhone|iPad/.test(navigator.userAgent) && !isStandalone()
-          ? 'On iPhone, first tap Share → Add to Home Screen, then open Brain Pal from there.'
+          ? 'On iPhone, first tap Share → Add to Home Screen, then open Wobbi from there.'
           : 'This browser does not support push notifications.',
       }[r])
     } catch (e: any) { setMsg(e.message) }

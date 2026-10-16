@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { PRODUCT_ID, FREE_ANCHORS, GRACE_MS, PRO_FEATURES, ALWAYS_FREE, NO_PRO, normalizeEntitlement, isPro, canUse, priceLine, DISCLOSURE, featureInfo } from '../src/lib/pro.ts'
+import { PRODUCT_ID, GRACE_MS, PRO_FEATURES, ALWAYS_FREE, NO_PRO, normalizeEntitlement, isPro, canUse, priceLine, DISCLOSURE, featureInfo } from '../src/lib/pro.ts'
 
 assert.equal(PRODUCT_ID, 'com.brainpal.app.pro.monthly')
 assert.equal(new Set(PRO_FEATURES.map(f => f.id)).size, PRO_FEATURES.length)
 for (const f of PRO_FEATURES) assert.ok(f.title && f.blurb && f.emoji, f.id)
-assert.equal(featureInfo('guard').title, 'Focus guard')
+assert.deepEqual(PRO_FEATURES.map(f => f.id), ['analytics'], 'for now the paywall guards advanced analytics only')
+assert.equal(featureInfo('analytics').title, 'Advanced analytics')
 
 // ethics: safety and your own data are never sold
 const everything = JSON.stringify(PRO_FEATURES).toLowerCase()
@@ -25,9 +26,8 @@ assert.equal(isPro({ ...live, until: now - 1000 }, now), true, 'just expired: st
 assert.equal(isPro({ ...live, until: now - GRACE_MS - 1 }, now), false, 'long expired: not Pro')
 assert.equal(isPro({ ...live, active: false }, now), false); assert.equal(isPro(NO_PRO, now), false)
 
-// gating
-for (const f of ['sync', 'guard', 'sleep', 'summary', 'proof']) { assert.equal(canUse(f, false), false, f); assert.equal(canUse(f, true), true, f) }
-assert.equal(canUse('anchors', false, { anchors: FREE_ANCHORS - 1 }), true); assert.equal(canUse('anchors', false, { anchors: FREE_ANCHORS }), false); assert.equal(canUse('anchors', true, { anchors: 5 }), true)
+// gating: advanced analytics needs Pro; nothing else is a Pro id any more
+assert.equal(canUse('analytics', false), false); assert.equal(canUse('analytics', true), true)
 
 // copy never invents prices
 assert.equal(priceLine(null), 'Price shown by the App Store'); assert.equal(priceLine({}), 'Price shown by the App Store')

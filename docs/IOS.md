@@ -1,4 +1,4 @@
-# Brain Pal for iPhone (Capacitor)
+# Wobbi for iPhone (Capacitor)
 
 The iPhone app is this same web app in a native shell. It adds what browsers can't do:
 
@@ -37,7 +37,7 @@ Every time you change web code: `npm run ios:sync`, then ▶ Run again.
 ## Try the Apple Health bit
 1. In the app: **More ▸ Apple Health ▸ switch on** → iOS shows a permission sheet → allow *Mindful Minutes*.
 2. Do a breathing session of 10 seconds or more.
-3. Open the **Health** app ▸ **Browse ▸ Mindfulness** → *Mindful Minutes* — the session is there, with Brain Pal as the source.
+3. Open the **Health** app ▸ **Browse ▸ Mindfulness** → *Mindful Minutes* — the session is there, with Wobbi as the source.
 4. **Save past sessions** (same screen) back-fills sessions logged before you connected.
 
 The Simulator can test Health permissions and saving, but **not haptics** (use a real phone for those).
@@ -61,7 +61,7 @@ Email + password works as-is. For magic-link / password-reset emails to open the
 
 ## Sleep from your Apple Watch (Phase 10)
 *Stats → Sleep → Connect Apple Health sleep* asks iOS for permission to **read sleep analysis** and shows last night, the last week, bedtime consistency and (with enough days) how sleep and mood relate. Notes:
-- iOS never tells an app whether *read* access was granted. If nothing shows up, check **Settings → Health → Data Access & Devices → Brain Pal → Sleep**, and that the Watch (or iPhone Sleep schedule) is actually tracking sleep.
+- iOS never tells an app whether *read* access was granted. If nothing shows up, check **Settings → Health → Data Access & Devices → Wobbi → Sleep**, and that the Watch (or iPhone Sleep schedule) is actually tracking sleep.
 - Sleep stages (Deep / REM / Core) need an Apple Watch with watchOS 9+/iOS 16+; older data shows as plain "asleep".
 - When the Watch and iPhone both report the same minutes they are merged (named stage wins; an explicit *awake* beats sleep), so time is never counted twice. Short blips (< 20 min) are ignored, naps are kept apart from the night, and a night belongs to the morning you woke up.
 - The Health permission text (`NSHealthShareUsageDescription`) now says it reads sleep; `python3 scripts/ios-patch.py` updates existing projects.
@@ -76,3 +76,11 @@ In the iPhone app the bottom bar is a **real `UITabBar`** added by `MindfulPlugi
 - The web page leaves room via `--native-tab-h` (height the bar covers) and the + button sits above it.
 - **Not verified on a device:** the Swift compiles on macOS CI, and the JS side is covered by e2e with the simulated bridge, but I could not see the real bar. Check on your iPhone: glass look on iOS 26, tab taps switch screens, bar hides behind the + menu, nothing is cut off at the bottom of scrolled screens, and the + button position.
 - Because it is a standalone `UITabBar` (not a `UITabBarController`), iOS 26 may draw it docked rather than as the floating capsule. If you want the floating capsule exactly, the next step is a `UITabBarController` shell — say so.
+
+## Siri, Shortcuts and the Action button (Phase 20)
+`ios-native/BrainPalIntents.swift` (App Intents, iOS 16+) gives three zero-setup Siri phrases: *"I'm anxious in Wobbi"* (opens SOS), *"Breathe with Wobbi"*, *"Log my mood in Wobbi"*. Each intent opens our own `brainpal://sos|breathe|checkin|journal` link, handled by `parseRouteLink` in `nativeInit.ts`. The same links work in the Shortcuts app ("Open URL") and can be bound to the **Action button** (Settings → Action Button → Shortcut). The links and the JS side are unit/e2e tested; the Swift is compiled only by the macOS CI job and **not verified on a device** (check: say the phrase, it should open SOS).
+
+**Not built yet (needs a Mac session, separate Xcode targets):** Home/Lock Screen **widgets** (WidgetKit: streak, one-tap mood, SOS) and an **Apple Watch** app (mood tap, haptic breathing). Plan: App Group shared UserDefaults for the streak number only (no entry text), a Widget Extension target, and a watchOS target; add them with `ios-patch.py` once a Mac can verify the build.
+
+## Rating prompt and offer codes
+`Mindful.requestReview` shows the system rating prompt (`SKStoreReviewController`); JS asks only after a celebration, ≥7 days after first launch, ≥120 days apart, max 3 times (`lib/review.ts`). `Mindful.proRedeemCode` opens Apple's "Redeem code" sheet from the paywall's "Have a code?" link; create the codes in App Store Connect → the subscription → Offer Codes. Both are mocked in e2e, **not verified on a device**.

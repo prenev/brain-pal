@@ -180,6 +180,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const extrasRef = useRef<Extras>(null!)
   extrasRef.current = { journal, anchors, checks, focus: focusSessions, manualNights, purchases, rituals, themeId }
   const syncing = useRef(false)
+  const syncAgain = useRef(false)          // something changed (or a sync was asked for) while a run was in flight
+  const syncRef = useRef<() => Promise<void>>(async () => {})
   const loadMeta = (): Meta => { try { const m = JSON.parse(localStorage.getItem('bp.sync.meta') ?? '{}'); return m && typeof m === 'object' ? m : {} } catch { return {} } }
   const saveMeta = (m: Meta) => { try { localStorage.setItem('bp.sync.meta', JSON.stringify(m)) } catch { /* ignore */ } }
   const applyExtras = (x: Extras) => {
@@ -188,7 +190,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setPurchases(x.purchases); savePurchases(x.purchases); setRitualsState(x.rituals); saveRituals(x.rituals); setThemeId(x.themeId); saveTheme(x.themeId)
   }
   const syncNow = useCallback(async () => {
-    if (!supabase || !authSession || syncing.current) return
+    if (!supabase || !authSession) return
+    if (syncing.current) { syncAgain.current = true; return }
     syncing.current = true; setSyncState(s => ({ ...s, status: 'syncing' }))
     try {
       const items0 = collectItems(extrasRef.current)
@@ -203,8 +206,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const meta = ok ? markSynced(rec.meta, toSend) : rec.meta
       saveMeta(meta); setSyncState({ status: ok ? 'ok' : 'error', at: ok ? Date.now() : null, pending: dirtyCount(meta) })
     } catch (e) { console.warn('sync failed', e); setSyncState(s => ({ ...s, status: 'error' })) }
-    finally { syncing.current = false }
+    finally { syncing.current = false; if (syncAgain.current) { syncAgain.current = false; setTimeout(() => { void syncRef.current() }, 400) } }   // an edit made mid-run must not wait for the next change to be sent
   }, [authSession])
+  syncRef.current = syncNow
   // Sync on sign-in, shortly after you change something, when the app returns to the foreground, and when the network comes back.
   useEffect(() => {
     if (!supabase || !authSession || !loaded) return

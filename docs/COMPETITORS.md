@@ -1,6 +1,6 @@
 # Competitor analysis & gap matrix
 
-**Purpose:** decide what Brain Pal builds that the closest apps don't, and what to keep simple.
+**Purpose:** decide what Wobbi builds that the closest apps don't, and what to keep simple.
 **How to read this honestly:** positioning below comes from the App Store listings you shared; weak points come from a quick web search of review sites (cited, with a confidence note). Several sources are third-party aggregators or single reviews, and for two apps (Umbrella, HolistiQ) I found little or no independent feedback. In the matrix, **✅ = the listing advertises it**, **– = not advertised in the listing (not proof it's absent)**, **◐ = partly**. Verify against the live apps before using any of this externally.
 
 ## The six competitors
@@ -18,7 +18,7 @@
 
 ## Gap matrix (advertised features)
 
-| Capability | Flourish | Umbrella | Finch | Rootd | Daylio | HolistiQ | **Brain Pal** (✅ built · 🛠 planned) |
+| Capability | Flourish | Umbrella | Finch | Rootd | Daylio | HolistiQ | **Wobbi** (✅ built · 🛠 planned) |
 |---|---|---|---|---|---|---|---|
 | Mood diary + stats | ✅ | ✅ | ◐ | – | ✅ | – | ✅ |
 | Full CBT thought record (situation → thought → emotions → behaviour → alternate thought) | ◐ | ✅ | – | – | – | – | ✅ |
@@ -42,7 +42,7 @@
 
 "?" = not established from what I could find.
 
-## What only Brain Pal will have (the moat)
+## What only Wobbi will have (the moat)
 1. **The anxiety → action loop:** SOS / breathing → rate relief → *"one tiny step?"* pulled from the worries you already parked → a short calm-start focus timer. Others have breathing *or* a timer; none connect them through your own worries.
 2. **Worry time** as a first-class ritual (park, review later, let go or plan).
 3. **Proof, not points:** levelling up is shown with real evidence from your data ("your average relief after SOS: 1.8 → 3.4 over 30 days"), not a streak counter or pet XP.

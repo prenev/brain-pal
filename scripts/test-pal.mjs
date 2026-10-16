@@ -9,7 +9,7 @@ for (const n of POSE_NAMES) {
   assert.equal(open, close, `${n}: balanced <g>`)
   assert.match(svg, /^<svg [^>]*viewBox="0 0 200 200"/); assert.match(svg, /<\/svg>$/)
   assert.ok(POSE_LABEL[n], `${n} has an accessible label`)
-  assert.match(svg, /role="img" aria-label="Pal/, `${n} is labelled by default`)
+  assert.match(svg, /role="img" aria-label="Wobbi/, `${n} is labelled by default`)
   assert.match(palSvg(n, { label: '' }), /aria-hidden="true"/); assert.doesNotMatch(palSvg(n, { label: '' }), /aria-label/)
   assert.ok(palBody(n).includes('class="arm armR"') && palBody(n).includes('class="arm armL"'), `${n} has arms the CSS can animate`)
   assert.ok(palBody(n).includes('class="eyes"'), `${n} has eyes the CSS can blink`)

@@ -1,5 +1,4 @@
 import { PalTip } from './Pal'
-import { ProGate } from './Pro'
 import { useMemo, useState } from 'react'
 import Face from './Face'
 import { useStore } from '../lib/store'
@@ -17,7 +16,7 @@ const dow = (date: string, style: 'short' | 'narrow' = 'short') => new Date(`${d
 const eveningToClock = (m: number) => { const t = (m + 18 * 60) % 1440; return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}` }
 
 /** Last night, the week at a glance, consistency, and (with enough data) how sleep and mood relate. Apple Watch data via Apple Health, or a manual log. */
-export default function Sleep() { return <ProGate feature="sleep"><SleepView /></ProGate> }
+export default function Sleep() { return <SleepView /> }
 
 function SleepView() {
   const { sleepNights, sleepOn, connectSleepNow, disconnectSleepNow, syncSleepNow, addManualNight, deleteManualNight, thoughts } = useStore()
@@ -33,7 +32,7 @@ function SleepView() {
   async function connect() {
     setBusy(true); setMsg('')
     const r = await connectSleepNow()
-    setMsg(r === 'ok' ? 'Connected. If nothing shows up, check Settings → Health → Data Access → Brain Pal, and that your Apple Watch has sleep tracking on.' : r === 'unavailable' ? 'Apple Health isn’t available on this device.' : 'Could not connect to Apple Health. Please try again.')
+    setMsg(r === 'ok' ? 'Connected. If nothing shows up, check Settings → Health → Data Access → Wobbi, and that your Apple Watch has sleep tracking on.' : r === 'unavailable' ? 'Apple Health isn’t available on this device.' : 'Could not connect to Apple Health. Please try again.')
     setBusy(false)
   }
   async function refresh() { setBusy(true); const n = await syncSleepNow(); setMsg(n === null ? 'Could not read Apple Health right now.' : n ? `Found ${n} ${n === 1 ? 'night' : 'nights'} of sleep.` : 'No sleep data found yet — check Health permissions and that your Watch tracks sleep.'); setBusy(false) }
@@ -51,7 +50,7 @@ function SleepView() {
       <PalTip id="sleep" pose="sleepy">{native ? 'Connect Apple Health to see last night next to your mood.' : 'Log last night by hand and I’ll show how sleep and mood go together.'}</PalTip>
       {native && !sleepOn && <div className="card">
         <b>Show your sleep from Apple Health</b>
-        <p className="muted small">Brain Pal can read your sleep (for example from your Apple Watch) to show it next to your mood. It reads <i>only</i> sleep, keeps it on this device, and never sends it anywhere. You can disconnect any time.</p>
+        <p className="muted small">Wobbi can read your sleep (for example from your Apple Watch) to show it next to your mood. It reads <i>only</i> sleep, keeps it on this device, and never sends it anywhere. You can disconnect any time.</p>
         <button className="btn primary block" disabled={busy} onClick={connect}>{busy ? 'Connecting…' : 'Connect Apple Health sleep'}</button>
       </div>}
       {native && sleepOn && <div className="card row spread">
@@ -84,7 +83,7 @@ function SleepView() {
 
       <div className="card" aria-label="Sleep and mood">
         <b>Sleep and mood</b>
-        <p style={{ marginBottom: 0 }} className={link ? '' : 'muted'}>{link ? link.sentence : 'Log your mood on a week or so of mornings that also have sleep data and Brain Pal will show how the two relate for you.'}</p>
+        <p style={{ marginBottom: 0 }} className={link ? '' : 'muted'}>{link ? link.sentence : 'Log your mood on a week or so of mornings that also have sleep data and Wobbi will show how the two relate for you.'}</p>
       </div>
 
       <form className="card" onSubmit={saveManual}>

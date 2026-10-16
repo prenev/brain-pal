@@ -4,6 +4,7 @@ import { Emoji } from '../lib/emoji'
 import { fmtDuration, MAX_RECORD_SEC } from '../lib/audio'
 import { MicError, startRecording, type Recording } from '../lib/recorder'
 import { AiError, aiEnabled, structureEntry, transcribe, type Structured } from '../lib/gemini'
+import AudioPlayer from './AudioPlayer'
 import type { AudioClip } from '../lib/types'
 
 const msg = (e: unknown) => (e instanceof AiError || e instanceof MicError ? e.message : 'Something went wrong. Please try again.')
@@ -86,9 +87,8 @@ export default function VoiceRecorder({ clip, onChange, onFill }: {
       </>}
 
       {!recording && clip && <>
-        <audio controls src={url ?? undefined} aria-label="Your voice memo" style={{ width: '100%' }} />
-        <div className="row spread" style={{ margin: '8px 2px 12px' }}>
-          <span className="muted small">{fmtDuration(clip.durationSec)}</span>
+        {url && <AudioPlayer src={url} durationSec={clip.durationSec} label="Your voice memo" />}
+        <div className="row" style={{ margin: '8px 2px 12px', justifyContent: 'flex-end' }}>
           <button className="icon-btn" aria-label="Delete voice memo" onClick={() => { onChange(null); setErr('') }}><Trash2 size={18} /></button>
         </div>
         <label className="field"><span>Transcript</span>

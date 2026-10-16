@@ -10,7 +10,7 @@ export const SKILLS: SkillDef[] = [
   { id: 'calming', name: 'Calming', emoji: 'wind', unit: 'calming sessions', unitOne: 'calming session', blurb: 'Breathing and grounding sessions you finished.' },
   { id: 'reframing', name: 'Reframing', emoji: 'bulb', unit: 'thoughts reframed', unitOne: 'thought reframed', blurb: 'Entries where you wrote a more balanced thought.' },
   { id: 'worry', name: 'Worry mastery', emoji: 'worry', unit: 'worries processed', unitOne: 'worry processed', blurb: 'Parked worries you let go of or made a plan for.' },
-  { id: 'consistency', name: 'Showing up', emoji: 'seedling', unit: 'active days', unitOne: 'active day', blurb: 'Days you did anything in Brain Pal.' },
+  { id: 'consistency', name: 'Showing up', emoji: 'seedling', unit: 'active days', unitOne: 'active day', blurb: 'Days you did anything in Wobbi.' },
   { id: 'journaling', name: 'Journaling', emoji: 'notebook', unit: 'journal entries', unitOne: 'journal entry', blurb: 'Times you wrote in your journal.' },
   { id: 'focus', name: 'Small steps', emoji: 'rocket', unit: 'focus sessions', unitOne: 'focus session', blurb: 'Tiny steps you started and finished.' },
 ]

@@ -12,7 +12,7 @@ pbx = app / 'App.xcodeproj' / 'project.pbxproj'
 if not pbx.exists():
     sys.exit('ios/ not found - run `npx cap add ios` first')
 
-for f in ['MindfulPlugin.swift', 'MainViewController.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy']:
+for f in ['MindfulPlugin.swift', 'MainViewController.swift', 'BrainPalIntents.swift', 'App.entitlements', 'PrivacyInfo.xcprivacy']:
     shutil.copy(root / 'ios-native' / f, src / f)
 
 # ---- project.pbxproj: file refs, build files, group, sources phase, entitlements setting
@@ -39,6 +39,16 @@ if 'CODE_SIGN_ENTITLEMENTS' not in p:
     p = p.replace('\t\t\t\tCODE_SIGN_STYLE = Automatic;\n', '\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tCODE_SIGN_STYLE = Automatic;\n')
 pbx.write_text(p)
 
+# ---- Siri / Shortcuts intents (App Intents) compiled into the app target
+INT = {'ref': 'B1A0000000000000000A0008', 'bf': 'B1A0000000000000000A0009'}
+p = pbx.read_text()
+if INT['ref'] not in p:
+    p = p.replace('/* End PBXBuildFile section */', f"\t\t{INT['bf']} /* BrainPalIntents.swift in Sources */ = {{isa = PBXBuildFile; fileRef = {INT['ref']} /* BrainPalIntents.swift */; }};\n/* End PBXBuildFile section */")
+    p = p.replace('/* End PBXFileReference section */', f"\t\t{INT['ref']} /* BrainPalIntents.swift */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainPalIntents.swift; sourceTree = \"<group>\"; }};\n/* End PBXFileReference section */")
+    p = re.sub(r'(\t\t\t\t[0-9A-F]{24} /\* SceneDelegate\.swift \*/,\n)', r'\1' + f"\t\t\t\t{INT['ref']} /* BrainPalIntents.swift */,\n", p, count=1)
+    p = re.sub(r'(\t\t\t\t[0-9A-F]{24} /\* SceneDelegate\.swift in Sources \*/,\n)', r'\1' + f"\t\t\t\t{INT['bf']} /* BrainPalIntents.swift in Sources */,\n", p, count=1)
+    pbx.write_text(p)
+
 # ---- App Store hygiene: privacy manifest as a bundled resource, iPhone-only, version 1.0.0
 PRIV = {'ref': 'B1A0000000000000000A0006', 'bf': 'B1A0000000000000000A0007'}
 p = pbx.read_text()
@@ -60,11 +70,11 @@ ip = src / 'Info.plist'
 t = ip.read_text()
 def add_key(t, key, xml):
     return t if f'<key>{key}</key>' in t else t.replace('</dict>\n</plist>', f'\t<key>{key}</key>\n\t{xml}\n</dict>\n</plist>')
-t = add_key(t, 'NSMicrophoneUsageDescription', '<string>Brain Pal uses the microphone to record voice memos for your entries.</string>')
-t = add_key(t, 'NSCameraUsageDescription', '<string>Brain Pal uses the camera so you can attach photos to your entries.</string>')
-t = add_key(t, 'NSPhotoLibraryUsageDescription', '<string>Brain Pal lets you attach photos from your library to your entries.</string>')
-t = add_key(t, 'NSHealthUpdateUsageDescription', '<string>Brain Pal saves your breathing sessions to Apple Health as Mindful Minutes.</string>')
-HEALTH_SHARE = '<string>Brain Pal can read your sleep from Apple Health (for example from your Apple Watch) to show it next to your mood. It reads nothing else and never sends it anywhere.</string>'
+t = add_key(t, 'NSMicrophoneUsageDescription', '<string>Wobbi uses the microphone to record voice memos for your entries.</string>')
+t = add_key(t, 'NSCameraUsageDescription', '<string>Wobbi uses the camera so you can attach photos to your entries.</string>')
+t = add_key(t, 'NSPhotoLibraryUsageDescription', '<string>Wobbi lets you attach photos from your library to your entries.</string>')
+t = add_key(t, 'NSHealthUpdateUsageDescription', '<string>Wobbi saves your breathing sessions to Apple Health as Mindful Minutes.</string>')
+HEALTH_SHARE = '<string>Wobbi can read your sleep from Apple Health (for example from your Apple Watch) to show it next to your mood. It reads nothing else and never sends it anywhere.</string>'
 t = add_key(t, 'NSHealthShareUsageDescription', HEALTH_SHARE)
 t = re.sub(r'(<key>NSHealthShareUsageDescription</key>\s*)<string>[^<]*</string>', lambda m: m.group(1) + HEALTH_SHARE, t)   # existing projects get the honest wording too
 t = add_key(t, 'CFBundleURLTypes', '<array><dict><key>CFBundleURLName</key><string>com.brainpal.app</string><key>CFBundleURLSchemes</key><array><string>brainpal</string></array></dict></array>')

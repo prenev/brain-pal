@@ -39,3 +39,8 @@ export async function buyPro(): Promise<BuyResult> {
 export async function restorePro(): Promise<boolean> {
   try { const r = await Mindful.proRestore(); setEntitlement(fromStore(r)); return !!r.active } catch { return false }
 }
+
+/** Apple's "Redeem code" sheet (offer codes). The entitlement shows up through the normal status refresh afterwards. */
+export async function redeemCode(): Promise<boolean> {
+  try { const r = await Mindful.proRedeemCode(); if (r.shown) setTimeout(() => void refreshPro(), 4000); return r.shown } catch { return false }
+}

@@ -1,6 +1,6 @@
-# Brain Pal roadmap
+# Wobbi roadmap
 
-> **Vision:** Brain Pal is a *whole-wellbeing companion*, not just a thought recorder: mood + thoughts, calm tools, sleep, small daily anchors, journaling, gentle reminders, and a little reward loop that makes showing up feel good. Self-help only — never diagnosis, never guilt.
+> **Vision:** Wobbi is a *whole-wellbeing companion*, not just a thought recorder: mood + thoughts, calm tools, sleep, small daily anchors, journaling, gentle reminders, and a little reward loop that makes showing up feel good. Self-help only — never diagnosis, never guilt.
 >
 > Live work tracking: [`docs/KANBAN.md`](docs/KANBAN.md) (board) · GitHub issues (labels `phase-N`) · [`TODO.md`](TODO.md) (things only the owner can do).
 
@@ -40,7 +40,7 @@ Order of work (changed after the competitor analysis in [`docs/COMPETITORS.md`](
 | 6 | 16 | **Level-up proof** — skill levels backed by your own before/after data | Evidence, not points | ✅ skills, proof cards, milestones, level-up moment; Journaling/Focus skills appear when P8/P14 ship |
 | 7 | 9 | **Rituals & reminders** — breathe at 07:00 and at night | Reminders that *do* something | ✅ iPhone: 4 rituals with times/weekdays, tap-to-open, skip-when-done, migration; delivery on a real phone not verified; web multi-time needs `send-reminders` deployed |
 | 8 | 10 | **Sleep** — Apple Watch via Apple Health (+ manual log) | Sleep drives mood | ✅ pure logic (mutation-checked), Swift read-only query (compiles on macOS CI), Sleep view, manual log, weekly-summary line; real Watch data not verified (see TODO.md) |
-| 9 | 11 | **Coins & rewards** | Showing up feels good, no shame mechanics | ✅ derived earnings with caps, wallet, accent themes, rest days (extend the streak), self-named treats, +N toast; Pal outfits / confetti styles not built |
+| 9 | 11 | **Coins & rewards** | Showing up feels good, no shame mechanics | ✅ derived earnings with caps, wallet, accent themes, rest days (extend the streak), self-named treats, +N toast; Wobbi outfits / confetti styles not built |
 | 10 | 12 | **Cloud sync for the new data** | Everything on every device | ✅ `user_docs` migration applied to the live project (RLS verified, advisors clean apart from the pre-existing leaked-password setting), pure sync engine, store wiring, 3 two-device e2e; not yet exercised against the live API from here |
 | 11 | 13 | **Reflection extras** — theme picker, optional AI "reflect with me" | Polish | ⏳ |
 | – | 17+ | Idea backlog (bottom of this file) | | 💡 |
@@ -139,7 +139,7 @@ Local: `bp.anchors`, `bp.anchorChecks`. Pure logic in `src/lib/anchors.ts` (no D
 ## Phase 11 — Coins & rewards
 **Principle:** reward *showing up*, not perfection; nothing is ever taken away; spending is optional and cosmetic or kind.
 - **Earn (derived, retroactive, can't be gamed twice):** check-in +5 (once per entry, max 3/day), breathing/grounding session +3 (max 3/day), journal entry +4 (max 2/day), each anchor +2, all-anchors bonus +5, worry let-go +2, sleep logged +2, streak milestones (3/7/14/30/60/100 days) +10/20/30/50/80/120. Balance = `earned(events) − spent`. Because earnings are recomputed from data, they sync for free and survive reinstall; only **spends** are stored.
-- **Spend:** accent colour themes, Pal faces/outfits, confetti styles, **Rest day** (30 coins, max 2/month: freezes the anchor/day streak for one missed day — the kind alternative to streak loss), a "treat jar" the user defines themselves (*"coffee at my favourite place"*) — self-reward, redeemable by honesty.
+- **Spend:** accent colour themes, Wobbi faces/outfits, confetti styles, **Rest day** (30 coins, max 2/month: freezes the anchor/day streak for one missed day — the kind alternative to streak loss), a "treat jar" the user defines themselves (*"coffee at my favourite place"*) — self-reward, redeemable by honesty.
 - **UX:** coin counter in the top bar, a small *Wallet* page (balance, recent earnings, shop), a gentle +N toast on earn (no sound, haptic tick on iPhone), never a pop-up that blocks.
 - **Anti-dark-pattern checklist (reviewed in the PR):** no countdown timers, no "you'll lose", no purchases with real money, no leaderboards, no loot boxes.
 **Pure logic `src/lib/rewards.ts`** (`earnings(events)`, `daily caps`, `milestones`, `balance`, `canBuy`). Tests: caps, milestone edges, retroactivity, double-spend refused, rest-day limits, idempotence.
@@ -150,12 +150,21 @@ Migrations (new files, plain SQL, **no `DO` blocks**; apply via the connector, t
 ## Phase 13 — Reflection
 Weekly review screen (and optional Sunday-evening ritual): mood trend, best/worst day, what helped (tools used, anchors hit), sleep average, 1 prompt. Optional Gemini "reflect with me" (opt-in, same privacy rules, crisis-safe). Theme picker (uses Phase 11 unlocks). Goals ("breathe 5×/week") as a *view over anchors*, not a new system.
 
-## Phase 19 — Offline first + Brain Pal Pro (monthly subscription)
-Done: no account needed (the app starts straight on Home; sign-in is an optional Pro step that moves on-device data into the account), Pro subscription via StoreKit 2 (7-day trial, restore, disclosure, paywall) with gates on Focus guard, Sleep, week/month Summary, Progress proof, 4th/5th anchor and Sync; safety and data export are never gated; What's new dialog after updates; SOS first in Pal's coach; scroll bars hidden. Plan, competitor notes, pricing and owner steps: `docs/MONETIZATION.md`.
+## Phase 20 — Growth & marketing
+Done: share cards (streak / level-up / Focus-guard "brain rot, beaten", numbers only), 16 Wobbi stickers (More → Wobbi stickers), Invite a friend, rating prompt at happy moments, offer-code redeem link, Siri/Shortcuts/Action-button links + App Intents. Still to do: widgets + Apple Watch (need a Mac), landing page + waitlist, App Store link in `APP_STORE_URL` (`lib/share.ts`) once live. Plan: `docs/MARKETING.md` (positioning, audiences, ASO, launch, content engine, partnerships, measurement without tracking, budget tiers, 90-day calendar). Build next (in this order): B4 ratings prompt at happy moments · G1 share cards (numbers only) · G2 Wobbi sticker pack · G3 brain-rot-saved counter · landing page + waitlist · G4 invite/offer codes · G5 widgets/G6 App Intents (Mac). All figures in the plan are unverified assumptions.
+
+## Phase 22 — Guided thought entry, own audio player, paywall trimmed
+Done: the thought entry is a step-by-step flow with Wobbi (feel → what happened → what went through your mind + thinking traps → a kinder thought + re-rate → tags/photos → Save; the kinder step only appears once there is a thought; internal/external behaviour fields and the search box were dropped, old entries still show them). Voice memos use our own player (play/pause, scrubber, time) instead of the browser bar. The Pro paywall now guards **advanced analytics only** (proof cards + week/month summaries); Focus guard, sleep, sync and all five anchors are free for now (`docs/MONETIZATION.md`). Fixed a real sync race: an edit made while a sync was running waited for the next change instead of being retried (regression e2e).
+
+## Phase 21 — Immersive breathing
+Done: breathing (Breathe tab, SOS, Focus flow, Focus guard) is a full-screen scene: Wobbi swells and settles with the breath over a glow whose colour follows the phase (green in, violet hold, blue out), expanding rings and drifting specks (off with reduced motion), phase label + count, Sound/Muted, End and time left; the native tab bar hides while it runs. Not verified on a device: look and feel of the animation at 60 fps in the iOS web view.
+
+## Phase 19 — Offline first + Wobbi Pro (monthly subscription)
+Done: no account needed (the app starts straight on Home; sign-in is an optional Pro step that moves on-device data into the account), Pro subscription via StoreKit 2 (7-day trial, restore, disclosure, paywall) with gates on Focus guard, Sleep, week/month Summary, Progress proof, 4th/5th anchor and Sync; safety and data export are never gated; What's new dialog after updates; SOS first in Wobbi's coach; scroll bars hidden. Plan, competitor notes, pricing and owner steps: `docs/MONETIZATION.md`.
 Next: annual plan, server notifications (only if needed), offer codes, Family Sharing. Not verified: real purchases on a device.
 
-## Phase 18 — Pal & Focus guard
-Pal the mascot (soft lavender cloud-brain: 16 poses, 6 animation strips, CSS motion, `npm run sprites` art kit, new app icon), used in onboarding (Pal explains the app in 6 skippable screens), Today, empty states, celebrations, breathing, login. Notch fix on Stats. **Focus guard** (iOS Screen Time): pick apps, they stay paused until you earn time with push-ups/squats/plank/walk/breathing/a journal line — see `docs/SCREENTIME.md`. Not verified on a device; needs Apple's Family Controls entitlement for distribution.
+## Phase 18 — Wobbi & Focus guard
+Wobbi the mascot (soft lavender cloud-brain: 16 poses, 6 animation strips, CSS motion, `npm run sprites` art kit, new app icon), used in onboarding (Wobbi explains the app in 6 skippable screens), Today, empty states, celebrations, breathing, login. Notch fix on Stats. **Focus guard** (iOS Screen Time): pick apps, they stay paused until you earn time with push-ups/squats/plank/walk/breathing/a journal line — see `docs/SCREENTIME.md`. Not verified on a device; needs Apple's Family Controls entitlement for distribution.
 
 ## Phase 17 — App Store launch pack
 Done: mascot icon + launch image + PWA icons (`npm run icons`), App Store screenshots at 6.9″/6.5″ (`npm run store:screens`), listing text/review notes/age-rating/privacy-label as tested data (`scripts/store-metadata.mjs` → fastlane), Privacy Policy / Terms / Support / open-source notices (in-app + static site via GitHub Pages), privacy manifest, export-compliance flag, iPhone-only 1.0.0, fastlane + TestFlight workflow, `npm run store:check`. Guide: `docs/APPSTORE.md`.

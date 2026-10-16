@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import Face from './Face'
+import AudioPlayer from './AudioPlayer'
 import { Emoji } from '../lib/emoji'
 import { NameIcon } from '../lib/icons'
 import { moodOf } from '../lib/mood'
@@ -58,7 +59,7 @@ export default function EntryCard({ t, onDelete }: { t: Thought; onDelete?: (id:
           {t.internalBehaviour && <div className="kv"><b>Internal reaction</b>{t.internalBehaviour}</div>}
           {t.externalBehaviour && <div className="kv"><b>External behaviour</b>{t.externalBehaviour}</div>}
           {t.audio && <div onClick={e => e.stopPropagation()}>
-            {t.audio.url ? <audio controls preload="none" src={t.audio.url} aria-label="Voice memo" /> : <p className="muted small" style={{ margin: 0 }}>The audio file for this memo couldn’t be loaded.</p>}
+            {t.audio.url ? <AudioPlayer src={t.audio.url} durationSec={t.audio.durationSec} /> : <p className="muted small" style={{ margin: 0 }}>The audio file for this memo couldn’t be loaded.</p>}
             {t.audio.transcript ? <div className="etranscript">{t.audio.transcript}</div>
               : aiEnabled() && <button className="btn" style={{ marginTop: 10 }} disabled={busy} onClick={runTranscribe}>{busy ? 'Transcribing…' : 'Transcribe'}</button>}
             {err && <p role="alert" style={{ color: 'var(--danger)', margin: '8px 0 0' }}>{err}</p>}

@@ -7,9 +7,9 @@ import type { PoseName } from '../lib/pal.ts'
 const PICKS = STARTERS.filter(s => ['Slow breathing', 'Log a mood', 'Walk 10 minutes', 'Get some sunlight', 'Write one line'].includes(s.label))
 
 interface Page { pose: PoseName; motion: PalMotion; title: string; body: string; note?: string }
-/** The story: one idea per screen, Pal doing the talking. */
+/** The story: one idea per screen, Wobbi doing the talking. */
 export const STORY: Page[] = [
-  { pose: 'wave', motion: 'wave', title: 'Hi, I’m Pal!', body: 'I’m your pocket buddy for a calmer head. I’ll help you check in, settle down when things spike, and build tiny habits that stick. No pressure, no guilt.', note: 'Brain Pal is a self-help tool, not medical care. If you’re in crisis, support options are always one tap away in the SOS flow and under More.' },
+  { pose: 'wave', motion: 'wave', title: 'Hi, I’m Wobbi!', body: 'I’m your pocket buddy for a calmer head. I’ll help you check in, settle down when things spike, and build tiny habits that stick. No pressure, no guilt.', note: 'Wobbi is a self-help tool, not medical care. If you’re in crisis, support options are always one tap away in the SOS flow and under More.' },
   { pose: 'idle', motion: 'bob', title: 'Check in with one tap', body: 'Tap a face to log how you feel. Add a thought, a photo or a voice memo only when you want to. Your calendar and stats turn it into patterns you can actually see.' },
   { pose: 'breatheIn', motion: 'breathe', title: 'Calm down, together', body: 'Slow breathing and grounding walk you through it, and the red siren button up top is there for when anxiety spikes. Park worries for later, then decide: one small step, or let it go.' },
   { pose: 'flex', motion: 'bob', title: 'Grow a little each day', body: 'Pick up to five tiny daily anchors. Your skill levels grow with what you really do, with proof, and never go down. On iPhone, the Focus guard can keep time-sink apps paused until you move.' },
@@ -17,7 +17,7 @@ export const STORY: Page[] = [
 ]
 const LAST = STORY.length          // the final screen picks anchors
 
-/** First run: Pal explains everything in a few skippable screens, then you can pick your first anchors. */
+/** First run: Wobbi explains everything in a few skippable screens, then you can pick your first anchors. */
 export default function Onboarding({ onDone }: { onDone: () => void }) {
   const { addAnchor } = useStore()
   const [step, setStep] = useState(0)
@@ -27,7 +27,7 @@ export default function Onboarding({ onDone }: { onDone: () => void }) {
   const page = STORY[step]
 
   return (
-    <div className="overlay onboarding" role="dialog" aria-modal aria-label="Welcome to Brain Pal"><div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div className="overlay onboarding" role="dialog" aria-modal aria-label="Welcome to Wobbi"><div className="inner" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <div className="row spread" style={{ padding: 'calc(var(--safe-t) + 14px) 4px 10px' }}>
         <span className="dots" role="img" aria-label={`Step ${step + 1} of ${LAST + 1}`}>{Array.from({ length: LAST + 1 }, (_, i) => <i key={i} className={i === step ? 'on' : i < step ? 'past' : ''} />)}</span>
         <button className="linkbtn" onClick={onDone}>Skip</button>

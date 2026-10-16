@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.brainpal.app', // change to your own reverse-DNS id before shipping (must match your Apple developer team)
-  appName: 'Brain Pal',
+  appName: 'Wobbi',
   webDir: 'dist',
   backgroundColor: '#0e1726',
   ios: { contentInset: 'never', backgroundColor: '#0e1726' },

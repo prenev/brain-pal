@@ -90,7 +90,7 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.cell:not(.off) .bub:has(svg) >> nth=-1'); await p.evaluate(() => window.scrollTo(0, 700)); await snap('calendar-day')
   await p.click('.tab >> text=Breathe'); await snap('breathe')
   await p.click('.seg >> text=Calm 4-6'); await snap('breathe-calm-preset')
-  await p.click('text=Start'); await p.waitForTimeout(5200); await snap('breathe-running'); await p.click('text=End session')
+  await p.click('text=Start'); await p.waitForTimeout(3200); await snap('breathe-running'); await p.waitForTimeout(2200); await snap('breathe-running-2'); await p.click('text=End session')
   // SOS flow
   await p.click('[aria-label^="Anxious right now"]'); await snap('sos-rate')
   await p.click('text=Need more support right now?'); await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await snap('sos-support'); await p.click('text=Hide support options')
@@ -117,13 +117,16 @@ await session('http://localhost:4173', true, async (p, snap) => {
   await p.click('.sheet-item >> text=Park a worry'); await p.fill('textarea', 'What if I forget my notes?'); await snap('park-worry'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
   await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await snap('mood-picker')
   await p.click('.datelink'); await snap('mood-picker-date'); await p.click('.datelink')
-  await p.click('.faces button >> nth=3'); await p.click('.ig >> text=anxious'); await p.click('.ig >> text=stressed'); await snap('editor-emotions')
-  await p.evaluate(() => document.querySelector('.overlay').scrollTo(0, 99999)); await p.locator('text=Thinking traps').scrollIntoViewIfNeeded(); await p.click('.chip >> text=catastrophizing'); await p.click('.chip >> text=mind reading'); await snap('editor-thinking-traps')
-  await p.locator('text=Questions that help').scrollIntoViewIfNeeded(); await p.click('.qbtn >> nth=1'); await p.evaluate(() => document.querySelector('.overlay').scrollBy(0, 200)); await snap('editor-reframe-questions')
-  await p.locator('h3:has-text("Voice memo")').scrollIntoViewIfNeeded(); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await snap('voice-recording')
-  await p.click('button:has-text("Stop")'); await p.waitForSelector('audio'); await p.fill('textarea[placeholder^="Type it yourself"]', 'Talked it through: the demo went fine in the end.'); await snap('voice-recorded')
-  await p.click('text=Save'); await p.waitForSelector('.celebrate'); await p.waitForTimeout(900); await snap('celebrate')
-  await p.click('.celebrate .btn'); await snap('entries-after-save')
+  const nxt = () => p.click('.wiz-foot .btn.primary')
+  await p.click('.faces button >> nth=3'); await p.click('.ig >> text=anxious'); await p.click('.ig >> text=stressed'); await snap('wizard-1-feel')
+  await nxt(); await p.fill('textarea[placeholder="What was happening?"]', 'Presentation tomorrow'); await snap('wizard-2-happened')
+  await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await snap('voice-recording')
+  await p.click('button:has-text("Stop")'); await p.waitForSelector('audio', { state: 'attached' }); await p.fill('textarea[placeholder^="Type it yourself"]', 'Talked it through: the demo went fine in the end.'); await snap('voice-recorded')
+  await nxt(); await p.fill('textarea[placeholder="What went through your mind?"]', 'Everyone will notice if I mess up'); await p.click('.chip >> text=catastrophizing'); await p.click('.chip >> text=mind reading'); await snap('wizard-3-thought')
+  await nxt(); await p.click('.qbtn >> nth=1'); await snap('wizard-4-kinder')
+  await nxt(); await p.click('.ig >> text=work'); await snap('wizard-5-finish')
+  await p.click('.wiz-foot .btn.primary'); await p.waitForSelector('.celebrate'); await p.waitForTimeout(900); await snap('celebrate')
+  await p.click('.celebrate .btn.primary'); await snap('entries-after-save')
   await p.click('.tool >> text=Thoughts'); await p.locator('.overlay .entry:has-text("Voice memo")').first().click(); await snap('entry-with-voice-memo')
 })
 
@@ -131,10 +134,10 @@ await session('http://localhost:4173', true, async (p, snap) => {   // AI helper
   await p.click('.tab >> text=More'); await p.click('.li >> text=AI helper'); await p.click('[role=switch]'); await p.fill('input[type=password]', 'demo-key')
   await p.click('text=Save & test'); await p.waitForSelector('text=/Connected/'); await snap('ai-connected'); await p.click('[aria-label=Back]')
   await p.click('.tab >> text=Home'); await p.click('.fab'); await p.click('.sheet .sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=3')
-  await p.locator('h3:has-text("Voice memo")').scrollIntoViewIfNeeded(); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio')
+  await p.click('.wiz-foot .btn.primary'); await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(1600); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio', { state: 'attached' })
   await p.click('button:has-text("Transcribe")'); await p.waitForFunction(() => [...document.querySelectorAll('textarea')].some(x => x.value.startsWith('I am really worried'))); await snap('ai-transcribed')
   await p.click('button:has-text("Fill my thought record")'); await p.waitForSelector('text=Filled in from your memo'); await snap('ai-filled')
-  await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card'); await p.locator('.reframe-card').first().scrollIntoViewIfNeeded(); await snap('ai-reframes')
+  await p.click('.wiz-foot .btn.primary'); await p.click('.wiz-foot .btn.primary'); await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card'); await p.locator('.reframe-card').first().scrollIntoViewIfNeeded(); await snap('ai-reframes')
 })
 
 await session('http://localhost:4173', true, async (p, snap) => {   // iPhone app (native bridge simulated)
@@ -164,7 +167,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // journal
   await p.click('text=Need a place to start?'); await p.fill('[aria-label="Title"]', 'A slower morning')
   await p.fill('[aria-label="Journal entry"]', 'Woke up before the alarm. Made tea, sat by the window and just watched the street for ten minutes. Nothing special, but my shoulders dropped for the first time this week.')
   await p.click('[aria-label=Mood]'); await p.click('[aria-label="Mood: good"]'); await p.click('[aria-label=Tags]'); await p.click('.chip:has-text("health")'); await snap('journal-editor-tags'); await p.click('[aria-label=Tags]'); await snap('journal-editor')
-  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn')
+  await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn.primary')
   await p.click('.tab >> text=More'); await p.click('.li >> text=Journal'); await snap('journal-list')
 })
 
@@ -196,7 +199,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // coins
 })
 
 await session('http://localhost:4173', false, async (p, snap) => {   // first run
-  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await snap('welcome-1')
+  await p.waitForSelector('[aria-label="Welcome to Wobbi"]'); await snap('welcome-1')
   for (let i = 2; i <= 5; i++) { await p.click('button:has-text("Next")'); await snap(`welcome-${i}`) }
   await p.click('button:has-text("Next")'); await p.click('.chip:has-text("Slow breathing")'); await p.click('.chip:has-text("Walk 10 minutes")'); await snap('welcome-6-anchors')
 }, { onboarding: true })
@@ -204,6 +207,12 @@ await session('http://localhost:4173', false, async (p, snap) => {   // first ru
 await session('http://localhost:4173', true, async (p, snap) => {   // Focus guard on the web (practice mode) and on iPhone (simulated Screen Time)
   await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await snap('guard-web')
   await p.click('button:has-text("Try an activity")'); await snap('guard-choose'); await p.click('.challenge-opt >> text=Push-ups'); await p.click('.rep-btn'); await snap('guard-pushups')
+})
+await session('http://localhost:4173', true, async (p, snap) => {   // share cards + stickers
+  await p.evaluate(() => localStorage.setItem('bp.guard.events', JSON.stringify([{ id: 'a', at: new Date().toISOString(), challenge: 'pushups', minutes: 10, reps: 20 }, { id: 'b', at: new Date().toISOString(), challenge: 'squats', minutes: 10, reps: 35 }])))
+  await p.reload(); await p.click('.tab >> text=More'); await p.click('.li >> text=Focus guard'); await p.waitForSelector('[aria-label="Brain rot beaten"]'); await snap('guard-counter')
+  await p.click('[aria-label="Brain rot beaten"] button'); await p.waitForSelector('.share-preview svg'); await snap('share-card'); await p.click('.sheet button:has-text("Close")')
+  await p.click('[aria-label=Back]'); await p.click('.li >> text=Wobbi stickers'); await snap('stickers')
 })
 await session('http://localhost:4173', true, async (p, snap) => {
   await p.evaluate(() => { window.__reply = { 'Mindful.screenTimeStatus': { available: true, authorized: true, appCount: 4 }, 'Mindful.screenTimePickApps': { count: 4 } } })
@@ -219,7 +228,7 @@ await session('http://localhost:4174', false, async (p, snap) => {
 })
 
 await session('http://localhost:4173', true, async (p, snap) => {   // not Pro: the lock card and the paywall
-  await p.click('.tool >> text=Focus guard'); await snap('pro-locked'); await p.click('.pro-lock button'); await p.waitForSelector('[aria-label="Brain Pal Pro"]'); await snap('paywall')
+  await p.click('.tab >> text=Stats'); await p.click('[role=tab]:has-text("Progress")'); await p.waitForSelector('.pro-lock'); await snap('pro-locked'); await p.click('.pro-lock button'); await p.waitForSelector('[aria-label="Wobbi Pro"]'); await snap('paywall')
 }, { native: true, pro: false })
 
 await local.close(); await cloud.close(); await browser.close()
