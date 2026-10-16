@@ -422,6 +422,7 @@ test('journal editor: topic chips change each time, the formatting bar edits the
   const first = await topics(); await p.click('[aria-label="More topic ideas"]')
   const second = await topics(); assert.equal(first.filter(t => second.includes(t)).length, 0, 'the shuffle shows different topics')
   await p.click('.topic-row .chip >> nth=0'); assert.equal(await p.locator('.topic-row').count(), 0)
+  await p.waitForFunction(() => { const a = document.querySelector('[aria-label="Journal entry"]'); return a.selectionStart === a.value.length })      // the chip puts the cursor at the end on the next frame: wait for it, or it can overwrite the selection below
   await p.fill('[aria-label="Journal entry"]', 'plain text'); await p.evaluate(() => { const a = document.querySelector('[aria-label="Journal entry"]'); a.focus(); a.setSelectionRange(0, 5) })
   await p.click('[aria-label=Bold]'); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '**plain** text')
   await p.click('[aria-label="Bulleted list"]'); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '- **plain** text')
