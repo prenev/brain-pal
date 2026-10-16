@@ -33,7 +33,6 @@ import Wallet from './components/Wallet'
 import { levelCard } from './lib/share.ts'
 import { installFeedback } from './lib/feedback'
 import { useWidgetSync } from './lib/nativeWidgets'
-import { sfx } from './lib/sound'
 import { askForReviewIfHappy, noteFirstSeen } from './lib/reviewAsk'
 import type { JournalEntry } from './lib/journal.ts'
 
@@ -67,7 +66,7 @@ function Shell() {
   useEffect(() => {
     if (!ready) return
     const prev = lastCoins.current; lastCoins.current = coins
-    if (prev !== null && coins > prev) { setCoinToast({ n: coins - prev, id: Date.now() + Math.random() }); sfx('coin') }
+    if (prev !== null && coins > prev) { setCoinToast({ n: coins - prev, id: Date.now() + Math.random() }) }
   }, [ready, coins])
   // Its own timer: a later change in coins (spending, undoing an entry) must never cancel the hide.
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])

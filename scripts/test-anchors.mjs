@@ -54,3 +54,11 @@ const r = reorder([A('a1'), A('a2'), A('a3')], 'a2', -1)
 assert.deepEqual(activeAnchors(r).map(x => x.id), ['a2', 'a1', 'a3'])
 assert.deepEqual(reorder(r, 'a2', -1), r); assert.deepEqual(activeAnchors(reorder(r, 'a3', 1)).map(x => x.id), ['a2', 'a1', 'a3'])
 console.log('anchors: all tests passed')
+
+// regression: a stored list with more than five anchors (sync merge, older build) must never show more than five
+{
+  const many = Array.from({ length: 8 }, (_, i) => ({ id: 'x' + i, label: 'A' + i, emoji: 'target', link: null, order: i, createdAt: '2026-10-01T00:00:00.000Z', archivedAt: null }))
+  assert.equal(activeAnchors(many).length, MAX_ANCHORS); assert.deepEqual(activeAnchors(many).map(a => a.id), ['x0', 'x1', 'x2', 'x3', 'x4'], 'the first five by order win')
+  assert.equal(canAdd(many), false)
+  console.log('anchor cap ok')
+}

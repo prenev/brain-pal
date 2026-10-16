@@ -110,9 +110,10 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
     <div className="overlay notes" role="dialog" aria-modal aria-label={entry ? 'Edit journal entry' : 'New journal entry'}><div className="inner">
       <div className="notes-bar">
         <button className="notes-back" aria-label="Back" onClick={onClose}><ChevronLeft size={26} />Journal</button>
-        <button className="notes-done" onClick={save}>Save</button>
+        <span className="row" style={{ gap: 4 }}>{entry && <button className="notes-back" aria-label="Delete entry" onClick={remove} style={{ color: 'var(--muted)' }}><Trash2 size={21} /></button>}<button className="notes-done" onClick={save}>Save</button></span>
       </div>
-      <p className="notes-date">{when}</p>
+      <p className="notes-date">{when} · {words} {words === 1 ? 'word' : 'words'}</p>
+      {err && <p className="notes-date" role="alert" style={{ color: 'var(--danger)' }}>{err}</p>}
 
       {restored && <p className="muted small" role="status" style={{ textAlign: 'center' }}>Picked up where you left off.</p>}
       {crisis && <div role="alert"><Support /></div>}
@@ -127,7 +128,6 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
         : <textarea ref={area} className="notes-body" aria-label="Journal entry" maxLength={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={e => { setBody(e.target.value); setErr('') }} />}
       {(entry?.audio && !dropAudio && !clip) && <div className="notes-voice">{oldAudioUrl ? <AudioPlayer src={oldAudioUrl} durationSec={entry.audio.durationSec} label="Voice note" /> : <p className="muted small">This voice note was recorded on another device.</p>}
         <button className="linkbtn" onClick={() => setDropAudio(true)}>Remove voice note</button></div>}
-      {voiceOpen && <div className="notes-voice"><VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setVoiceOpen(false) }} onFill={() => {}} /></div>}
 
       <div className="notes-dock" style={{ ['--kb' as string]: `${kb}px` }}>
       {panel && <div className="notes-panel" role="group" aria-label={panel === 'mood' ? 'Choose a mood' : 'Choose tags'}>
@@ -139,20 +139,20 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
               {tagChoices.map(t => <button key={t} type="button" className={`chip ${tags.includes(t) ? 'on' : ''}`} aria-pressed={tags.includes(t)} onClick={() => setTags(tags.includes(t) ? tags.filter(x => x !== t) : [...tags, t])}>{t}</button>)}
             </div>}
       </div>}
-      {!preview && <div className="fmt-bar" role="toolbar" aria-label="Formatting">
-        {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} onPointerDown={e => e.preventDefault()} onClick={() => fmt(kind)}><Icon size={20} /></button>)}
-      </div>}
-      <div className="notes-tools">
+      {voiceOpen && <div className="notes-voicepanel"><VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setVoiceOpen(false) }} onFill={() => {}} /></div>}
+      <div className="notes-row" role="toolbar" aria-label="Formatting and extras">
+        {!preview && <span className="fmt-bar">
+          {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} onPointerDown={e => e.preventDefault()} onClick={() => fmt(kind)}><Icon size={20} /></button>)}
+          <i className="vsep" />
+        </span>}
         <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
-          {mood ? <Face mood={mood} size={26} /> : <Smile size={24} />}
+          {mood ? <Face mood={mood} size={26} /> : <Smile size={22} />}
         </button>
         <button aria-label="Tags" aria-expanded={panel === 'tags'} className={panel === 'tags' ? 'on' : ''} onClick={() => setPanel(panel === 'tags' ? null : 'tags')}>
-          <Tag size={22} />{tags.length > 0 && <span className="small">{tags.length}</span>}
+          <Tag size={21} />{tags.length > 0 && <span className="small">{tags.length}</span>}
         </button>
-        <button aria-label="Voice note" aria-expanded={voiceOpen} className={voiceOpen || clip ? 'on' : ''} onClick={() => setVoiceOpen(!voiceOpen)}><Mic size={22} /></button>
-        <button aria-label={preview ? 'Back to writing' : 'Preview'} aria-pressed={preview} className={preview ? 'on' : ''} onClick={() => setPreview(!preview)}><Eye size={22} /></button>
-        <span className="notes-count">{err ? <span role="alert" style={{ color: 'var(--danger)' }}>{err}</span> : `${words} ${words === 1 ? 'word' : 'words'}`}</span>
-        {entry && <button aria-label="Delete entry" onClick={remove}><Trash2 size={22} /></button>}
+        <button aria-label="Voice note" aria-expanded={voiceOpen} className={voiceOpen || clip ? 'on' : ''} onClick={() => setVoiceOpen(!voiceOpen)}><Mic size={21} /></button>
+        <button aria-label={preview ? 'Back to writing' : 'Preview'} aria-pressed={preview} className={preview ? 'on' : ''} onClick={() => setPreview(!preview)}><Eye size={21} /></button>
       </div>
       </div>
     </div></div>

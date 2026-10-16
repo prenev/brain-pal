@@ -6,7 +6,7 @@ for (const [name, notes] of Object.entries(SCORES)) {
   assert.ok(notes.length >= 1, name)
   for (const n of notes) { assert.ok(n.hz >= 200 && n.hz <= 4000, `${name} hz ${n.hz}`); assert.ok(n.dur > 0 && n.at >= 0, name); assert.ok((n.vol ?? 0.12) > 0 && (n.vol ?? 0.12) <= 0.2, `${name} stays quiet`) }
 }
-assert.ok(scoreLength('tick') < 0.1, 'ticks are tiny'); assert.ok(scoreLength('celebrate') < 1.5 && scoreLength('levelup') < 1.6, 'fanfares stay short')
+assert.deepEqual(Object.keys(SCORES).sort(), ['celebrate', 'levelup', 'oops', 'success'], 'sounds exist only for achievements, never for taps'); assert.ok(scoreLength('celebrate') < 1.5 && scoreLength('levelup') < 1.6, 'fanfares stay short')
 assert.ok(scoreLength('levelup') > scoreLength('success'), 'bigger moment, bigger sound')
 assert.ok(SCORES.success.every((n, i, a) => i === 0 || n.hz > a[i - 1].hz), 'success rises (a lift, never a drop)')
 assert.ok(SCORES.oops.every((n, i, a) => i === 0 || n.hz < a[i - 1].hz), 'oops falls, softly')

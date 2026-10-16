@@ -31,7 +31,8 @@ export const STARTERS: { label: string; emoji: string; link: AnchorLink | null }
 ]
 export const ANCHOR_EMOJI = ['wind', 'memo', 'notebook', 'walk', 'sun', 'water', 'pill', 'lotus', 'book', 'bed', 'run', 'dumbbell', 'salad', 'apple', 'shower', 'tooth', 'music', 'pray', 'phoneoff', 'heartfire']
 
-export const activeAnchors = (all: Anchor[]): Anchor[] => all.filter(a => !a.archivedAt).sort((a, b) => a.order - b.order)
+/** Never more than MAX_ANCHORS, whatever the stored list says (a sync merge or an old build could leave extras): the first five by order win. */
+export const activeAnchors = (all: Anchor[]): Anchor[] => all.filter(a => !a.archivedAt).sort((a, b) => a.order - b.order).slice(0, MAX_ANCHORS)
 export const canAdd = (all: Anchor[]): boolean => activeAnchors(all).length < MAX_ANCHORS
 export const cleanLabel = (s: string): string => s.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL)
 

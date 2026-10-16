@@ -7,7 +7,6 @@ import { AnchorCard, AnchorsManager } from '../components/Anchors'
 import { Screen, Sheet } from '../components/ui'
 import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
-import { worryStats } from '../lib/worries'
 import { loadGuard } from '../lib/extras'
 import { monthLabel } from '../components/ui'
 import EntryCard from '../components/EntryCard'
@@ -19,14 +18,13 @@ export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'guard' | 'sleep' | 'p
 
 /** Home: how are you feeling (always first), today's highlights, three tools, anchors, and everything you logged today. */
 export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorry, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onStep: () => void }) {
-  const { thoughts, deleteThought, streak, worries, coins } = useStore()
+  const { thoughts, deleteThought, streak, coins } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
-  const parked = worryStats(worries).open
   const tools: { id: HomeTool; emoji: string; label: string; badge?: string }[] = [
     { id: 'journal', emoji: 'notebook', label: 'Journal' },
-    { id: 'worry', emoji: 'worry', label: 'Worry time', badge: parked ? String(parked) : undefined },
+    { id: 'worry', emoji: 'worry', label: 'Worry time' },
     { id: 'guard', emoji: 'shield', label: 'Focus guard', badge: loadGuard().enabled ? 'On' : undefined },
   ]
 

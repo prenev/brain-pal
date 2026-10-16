@@ -841,19 +841,20 @@ test('iPhone app mode: boots without a service worker, styles the status bar, ne
   await done(s)
 })
 
-test('feedback: buttons and chips tick on the Taptic Engine, sliders tick as you drag, celebrations play a sound — and both switch off in More → Sounds & haptics', async () => {
+test('feedback: buttons and chips tick on the Taptic Engine and sliders tick as you drag (silently), and both switches work in More → Sounds & haptics', async () => {
   const s = await open(null, { native: true, time: new Date('2026-10-16T12:00:00') }); const p = s.page
   await p.addInitScript(() => { window.__osc = 0; window.AudioContext = class { constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} } resume() { return Promise.resolve() } createGain() { return { gain: { value: 1, setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: n => n } } createOscillator() { window.__osc++; return { frequency: { setValueAtTime() {} }, connect: n => n, start() {}, stop() {} } } } })
   await reload(p)
   const impacts = () => calls(p, 'Haptics', 'impact')
   const n0 = (await impacts()).length
-  await p.click('.fab'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n0)
+  await tab(p, 'Calendar'); await p.waitForSelector('.cal'); const n00 = (await impacts()).length
+  await p.click('.fab'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n00)
   assert.equal((await impacts()).at(-1).options.style, 'MEDIUM', 'the + button is a firm tap'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
-  await p.click('.fab'); await p.click('.sheet-item >> text=Thought entry'); await p.click('.faces button >> nth=2'); await p.waitForSelector('.wiz-body')
+  await tab(p, 'Home'); await p.click('[aria-label="Log mood: meh"]'); await p.waitForSelector('.wiz-body')
   const n1 = (await impacts()).length; await p.click('.ig >> text=anxious'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n1)
   assert.equal((await impacts()).at(-1).options.style, 'LIGHT', 'choosing a feeling is a light tick')
   const n2 = (await impacts()).length; await p.locator('input[type=range]').first().fill('20'); await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length > n, n2)   // a slider tick
-  assert.ok(await p.evaluate(() => window.__osc) > 0, 'selections make a tiny tick sound')
+  assert.equal(await p.evaluate(() => window.__osc), 0, 'taps are silent: sound is only for celebrations')
   await p.click('[aria-label=Close]')
   await tab(p, 'More'); await p.click('.li >> text=Sounds & haptics'); await p.waitForSelector('[role=switch][aria-label="Sound effects"]')
   assert.equal(await p.locator('[role=switch][aria-checked=true]').count(), 2, 'both on by default')
@@ -877,7 +878,7 @@ test('feedback: a celebration plays the fanfare (a bigger one for a level-up)', 
 
 test('iPhone app mode: breathing uses the Taptic Engine and keeps the screen awake', async () => {
   const s = await open(null, { native: true }); const p = s.page
-  await tab(p, 'Breathe'); await p.click('.seg >> text=Calm 4-6')
+  await tab(p, 'Breathe'); await p.click('.tech >> text=Calm 4-6')
   const taps = (await calls(p, 'Haptics', 'impact')).length; await p.click('button:has-text("Start")')   // our own button taps are separate from the breathing pattern
   await p.waitForFunction(n => window.__native.filter(c => c.plugin === 'Haptics' && c.method === 'impact').length >= n + 5, taps, { timeout: 8000 })
   const raw = (await calls(p, 'Haptics', 'impact')).slice(taps + 1), t0 = raw[0].at
@@ -1196,7 +1197,7 @@ test('widgets (iPhone app): the app keeps the widget snapshot fresh, applies moo
   // the control's screen opens, the queued mood is logged at the time it was tapped, the anchor is ticked
   await p.waitForSelector('[aria-label="Park a worry"]')
   await p.evaluate(() => { window.__reply = { ...window.__reply, 'Mindful.widgetTake': { actions: '[]' } } })
-  await p.click('[aria-label="Back"]'); await p.waitForSelector('.topbar .title >> text=Home')
+  await p.click('[aria-label="Back"]'); await p.waitForSelector('[aria-label="Log mood: good"]')
   const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.thoughts') ?? '[]'))
   assert.equal(stored.length, 1, 'one mood logged (the junk one is dropped)'); assert.equal(stored[0].mood, 2); assert.equal(stored[0].createdAt, new Date(t - 60_000).toISOString())
   const checks = await p.evaluate(() => JSON.parse(localStorage.getItem('bp.anchorChecks') ?? '[]'))
@@ -1239,7 +1240,7 @@ test('breathing is an immersive full-screen scene: Wobbi swells and settles with
   const a = await pal(); await p.waitForTimeout(2500); const b = await pal()
   assert.ok(b > a + 0.05, `Wobbi grows while breathing in (${a} → ${b})`)
   await p.waitForSelector('.breath-bar >> text=Muted'); await p.click('[aria-label="Turn tones on"]'); await p.waitForSelector('.breath-bar >> text=Sound'); await p.click('[aria-label="Mute tones"]'); await p.waitForSelector('.breath-bar >> text=Muted')
-  assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 6/)
+  assert.match(await p.locator('.breath-left').innerText(), /\d:\d\d/); assert.match(await p.locator('.breath-round').innerText(), /Round 1 of 12/)
   await p.waitForTimeout(8000); await p.waitForSelector('.breath-scene[data-phase=hold1]')                // box 4: 4 s in, then a hold
   await p.click('button:has-text("End session")'); await p.waitForSelector('.breath-scene', { state: 'detached' })
   await p.waitForFunction(() => window.__native.filter(c => c.method === 'setTabsHidden').pop()?.options.hidden === false)
@@ -1303,11 +1304,11 @@ test('Wobbi tips: every section has one short tip, dismissing sticks, and More b
   const s = await open({ 'bp.thoughts': [rec('t1', 0)], 'bp.journal': [] }); const p = s.page
   const tip = () => p.locator('.pal-tip .bubble').first().innerText()
     assert.equal(await p.locator('.pal-tip').count(), 0, 'Home itself has no tip: Wobbi’s corner coach covers it')
-  for (const [t, re] of [['Calendar', /Tap a day/], ['Breathe', /follow the circle/]]) { await tab(p, t); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, t) }
+  for (const [t, re] of [['Calendar', /Tap a day/], ['Breathe', /Pick a rhythm/]]) { await tab(p, t); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, t) }
   await tab(p, 'Stats')
   for (const [v, re] of [['Progress', /Skills grow/], ['Summary', /plain words/], ['Sleep', /sleep and mood|Apple Health/]]) { await p.click(`[role=tab]:has-text("${v}")`); await p.waitForSelector('.pal-tip'); assert.match(await tip(), re, v) }
   await tab(p, 'Home')
-  for (const [t, re] of [['Thoughts', /month by month/], ['Journal', /Only you can read/], ['Coins', /Coins come from/], ['Sleep', /sleep/]]) { await p.click(`.tools-row .tool >> text=${t}`); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
+  for (const [t, re] of [['.more-today', /month by month/], ['.tools-row .tool >> text=Journal', /Only you can read/], ['.coin-pill', /Coins come from/]]) { await p.click(t); await p.waitForSelector('.overlay .pal-tip'); assert.match(await p.locator('.overlay .pal-tip .bubble').first().innerText(), re, t); await p.click('[aria-label=Back]') }
   // dismiss: stays gone after a reload; More brings it back
   await tab(p, 'Calendar'); await p.click('.pal-tip [aria-label="Hide this tip"]'); assert.equal(await p.locator('.pal-tip').count(), 0)
   await reload(p); await tab(p, 'Calendar'); await p.waitForSelector('.cal'); assert.equal(await p.locator('.pal-tip').count(), 0, 'a dismissed tip stays dismissed')

@@ -3,7 +3,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { isNative } from './native'
 import { loadFx } from './extras'
 import { touchKind, type TouchInfo } from './sfx.ts'
-import { sfx, unlockAudio } from './sound'
+import { unlockAudio } from './sound'
 import { canVibrate } from './haptics'
 
 const SEL = 'button, [role=switch], [role=tab], [role=checkbox], input[type=checkbox], input[type=radio], .fab, .chip, .ig'
@@ -25,7 +25,7 @@ const infoOf = (el: Element): TouchInfo => ({
 export function touch(el: Element | null) {
   const target = el?.closest(SEL); if (!target) return
   const kind = touchKind(infoOf(target)); if (!kind) return
-  uiTap(kind === 'press'); sfx(kind === 'press' ? 'pop' : 'tick')
+  uiTap(kind === 'press')                       // taps are felt, not heard: sound is kept for celebrations
 }
 
 /** Call once at startup. Returns a cleanup. */

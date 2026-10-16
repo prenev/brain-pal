@@ -42,7 +42,7 @@ button.card:active { transform: translateY(2px); border-bottom-width: 2px; }
   position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: calc(var(--safe-t) + 10px) 14px 12px; margin: 0 -14px; background: var(--bg);
 }
-.topbar::after, .stats-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 14px; background: linear-gradient(var(--bg), transparent); pointer-events: none; }   /* solid bar, soft edge: content never shows through the bar */
+
 .round { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; flex: none; position: relative; color: var(--muted); transition: transform .08s; }
 button.round:active { transform: translateY(2px); border-bottom-width: 2px; }
 .round.green { color: var(--accent); }
@@ -418,7 +418,7 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 
 /* Journal editor: a Notes-style page — no boxes, the text is the page */
 .overlay.notes .inner { padding-bottom: calc(var(--safe-b) + 140px); }
-.notes-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; margin: 0 -14px; padding: calc(var(--safe-t) + 6px) 8px 6px; background: linear-gradient(var(--bg) 75%, transparent); }
+.notes-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; margin: 0 -14px; padding: calc(var(--safe-t) + 6px) 8px 6px; background: var(--bg); }
 .notes-back, .notes-done { display: flex; align-items: center; min-height: 44px; padding: 0 6px; color: var(--accent); font-size: 17px; font-weight: 800; }
 .notes-done { font-weight: 900; }
 .notes-date { margin: 0 0 16px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
@@ -430,16 +430,16 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .notes-dock { position: fixed; left: 0; right: 0; bottom: var(--kb, 0px); z-index: 61; max-width: 640px; margin: 0 auto; transition: bottom .12s;
   background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 60%), rgba(20,31,52,.9);
   -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); border-top: 1px solid rgba(255,255,255,.12); }
-.notes-tools { display: flex; align-items: center; gap: 6px; padding: 4px 14px 6px; }
-.notes-dock[style*="--kb: 0px"] .notes-tools { padding-bottom: calc(var(--safe-b) + 6px); }
-.notes-dock:not([style*="--kb: 0px"]) .notes-tools { padding-bottom: 6px; }
-.notes-tools button { min-width: 44px; height: 44px; padding: 0 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--muted); }
-.notes-tools button.on { color: var(--accent); background: rgba(255,255,255,.1); }
-.fmt-bar { display: flex; justify-content: space-between; gap: 2px; padding: 6px 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); overflow-x: auto; }
-.fmt-bar button { flex: 1; min-width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #c9d6f2; }
-.fmt-bar button:active { background: rgba(255,255,255,.14); color: var(--accent); }
+/* one row above the keyboard: formatting, then mood / tags / voice / preview. It scrolls sideways if the phone is narrow. */
+.notes-row { display: flex; align-items: center; gap: 2px; padding: 4px 8px 6px; overflow-x: auto; scrollbar-width: none; }
+.notes-dock[style*="--kb: 0px"] .notes-row { padding-bottom: calc(var(--safe-b) + 6px); }
+.notes-row button { flex: none; min-width: 38px; height: 42px; padding: 0 6px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 3px; color: #c9d6f2; }
+.notes-row button.on { color: var(--accent); background: rgba(255,255,255,.1); }
+.notes-row button:active { background: rgba(255,255,255,.14); color: var(--accent); }
+.fmt-bar { display: contents; } .vsep { width: 1px; height: 22px; background: rgba(255,255,255,.18); margin: 0 6px; flex: none; }
+.notes-voicepanel { padding: 12px 14px 4px; border-bottom: 1px solid rgba(255,255,255,.08); max-height: 46dvh; overflow-y: auto; }
 .notes-panel { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
-.overlay.notes .inner { padding-bottom: calc(var(--safe-b) + 190px); }
+.overlay.notes .inner { padding-bottom: calc(var(--safe-b) + 140px); }
 .topic-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .topic-row .chip { font-size: 14px; padding: 8px 14px; }
 .topic-row .shuffle { display: grid; place-items: center; padding: 8px 12px; color: var(--muted); }
@@ -519,8 +519,8 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .player-time { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--muted); min-width: 40px; text-align: right; }
 
 /* thought entry: one question per screen */
-.wiz-inner { min-height: 100dvh; display: flex; flex-direction: column; padding-top: calc(max(var(--safe-t, 0px), 20px) + 10px); }
-.wiz-head { display: flex; align-items: center; gap: 12px; padding: 4px 0 10px; }
+.wiz-inner { min-height: 100dvh; display: flex; flex-direction: column; }
+.wiz-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; margin: 0 -14px 6px; padding: calc(max(var(--safe-t, 0px), 20px) + 10px) 14px 10px; background: var(--bg); }   /* solid, and it owns the notch area: nothing scrolls behind the status bar */
 .wiz-prog { flex: 1; display: flex; gap: 6px; }
 .wiz-prog i { flex: 1; height: 10px; border-radius: 99px; background: var(--card2); border: 2px solid var(--edge); transition: background .25s; }
 .wiz-prog i.on { background: var(--accent); border-color: var(--accent-dark); }
