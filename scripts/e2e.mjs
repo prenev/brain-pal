@@ -75,12 +75,14 @@ const reload = async p => { await p.reload(); await p.waitForSelector('.topbar')
 
 const fabMenu = async p => { await tab(p, 'Calendar'); await p.click('.fab') }          // Home has no + button any more; Stats and Calendar still do
 const nextStep = p => p.click('.wiz-foot .btn.primary')
-const toStep = async (p, n) => { for (let i = 0; i < n; i++) await nextStep(p) }          // feel → happened → thought → (kinder) → finish
+const toStep = async (p, n) => { for (let i = 0; i < n; i++) await nextStep(p) }          // feel → write ("Write about it"); the kinder step is opened with "Untangle this thought" (untangle(p))
+const untangle = p => p.click('.untangle')
+const openTags = async p => { await p.click('summary:has-text("Tags and photos")') }
 const MOOD_NAME = { 5: 'rad', 4: 'good', 3: 'meh', 2: 'bad', 1: 'awful' }
 async function newEntry(p, { mood = 3, emotion, thought } = {}) {
   await tab(p, 'Home'); await p.click(`[aria-label="Log mood: ${MOOD_NAME[mood]}"]`); await p.waitForSelector('.wiz-body')      // the mood faces on Home open the entry flow with that mood chosen
   if (emotion) await p.click(`.ig >> text=${emotion}`)
-  if (thought) { await toStep(p, 2); await p.fill('textarea[placeholder="What went through your mind?"]', thought) }
+  if (thought) { await toStep(p, 1); await p.fill('textarea[aria-label="What’s on your mind?"]', thought) }
 }
 const save = async p => {
   if (await p.locator('.wiz-foot').count()) { while (!(await p.locator('.wiz-foot .btn.primary:has-text("Save")').count())) await nextStep(p) }
@@ -93,7 +95,7 @@ async function connectAi(p) {
   await p.click('[aria-label=Back]'); await tab(p, 'Home')
 }
 async function record(p, secs = 1.6) {
-  if (await p.locator('button:has-text("Speak instead")').count()) await p.click('button:has-text("Speak instead")')
+  if (await p.locator('button:has-text("Voice memo")').count()) await p.click('button:has-text("Voice memo")')
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio', { state: 'attached' })
 }
 
@@ -145,7 +147,7 @@ test('legacy data (no mood / traps / audio / session kind, inline photos) still 
 test('create, persist, expand and delete an entry', async () => {
   const s = await open()
   await newEntry(s.page, { mood: 2, emotion: 'anxious', thought: 'I will fail the exam' })
-  await s.page.click('.chip >> text=catastrophizing'); await s.page.fill('textarea[placeholder="What went through your mind?"]', 'I will fail the exam')
+  await s.page.click('.chip >> text=catastrophizing'); await s.page.fill('textarea[aria-label="What’s on your mind?"]', 'I will fail the exam')
   await save(s.page)
   await s.page.waitForSelector('.entry >> text=I will fail the exam')
   await reload(s.page)
@@ -169,7 +171,7 @@ test('crisis wording shows support options and blocks AI suggestions', async () 
   const s = await open(); await connectAi(s.page)
   await newEntry(s.page, { mood: 1, thought: 'I want to kill myself' })
   await s.page.waitForSelector('text=You don’t have to do this alone')
-  await toStep(s.page, 1); await s.page.waitForSelector('textarea[placeholder^="What would you tell"]'); await s.page.waitForSelector('text=You don’t have to do this alone')   // the support card follows them to the next step
+  await untangle(s.page); await s.page.waitForSelector('textarea[placeholder^="What would you tell"]'); await s.page.waitForSelector('text=You don’t have to do this alone')   // the support card follows them to the next step
   assert.equal(await s.page.locator('text=Suggest reframes').count(), 0)
   assert.ok(!s.gemini.calls.some(c => c.url.includes('generateContent') && c.body.includes('kill myself')), 'crisis text must never be sent to the AI')
   await done(s)
@@ -194,7 +196,7 @@ test('voice memo: record, play, transcribe by hand, persist across reload, free 
 
 test('voice memo: cancel discards, and AI controls stay hidden until enabled', async () => {
   const s = await open(); const p = s.page
-  await newEntry(p, { mood: 3 }); await toStep(p, 1); await p.click('button:has-text("Speak instead")')
+  await newEntry(p, { mood: 3 }); await toStep(p, 1); await p.click('button:has-text("Voice memo")')
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.click('button:has-text("Cancel")')
   await p.waitForSelector('text=● Record'); assert.equal(await p.locator('audio').count(), 0)
   await record(p); assert.equal(await p.locator('button:has-text("Transcribe")').count(), 0)
@@ -212,15 +214,15 @@ test('Gemini (mocked): connect, transcribe, fill thought record, reframes, trans
   await p.click('button:has-text("Fill my thought record")'); await p.waitForSelector('text=Filled in from your memo')
   await p.click('.wiz-foot [aria-label=Back]'); await p.waitForSelector('.ig')                       // feel step
   assert.equal(await p.locator('.ig.on').count(), 1, 'only allow-listed emotions are applied (bogus dropped)')
-  await toStep(p, 2)                                                                                // thought step
-  assert.equal(await p.inputValue('textarea[placeholder="What went through your mind?"]'), STRUCTURED.thought)
+  await toStep(p, 1)                                                                                // write step
+  assert.equal(await p.inputValue('textarea[aria-label="What’s on your mind?"]'), STRUCTURED.thought)
   assert.equal(await p.locator('.chip.on >> text=catastrophizing').count(), 1)
-  await toStep(p, 1)                                                                                // kinder step (there is a thought now)
+  await untangle(p)                                                                                 // kinder step (there is a thought now)
   await p.click('button:has-text("Suggest reframes")'); await p.waitForSelector('.reframe-card')
   assert.equal(await p.locator('.reframe-card').count(), 3)
   await p.click('.reframe-card >> nth=0')
   assert.match(await p.inputValue('textarea[placeholder^="What would you tell"]'), /I have prepared/)
-  await toStep(p, 1); assert.equal(await p.locator('.ig.on').count(), 1, 'allow-listed tag applied, bogus tag dropped')
+  await p.click('.wiz-foot [aria-label=Back]'); await openTags(p); assert.equal(await p.locator('.ig.on').count(), 1, 'allow-listed tag applied, bogus tag dropped')
   await save(p)
   await p.click('.entry'); await p.waitForSelector('.etranscript >> text=presentation tomorrow')
   // a memo saved without a transcript can be transcribed afterwards
@@ -310,7 +312,7 @@ test('emotion and tag lists start short, learn what you use, and "More" / search
   assert.equal(await p.locator('.ig:has-text("anxious")').count(), 1, 'sensible starters are still there')
   await p.click('text=/More emotions \\(\\d+\\)/'); assert.equal(await ig.count(), 19)
   await p.click('text=Show fewer'); assert.equal(await ig.count(), 6)
-  await toStep(p, 3); await p.waitForSelector('text=Add your own')                                  // feel → happened → thought → finish: tags live on the last step
+  await toStep(p, 1); await openTags(p); await p.waitForSelector('text=Add your own >> nth=0')                // tags live in the write step, under "Tags and photos"
   assert.equal(await ig.count(), 6); assert.equal(await ig.first().innerText().then(t => t.trim().toLowerCase()), 'money')
   await done(s)
 })
@@ -693,7 +695,7 @@ test('shop: save up for something (a goal with progress), the title and card sty
 
 test('achievements: a new one pops up as a shareable card with its coins, once; the Achievements list shows earned and locked ones', async () => {
   const s = await open({ 'bp.ach.seen': [] }); const p = s.page
-  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate >> text=Entry saved!'); await p.click('.celebrate .btn.primary')
+  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save")'); await p.waitForSelector('.celebrate >> text=Entry saved!'); await p.click('.celebrate .btn.primary')
   await p.waitForSelector('.celebrate >> text=Achievement unlocked!'); await p.waitForSelector('.cel-card svg'); assert.match(await p.locator('.cel-card').innerHTML(), /First check-in/); assert.match(await p.locator('.cel-card').innerHTML(), /BRONZE/)
   await p.waitForSelector('.celebrate >> text=+10 coins')
   await p.click('.celebrate .btn:has-text("Share")'); await p.waitForSelector('.share-preview svg'); assert.equal(await p.locator('.share-preview svg').getAttribute('viewBox'), '0 0 1080 1350'); await p.click('.sheet >> text=Close')
@@ -724,7 +726,7 @@ test('shop: a treat you name yourself, and a quiet +N when you earn', async () =
   await p.fill('input[placeholder^="e.g. A coffee"]', 'A long walk in the sun'); await p.click('.confirm-buy button.primary:has-text("Get it · 30 coins")')
   await p.waitForSelector('text=Treat saved. Go enjoy it!'); await p.waitForSelector('.card:has-text("Your treats") >> text=A long walk in the sun'); await p.waitForSelector('[aria-label="112 coins"]')
   assert.equal(await p.locator('.coin-toast').count(), 0, 'spending never pops a toast')
-  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+3 coins')
+  await tab(p, 'Home'); await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save")'); await p.waitForSelector('.coin-toast >> text=+3 coins')
   await done(s)
   const f = await open(); await f.page.waitForTimeout(600); assert.equal(await f.page.locator('.coin-toast').count(), 0, 'no toast on load'); await done(f)
 })
@@ -888,7 +890,7 @@ test('SOS flow records relief and Stats reflects it; breathing session logs', as
 
 test('photos attach, persist and show in the gallery', async () => {
   const s = await open(); const p = s.page
-  await newEntry(p, { mood: 4 }); await toStep(p, 3)
+  await newEntry(p, { mood: 4 }); await toStep(p, 1); await openTags(p)
   await p.setInputFiles('label:has-text("From gallery") input', { name: 'a.png', mimeType: 'image/png', buffer: PNG })
   await p.waitForSelector('.photos img'); await save(p)
   await reload(p); await tab(p, 'More'); await p.click('.li >> text=Photo Gallery'); await p.waitForSelector('.gallery img')
@@ -1139,7 +1141,7 @@ test('home: tapping a face opens the entry flow with that mood and "just save my
   assert.match(await p.locator('.tool:has-text("Sleep") small').innerText(), /4h 10m/, 'last night under Sleep')
   await p.click('.worry-tool'); await p.waitForSelector('text=Start worry time'); await p.click('[aria-label=Back]')
   await p.click('[aria-label="Log mood: bad"]'); await p.waitForSelector('.wiz-body'); assert.match(await p.locator('.wiz-face').getAttribute('aria-label'), /Change mood/)
-  await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
+  await p.click('button:has-text("Just save")'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.entry')
   assert.equal(await p.locator('.today').count(), 1, 'the mood card is still there after logging'); assert.equal(await p.locator('.entry').count(), 1)
   await reload(p); assert.equal(await p.locator('.entry').count(), 1)
   await done(s)
@@ -1447,13 +1449,13 @@ test('breathing is an immersive full-screen scene: Wobbi swells and settles with
 
 test('coin toast: "+N coins" always goes away by itself, even when your coins change again while it shows', async () => {
   const s = await open(null, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
-  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save my mood")'); await p.waitForSelector('.coin-toast >> text=+13 coins'); await p.click('.celebrate .btn.primary')   // 3 for the check-in + 10 for the first-check-in achievement
+  await p.click('[aria-label="Log mood: good"]'); await p.click('button:has-text("Just save")'); await p.waitForSelector('.coin-toast >> text=+13 coins'); await p.click('.celebrate .btn.primary')   // 3 for the check-in + 10 for the first-check-in achievement
   p.once('dialog', d => d.accept()); await p.click('.entry'); await p.click('text=Delete entry')      // the entry is deleted, so coins drop while the toast is still showing (this used to cancel its timer)
   await p.waitForFunction(() => !document.querySelector('.entry'))
   await p.clock.runFor(4000)
   assert.equal(await p.locator('.coin-toast').count(), 0, 'the toast must be gone after a few seconds')
   // the 13 coins from the deleted entry are kept (earned coins never vanish), so the next entries only pay out once they go beyond that
-  for (const m of ['bad', 'meh']) { await p.click(`[aria-label="Log mood: ${m}"]`); await p.click('button:has-text("Just save my mood")'); await p.click('.celebrate .btn.primary') }
+  for (const m of ['bad', 'meh']) { await p.click(`[aria-label="Log mood: ${m}"]`); await p.click('button:has-text("Just save")'); await p.click('.celebrate .btn.primary') }
   await p.waitForSelector('.coin-toast >> text=+3 coins'); await p.clock.runFor(4000)
   assert.equal(await p.locator('.coin-toast').count(), 0, 'and the next one too')
   await done(s)
@@ -1567,7 +1569,7 @@ test('Pro (iPhone): an ended subscription locks again (the store is the authorit
 test('offline first: the app needs no account; sign-in is optional and you can walk away from it', async () => {
   const A = await openCloud({ signedIn: false }); const a = A.page
   await a.click('button:has-text("Not now — keep using it offline")'); await tab(a, 'Home'); await a.waitForSelector('[aria-label="Log mood: good"]')
-  await a.click('[aria-label="Log mood: good"]'); await a.click('button:has-text("Just save my mood")'); await a.click('.celebrate .btn.primary'); await a.waitForSelector('.entry'); await tab(a, 'More')
+  await a.click('[aria-label="Log mood: good"]'); await a.click('button:has-text("Just save")'); await a.click('.celebrate .btn.primary'); await a.waitForSelector('.entry'); await tab(a, 'More')
   assert.equal(await a.locator('.li:has-text("Sync across devices")').count(), 1); assert.equal(await a.locator('.li:has-text("Storage") .val').innerText(), 'This device')
   assert.equal(await a.locator('button:has-text("Sign out")').count(), 0, 'nothing to sign out of')
   await done(A)
