@@ -22,6 +22,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 - `send-reminders` Edge Function not deployed (needs VAPID secrets)
 
 ## ✅ Done
+- UI: Home tools row (Focus guard · Worry time · Journal) above the anchors, each opens its own screen; Today/Entries/Journal switch removed (month list → *All entries*); Notes-style journal editor (borderless title + growing page, mood/tags in a glass toolbar)
 - Native UITabBar (Liquid Glass on iOS 26) via MindfulPlugin; web bar only as fallback (device check pending)
 - UX pass: Home tab (Today / Entries / Journal), grouped + menu, uniform tab icons, calendar fix
 - Fix: CI flake — anchors e2e crossed midnight UTC (clock pinned)

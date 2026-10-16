@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus, ArrowLeft, House, ChartColumn, CalendarDays, Wind, CircleEllipsis, type LucideIcon } from 'lucide-react'
 import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
-import { Sheet } from './components/ui'
+import { Screen, Sheet } from './components/ui'
 import { useNativeTabs } from './lib/nativeTabs'
-import { useGuardRelock } from './components/Guard'
+import Guard, { useGuardRelock } from './components/Guard'
 import { StoreProvider, useStore } from './lib/store'
 import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
-import Entries, { type HomeView } from './pages/Entries'
+import Entries, { AllEntries, type HomeTool } from './pages/Entries'
 import Stats from './pages/Stats'
 import CalendarPage from './pages/CalendarPage'
 import Breathe from './pages/Breathe'
@@ -17,7 +17,7 @@ import NewEntry from './pages/NewEntry'
 import Sos from './components/Sos'
 import WorryTime from './components/WorryTime'
 import ParkWorry from './components/ParkWorry'
-import { JournalEditor } from './components/Journal'
+import { JournalEditor, JournalList } from './components/Journal'
 import FocusFlow from './components/FocusFlow'
 import Onboarding from './components/Onboarding'
 import type { JournalEntry } from './lib/journal.ts'
@@ -49,7 +49,7 @@ function Shell() {
     if (prev !== null && coins > prev) { setCoinToast(coins - prev); const t = setTimeout(() => setCoinToast(0), 2600); return () => clearTimeout(t) }
   }, [ready, coins])
   const [tab, setTab] = useState<Tab>('entries')
-  const [homeView, setHomeView] = useState<HomeView>('today')
+  const [screen, setScreen] = useState<'guard' | 'journal' | 'entries' | 'search' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
@@ -68,7 +68,7 @@ function Shell() {
       const route = (e as CustomEvent<string>).detail
       if (route === 'breathe') setTab('breathe')
       else if (route === 'journal') setJournalOpen({})
-      else if (route === 'checkin' || route === 'anchors') { setHomeView('today'); setTab('entries') }
+      else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
@@ -91,7 +91,7 @@ function Shell() {
   }, [ready, needsLogin, recovery, cel, levels])
 
   // iPhone app: the real UIKit tab bar. Hidden whenever a sheet / full-screen flow is open or before the app proper shows.
-  const overlayOpen = menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const overlayOpen = !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
   const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || needsLogin || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
@@ -104,7 +104,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries view={homeView} setView={setHomeView} onJournal={e => setJournalOpen({ entry: e })} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onAllEntries={search => setScreen(search ? 'search' : 'entries')} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -134,7 +134,7 @@ function Shell() {
           </> : <>
             <div className="sheet-label first">Write</div>
             <button className="sheet-item" onClick={() => start(new Date())}><span className="ic"><Emoji name="nib" size={30} /></span>Thought entry</button>
-            <button className="sheet-item" onClick={() => { setMenu(false); setHomeView('journal'); setTab('entries'); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Journal entry</button>
+            <button className="sheet-item" onClick={() => { setMenu(false); setJournalOpen({}) }}><span className="ic"><Emoji name="notebook" size={30} /></span>Journal entry</button>
             <button className="sheet-item" onClick={() => { setMenu(false); setPark(true) }}><span className="ic"><Emoji name="worry" size={30} /></span>Park a worry</button>
             <div className="sheet-label">Calm &amp; focus</div>
             <button className="sheet-item" onClick={() => { setMenu(false); setSos(true) }}><span className="ic"><Emoji name="sos" size={30} /></span>I’m anxious right now</button>
@@ -149,7 +149,10 @@ function Shell() {
         </Sheet>
       )}
       {sos && <Sos onStep={() => setFocusOpen(true)} onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
-      {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setHomeView('entries'); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
+      {screen === 'guard' && <Screen title="Focus guard" onClose={() => setScreen(null)}><Guard /></Screen>}
+      {screen === 'journal' && <Screen title="Journal" onClose={() => setScreen(null)}><JournalList onOpen={e => setJournalOpen({ entry: e })} onWrite={() => setJournalOpen({})} /></Screen>}
+      {(screen === 'entries' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
       {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
       {journalOpen && <JournalEditor entry={journalOpen.entry} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}

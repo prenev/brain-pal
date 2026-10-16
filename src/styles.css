@@ -331,7 +331,6 @@ textarea.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
 .cal .bub { flex: none; }
 input.input[type=time], input.input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; box-sizing: border-box; text-align: center; display: block; }
 .seg.three button { flex: 1 1 0; }
-.home-seg { margin: 0 0 12px; flex-wrap: nowrap; }
 .month-row { margin: 0 0 12px; }
 .sheet-label.first { border-top: 0; margin-top: 0; padding-top: 4px; }
 .anchor-empty b { display: block; }
@@ -385,3 +384,29 @@ input.input[type=time], input.input[type=date] { -webkit-appearance: none; appea
 .rep-count { font-size: 56px; font-weight: 900; line-height: 1; margin: 6px 0 12px; }
 .rep-count small { font-size: 22px; color: var(--muted); }
 .rep-btn { min-height: 72px; font-size: 22px; }
+
+/* Home: secondary tools row */
+.tools-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.card.tool { margin: 0; padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.tool b { font-size: 14px; line-height: 1.15; } .tool .sub { font-size: 12px; font-weight: 700; color: var(--muted); }
+.all-entries { width: 100%; text-align: left; }
+
+/* Journal editor: a Notes-style page — no boxes, the text is the page */
+.overlay.notes .inner { padding-bottom: calc(var(--safe-b) + 140px); }
+.notes-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; margin: 0 -14px; padding: calc(var(--safe-t) + 6px) 8px 6px; background: linear-gradient(var(--bg) 75%, transparent); }
+.notes-back, .notes-done { display: flex; align-items: center; min-height: 44px; padding: 0 6px; color: var(--accent); font-size: 17px; font-weight: 800; }
+.notes-done { font-weight: 900; }
+.notes-date { margin: 0 0 16px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
+.notes-prompt { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0 0 12px; text-align: left; color: var(--muted); font-size: 15px; line-height: 1.4; }
+.notes-title, .notes-body { display: block; width: 100%; padding: 0; border: 0; outline: none; background: transparent; }
+.notes-title { margin: 0 0 8px; font-size: 28px; font-weight: 900; letter-spacing: -.01em; }
+.notes-body { min-height: 55dvh; resize: none; overflow: hidden; font-size: 18px; line-height: 1.6; }
+.notes-title::placeholder, .notes-body::placeholder { color: #4b5d80; }
+.notes-tools, .notes-panel { position: fixed; left: 0; right: 0; z-index: 61; max-width: 640px; margin: 0 auto;
+  background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 60%), rgba(20,31,52,.72);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); border: 1px solid rgba(255,255,255,.12); }
+.notes-tools { bottom: 0; display: flex; align-items: center; gap: 6px; padding: 6px 14px calc(var(--safe-b) + 6px); border-width: 1px 0 0; }
+.notes-tools button { min-width: 44px; height: 44px; padding: 0 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--muted); }
+.notes-tools button.on { color: var(--accent); background: rgba(255,255,255,.1); }
+.notes-count { flex: 1; text-align: center; color: var(--muted); font-size: 13px; font-weight: 700; }
+.notes-panel { bottom: calc(var(--safe-b) + 66px); left: 10px; right: 10px; max-width: 620px; padding: 14px; border-radius: 24px; }
