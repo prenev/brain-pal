@@ -5,16 +5,15 @@ The agent's own board. **Rules:** one card *In progress* at a time · a card mov
 Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · 📄 docs · 🐞 bug/chore
 
 ## 🔜 Backlog (ordered — see ROADMAP "Order of work")
-- **P7b** 🧱 First-run (3 skippable screens), reduced-motion, tap-target audit (rest of 7b)
 - **P13** 🧱 Theme picker; optional Gemini "reflect with me"
 - **chore** 🐞 Code-split bundle · neutral demo seed text · Siri/widgets (Mac)
 
 ## ⏭ Next up
-- **P13** 🧱 Weekly review + theme extras, optional Gemini "reflect with me"
-- **P7b** First-run screens + reduced-motion
+- **P13** 🧱 Weekly review nudge (Today card on Sunday evening), optional Gemini "reflect with me"
+- **chore** 🐞 Code-split the 1.4 MB bundle
 
 ## 🔨 In progress
-- **P12** 📄 verify (full e2e), commit, push — sync engine, `user_docs` live, 3 two-device e2e
+- **P7b** 📄 verify (full e2e + screens), commit, push — first run, reduced motion, tap-target audit; fixed a batch-add anchors bug
 
 ## 🔎 Verify / blocked on the owner
 - Google + Apple sign-in on a real iPhone (Swift compiled in CI only) — see TODO.md
@@ -23,6 +22,7 @@ Legend: 🧱 build · 🧪 tests · 🗄 data/migration · 📱 iOS/native · �
 
 ## ✅ Done
 - P0–P6: scaffold, mood diary, accounts, reminders (server), anxiety toolkit, playful redesign, iPhone app, voice memos + Gemini + worry time
+- P7b first-run + reduced motion + tap-target audit (found/fixed: adding several anchors in one tick kept only the last)
 - P12 Cloud sync (user_docs, newest-wins + tombstones, offline-safe, sign-out clears device) — migration live, engine mutation-checked, 3 two-device e2e
 - P11 Coins (derived earnings with caps, themes, rest days, treats) — pure logic mutation-checked, 4 e2e
 - P10 Sleep (Apple Health read-only, nights/stages/consistency, sleep↔mood, manual log) — pure logic mutation-checked, 3 e2e; real Watch data pending

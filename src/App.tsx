@@ -17,6 +17,7 @@ import WorryTime from './components/WorryTime'
 import ParkWorry from './components/ParkWorry'
 import { JournalEditor } from './components/Journal'
 import FocusFlow from './components/FocusFlow'
+import Onboarding from './components/Onboarding'
 import type { JournalEntry } from './lib/journal.ts'
 
 type Tab = 'entries' | 'stats' | 'calendar' | 'breathe' | 'more'
@@ -30,7 +31,11 @@ const TABS: { id: Tab; label: string; icon: LucideIcon | 'nib' }[] = [
 ]
 
 function Shell() {
-  const { ready, needsLogin, recovery, levels, coins } = useStore()
+  const { ready, needsLogin, recovery, levels, coins, thoughts, sessions, worries, journal, anchors } = useStore()
+  const hasData = thoughts.length + sessions.length + worries.length + journal.length + anchors.length > 0
+  const [onboarded, setOnboarded] = useState(() => { try { return !!localStorage.getItem('bp.onboarded') } catch { return true } })
+  const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
+  useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
   const [coinToast, setCoinToast] = useState(0)
   const lastCoins = useRef<number | null>(null)
   // A quiet "+N coins" when you earn some (never on load, never when coins drop from spending).
@@ -82,6 +87,7 @@ function Shell() {
 
   if (!ready) return <div className="center-screen muted">Loading…</div>
   if (needsLogin || recovery) return <Login />
+  if (!onboarded && !hasData) return <Onboarding onDone={finishOnboarding} />
 
   const start = (d: Date) => { setMenu(false); setOtherDay(false); setComposeAt(d) }
   const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d }

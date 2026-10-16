@@ -33,7 +33,7 @@ Order of work (changed after the competitor analysis in [`docs/COMPETITORS.md`](
 | Order | # | Phase | Why it matters | Status |
 |---|---|---|---|---|
 | 1 | 7 | **Daily Anchors** — up to 5 non-negotiables | The "do these and the day counts" habit loop | ✅ done (device-local until P12) |
-| 2 | 7b | **Today & ease of use** — one next action, ≤2-tap logging, short lists, tap-budget tests | "Easy to use af" | 🔨 Today card, one-tap mood + undo, short lists ✅; first-run screens + reduced-motion pending |
+| 2 | 7b | **Today & ease of use** — one next action, ≤2-tap logging, short lists, tap-budget tests | "Easy to use af" | ✅ Today card, one-tap mood + undo, short lists, first-run screens, reduced motion, tap-target audit |
 | 3 | 8 | **Journal** — free writing + gentle prompts | A place for thoughts that aren't a CBT record | ✅ editor, drafts, list/search/tags, edit/delete, crisis support; voice-note in journal pending |
 | 4 | 14 | **Worry → Focus bridge** ("Start tiny") | Our unique anxiety→action loop; competitors only have a timer | ✅ step picker (worry plans first), calm start, 5/10/25 focus, pause/stop, wired from SOS, Today card, + menu |
 | 5 | 15 | **Summaries** — daily recap, weekly/monthly digest, shareable | Understand your week in 20 seconds | ✅ Summary view (today/week/month) + share; evening "wind down" recap on the Today card pending |

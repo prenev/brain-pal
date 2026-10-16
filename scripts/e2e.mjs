@@ -31,8 +31,9 @@ const STRUCTURED = { situation: 'Presentation tomorrow', thought: 'I will mess i
 /** Fresh browser context + page with error capture and a mocked Gemini API. */
 const calls = (p, plugin, method) => p.evaluate(([a, b]) => window.__native.filter(c => c.plugin === a && (!b || c.method === b)), [plugin, method])
 
-async function open(seed, { native = false, time = null } = {}) {
+async function open(seed, { native = false, time = null, onboarding = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['microphone', 'notifications'], acceptDownloads: true })
+  if (!onboarding) await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })   // the first-run screens have their own test
   if (time) await ctx.clock.install({ time })      // for tests whose outcome depends on the time of day: pin it so they don't flake near midnight
   const gemini = { calls: [], mode: 'ok' }
   await ctx.route('https://generativelanguage.googleapis.com/**', async route => {
@@ -56,7 +57,7 @@ async function open(seed, { native = false, time = null } = {}) {
   const errors = []
   page.on('pageerror', e => errors.push('pageerror: ' + e.message))
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()) })
-  await page.goto(URL_); await page.waitForSelector('.topbar')
+  await page.goto(URL_); await page.waitForSelector('.topbar, .onboarding')
   opened.push(page)
   return { ctx, page, errors, gemini }
 }
@@ -696,6 +697,55 @@ test('cloud sync: data that predates sync is pushed on first sign-in; sign-out c
 })
 
 
+test('first run: three skippable screens, picks your first anchors, and never shows to someone who already uses the app', async () => {
+  const s = await open(null, { onboarding: true }); const p = s.page
+  await p.waitForSelector('[aria-label="Welcome to Brain Pal"]'); await p.waitForSelector('text=A calm place to check in'); assert.match(await p.locator('.onboarding').innerText(), /self-help tool, not medical care/)
+  await p.click('button:has-text("Next")'); await p.waitForSelector('text=Your data stays yours'); assert.match(await p.locator('.onboarding').innerText(), /No ads, no tracking/)
+  await p.click('button:has-text("Next")'); await p.waitForSelector('text=Pick up to three daily anchors')
+  for (const l of ['Slow breathing', 'Walk 10 minutes', 'Get some sunlight', 'Write one line']) await p.click(`.onboarding .chip:has-text("${l}")`)
+  assert.equal(await p.locator('.onboarding .chip.on').count(), 3, 'at most three')
+  await p.click('button:has-text("Start")'); await p.waitForSelector('.topbar'); await p.waitForSelector('[role=checkbox][aria-label="Slow breathing"]')
+  assert.equal(await p.locator('[role=checkbox]').count(), 3); assert.equal(await p.evaluate(() => !!localStorage.getItem('bp.onboarded')), true)
+  await reload(p); assert.equal(await p.locator('.onboarding').count(), 0, 'shown once')
+  await done(s)
+  const skip = await open(null, { onboarding: true }); await skip.page.waitForSelector('.onboarding'); await skip.page.click('button:has-text("Skip")'); await skip.page.waitForSelector('.topbar')
+  assert.equal(await skip.page.locator('[role=checkbox]').count(), 0, 'skipping adds nothing'); await done(skip)
+  const existing = await open({ 'bp.thoughts': [rec('t', 1)] }, { onboarding: true }); await existing.page.waitForSelector('.topbar'); assert.equal(await existing.page.locator('.onboarding').count(), 0, 'people with data never see it')
+  assert.equal(await existing.page.evaluate(() => !!localStorage.getItem('bp.onboarded')), true); await done(existing)
+})
+
+test('reduced motion: no entrance animations or long transitions', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' }); const page = await ctx.newPage()
+  await ctx.addInitScript(() => localStorage.setItem('bp.onboarded', '1')); await page.goto(URL_); await page.waitForSelector('.topbar')
+  await page.click('.fab'); await page.waitForSelector('.sheet')
+  const ms = await page.evaluate(() => { const cs = getComputedStyle(document.querySelector('.sheet')); return [parseFloat(cs.animationDuration) * (cs.animationDuration.endsWith('ms') ? 1 : 1000), parseFloat(getComputedStyle(document.querySelector('.fab')).transitionDuration) * 1000] })
+  assert.ok(ms[0] < 5 && ms[1] < 5, `animations/transitions are effectively off: ${ms}`)
+  await ctx.close()
+  const normal = await browser.newContext({ viewport: { width: 390, height: 844 } }); const q = await normal.newPage()
+  await normal.addInitScript(() => localStorage.setItem('bp.onboarded', '1')); await q.goto(URL_); await q.waitForSelector('.topbar'); await q.click('.fab'); await q.waitForSelector('.sheet')
+  assert.ok(await q.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.sheet')).animationDuration) > 0.1), 'still animated by default'); await normal.close()
+})
+
+
+test('tap targets: every control is big enough to hit (>= 24 px, primary controls >= 44 px)', async () => {
+  const s = await open({ 'bp.thoughts': [rec('t', 0)], 'bp.worries': [plan('w1', 'Email the landlord')] }); const p = s.page
+  const small = []
+  const scan = async label => small.push(...await p.evaluate(label => [...document.querySelectorAll('button, a[href], input:not([type=hidden]), select, textarea, [role=checkbox], [role=switch], [role=tab], [role=radio]')].filter(el => {
+    const r = el.getBoundingClientRect(), st = getComputedStyle(el); return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none' && r.bottom > 0 && r.top < innerHeight
+  }).map(el => {
+    const r = el.getBoundingClientRect(), primary = el.matches('.btn, .tab, .fab, .quickmood button, .anchor-item, .li, [role=tab], [role=switch]')
+    const min = primary ? 44 : 24, w = Math.round(r.width), h = Math.round(r.height)
+    return (el.matches('[role=switch]') ? h < 28 : (primary ? h < min : Math.min(w, h) < min)) || (!el.matches('[role=switch], input, textarea, select, .chip, .linkbtn') && Math.max(w, h) < 24) ? `${label}: ${el.tagName.toLowerCase()}.${(el.className || '').toString().split(' ')[0]} "${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 24)}" ${w}x${h}` : null
+  }).filter(Boolean), label))
+  await scan('Entries'); for (const t of ['Stats', 'Calendar', 'Breathe', 'More']) { await tab(p, t); await p.waitForTimeout(120); await scan(t) }
+  await p.click('.fab'); await p.waitForSelector('.sheet'); await scan('menu'); await p.click('.sheet-wrap', { position: { x: 5, y: 5 } })
+  await newEntry(p, { mood: 3 }); await scan('editor')
+  if (small.length) console.log('    too small:\n      ' + [...new Set(small)].join('\n      '))
+  assert.deepEqual([...new Set(small)], [], 'controls that are too small to tap comfortably')
+  await done(s)
+})
+
+
 test('SOS flow records relief and Stats reflects it; breathing session logs', async () => {
   const s = await open(); const p = s.page
   // support options are one tap away from the very first SOS screen, and don't disturb the flow
@@ -927,6 +977,7 @@ async function openCloud({ providers = { email: true, google: true, apple: true 
     await ctx.addInitScript(nativeStub)
     if (reply) await ctx.addInitScript(r => { window.__reply = r }, reply)
   }
+  await ctx.addInitScript(() => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } })
   if (signedIn) await ctx.addInitScript(sess => { if (!localStorage.getItem('sb-127-auth-token')) localStorage.setItem('sb-127-auth-token', JSON.stringify(sess)) }, SESSION)
   if (seed) await ctx.addInitScript(v => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, seed)
   const page = await ctx.newPage(); const errors = []

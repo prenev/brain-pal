@@ -45,6 +45,7 @@ Playful dark theme following Duolingo-style UI principles: chunky 3D buttons tha
 
 ## Daily wellbeing (anchors, Today card)
 
+- **First run** — three short, skippable screens the very first time (what it is, what happens to your data, pick up to 3 anchors). Never shown to anyone who already has data. Reduced-motion is respected everywhere; every control is at least 24 px (primary ones 44 px) — a test enforces it.
 - **Today card** — one obvious next thing. Before you've checked in it's five faces: **one tap logs a mood** (with Undo / "Add details"). After that it points at what's left: unfinished anchors, parked worries, or "you're all set".
 - **Daily anchors** — pick **up to 5** small non-negotiables (walk, sunlight, slow breathing, …). Tick them on the home screen; some tick themselves (e.g. a breathing session). Streak = days with *every* anchor done. The cap is deliberate — it is not a to-do list.
 - **Short lists** — the emotion/tag pickers start with your most-used six; *More* or search shows everything.

@@ -318,3 +318,9 @@ textarea.journal-area { min-height: 42dvh; line-height: 1.5; resize: vertical; }
 .sleep-bars .col i { display: block; width: 100%; border-radius: 8px 8px 4px 4px; background: var(--blue, #4aa8ff); }
 
 .coin-toast { position: fixed; top: calc(var(--safe-t, 0px) + 14px); left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px; background: var(--card); border: 2px solid var(--accent); color: var(--accent); font-weight: 900; pointer-events: none; animation: rise .3s cubic-bezier(.2,.9,.3,1); }
+
+/* Respect "reduce motion": no entrance animations or transitions (confetti is already skipped in JS). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+.seg button { min-height: 44px; }

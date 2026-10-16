@@ -156,7 +156,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const anchorStreakVal = useMemo(() => anchorStreak(anchors, checks, act, new Date()), [anchors, checks, act, today])
   const anchorHistory = useMemo(() => Array.from({ length: 400 }, (_, i) => shift(today, i - 399)).map(day => { const p = dayProgress(anchors, day, checks, act); return { day, done: p.done, total: p.total } }), [anchors, checks, act, today])
   const levels = useMemo(() => skillLevels({ thoughts, sessions, worries, journal, focus: focusSessions }), [thoughts, sessions, worries, journal, focusSessions])
-  const updateAnchors = (next: Anchor[]) => { setAnchors(next); saveAnchors(next) }
+  const anchorsRef = useRef(anchors); anchorsRef.current = anchors
+  // The ref is updated immediately so several changes in the same tick (e.g. the first-run picks) build on each other instead of overwriting.
+  const updateAnchors = (next: Anchor[]) => { anchorsRef.current = next; setAnchors(next); saveAnchors(next) }
 
   const earned = useMemo(() => computeEarnings({
     thoughts, sessions, journal, focus: focusSessions, worries, anchorDays: anchorHistory,
@@ -299,15 +301,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     deleteJournal(id) { updateJournalList(journal.filter(e => e.id !== id)) },
     anchors, anchorsToday, anchorHistory, levels, anchorStreak: anchorStreakVal,
     addAnchor(label, emoji, link) {
-      const clean = cleanLabel(label)
-      if (!clean || !canAdd(anchors)) return false
-      const order = anchors.reduce((m, a) => Math.max(m, a.order), 0) + 1
-      updateAnchors([...anchors, { id: crypto.randomUUID(), label: clean, emoji, link, order, createdAt: new Date().toISOString(), archivedAt: null }])
+      const cur = anchorsRef.current, clean = cleanLabel(label)
+      if (!clean || !canAdd(cur)) return false
+      const order = cur.reduce((m, a) => Math.max(m, a.order), 0) + 1
+      updateAnchors([...cur, { id: crypto.randomUUID(), label: clean, emoji, link, order, createdAt: new Date().toISOString(), archivedAt: null }])
       return true
     },
-    renameAnchor(id, label) { const clean = cleanLabel(label); if (clean) updateAnchors(anchors.map(a => (a.id === id ? { ...a, label: clean } : a))) },
-    removeAnchor(id) { updateAnchors(anchors.map(a => (a.id === id && !a.archivedAt ? { ...a, archivedAt: new Date().toISOString() } : a))) },
-    moveAnchor(id, dir) { updateAnchors(reorder(anchors, id, dir)) },
+    renameAnchor(id, label) { const clean = cleanLabel(label); if (clean) updateAnchors(anchorsRef.current.map(a => (a.id === id ? { ...a, label: clean } : a))) },
+    removeAnchor(id) { updateAnchors(anchorsRef.current.map(a => (a.id === id && !a.archivedAt ? { ...a, archivedAt: new Date().toISOString() } : a))) },
+    moveAnchor(id, dir) { updateAnchors(reorder(anchorsRef.current, id, dir)) },
     toggleAnchor(id) {
       const k = checkKey(id, today), next = new Set(checks)
       if (next.has(k)) next.delete(k); else next.add(k)
