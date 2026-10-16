@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { ALL_ANCHORS_BONUS, balance, canBuy, earnings, itemById, MAX_COINS_PER_DAY, ownedThemes, REST_DAYS_PER_MONTH, restDays, RULES, SHOP, spent, total } from '../src/lib/rewards.ts'
 
 const at = (day, h = 12) => `${day}T${String(h).padStart(2, '0')}:00:00`
-const data = (o = {}) => ({ thoughts: [], sessions: [], journal: [], focus: [], worries: [], anchorDays: [], sleepDates: [], guardAt: [], collectDays: [], streakDays: [], ...o })
+const data = (o = {}) => ({ thoughts: [], sessions: [], journal: [], focus: [], worries: [], anchorDays: [], sleepDates: [], collectDays: [], streakDays: [], ...o })
 const sum = e => e.reduce((a, x) => a + x.coins, 0)
 const thought = (createdAt, alternateThought = '') => ({ createdAt, alternateThought })
 const noAch = e => e.filter(x => x.reason !== 'achievement')   // achievements are tested in test-achievements.mjs

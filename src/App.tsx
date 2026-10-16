@@ -4,7 +4,6 @@ import { Emoji } from './lib/emoji'
 import Celebrate, { type Celebration } from './components/Celebrate'
 import { Screen, Sheet } from './components/ui'
 import { useNativeTabs } from './lib/nativeTabs'
-import Guard, { useGuardRelock } from './components/Guard'
 import { StoreProvider, useStore } from './lib/store'
 import { evidenceLine, levelUps, SKILLS, type SkillId } from './lib/levels.ts'
 import { newlyUnlocked } from './lib/achievements.ts'
@@ -30,6 +29,7 @@ import { APP_VERSION } from './lib/appInfo.ts'
 import { PaywallProvider, usePaywallOpen } from './components/Pro'
 import Sleep from './components/Sleep'
 import FocusHub from './components/FocusHub'
+import GroundNow from './components/GroundNow'
 import { PomoProvider } from './lib/pomoStore'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
@@ -57,7 +57,6 @@ function Shell() {
   const [onboarded, setOnboarded] = useState(() => { try { return !!localStorage.getItem('bp.onboarded') } catch { return true } })
   const finishOnboarding = () => { try { localStorage.setItem('bp.onboarded', '1') } catch { /* ignore */ } setOnboarded(true) }
   useEffect(() => { if (ready && !onboarded && hasData) finishOnboarding() }, [ready, onboarded, hasData])   // people who already use the app never see it
-  useGuardRelock()
   useWidgetSync()
   useEffect(() => installFeedback(), [])
   const [coached, setCoached] = useState(coachDone)
@@ -76,12 +75,13 @@ function Shell() {
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
   useEffect(() => { noteFirstSeen() }, [])
   const [tab, setTab] = useState<Tab>('entries')
-  const [screen, setScreen] = useState<'guard' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'achievements' | 'focus' | null>(null)   // full-screen pages opened from Home
+  const [screen, setScreen] = useState<'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'achievements' | 'focus' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
   const [sos, setSos] = useState(false)
   const [worryTime, setWorryTime] = useState(false)
+  const [ground, setGround] = useState(false)
   const [park, setPark] = useState(false)
   const [moreView, setMoreView] = useState<'support' | 'journal' | null>(null)
   const [composeMood, setComposeMood] = useState<number | null>(null)
@@ -99,7 +99,8 @@ function Shell() {
       else if (route === 'checkin' || route === 'anchors') { setScreen(null); setTab('entries') }
       else if (route === 'worry') setWorryTime(true)
       else if (route === 'park') setPark(true)
-      else if (route === 'guard' || route === 'sleep' || route === 'progress' || route === 'coins' || route === 'achievements' || route === 'focus') { setTab('entries'); setScreen(route) }
+      else if (route === 'guard' || route === 'focus') { setTab('entries'); setScreen('focus') }   // the old Focus guard lives inside Focus now
+      else if (route === 'sleep' || route === 'progress' || route === 'coins' || route === 'achievements') { setTab('entries'); setScreen(route) }
     }
     window.addEventListener('bp:route', go); return () => window.removeEventListener('bp:route', go)
   }, [])
@@ -152,7 +153,7 @@ function Shell() {
   const paywallOpen = usePaywallOpen()
   const [immersive, setImmersive] = useState(false)
   useEffect(() => { const f = (e: Event) => setImmersive(!!(e as CustomEvent<boolean>).detail); window.addEventListener('bp:immersive', f); return () => window.removeEventListener('bp:immersive', f) }, [])
-  const overlayOpen = paywallOpen || immersive || !!screen || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const overlayOpen = paywallOpen || immersive || !!screen || ground || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
   const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || loginOpen || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
   if (!ready) return <Splash />
@@ -165,7 +166,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onPark={() => setPark(true)} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} />}
+        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : t === 'ground' ? setGround(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onPark={() => setPark(true)} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -210,10 +211,10 @@ function Shell() {
       )}
       {sos && <Sos onStep={() => setFocusOpen(true)} onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
-      {screen === 'guard' && <Screen title="Focus guard" onClose={() => setScreen(null)}><Guard /></Screen>}
       {screen === 'journal' && <Screen title="Journal" onClose={() => setScreen(null)}><JournalList onOpen={e => setJournalOpen({ entry: e })} onWrite={() => setJournalOpen({})} /></Screen>}
       {(screen === 'thoughts' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
       {screen === 'focus' && <FocusHub onClose={() => setScreen(null)} />}
+      {ground && <GroundNow onClose={() => setGround(false)} onDone={() => { setGround(false); setCel({ emoji: 'herb', title: 'Back in the room', sub: 'You noticed what is here, right now. That is grounding.' }) }} />}
       {screen === 'sleep' && <Screen title="Sleep" onClose={() => setScreen(null)}><Sleep /></Screen>}
       {screen === 'progress' && <Screen title="Progress" onClose={() => setScreen(null)}><Progress /></Screen>}
       {screen === 'summary' && <Screen title="Summary" onClose={() => setScreen(null)}><Summary /></Screen>}

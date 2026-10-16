@@ -12,7 +12,7 @@ import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadEquip, loadPurchases, loadRituals, loadTheme, saveEquip, loadGuardEvents, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
+import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadEquip, loadPurchases, loadRituals, loadTheme, saveEquip, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
 import { balance as coinBalance, canBuy, earnings as computeEarnings, restDays, type BuyCheck, type Earning } from './rewards.ts'
@@ -117,8 +117,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeId] = useState<string | null>(loadTheme)
   const [equip, setEquipState] = useState<Equip>(() => loadEquip(loadPurchases()))
   const setEquip = (e: Equip) => { setEquipState(e); saveEquip(e) }
-  const [guardAt, setGuardAt] = useState<string[]>(() => loadGuardEvents().map(e => e.at))
-  useEffect(() => { const f = () => setGuardAt(loadGuardEvents().map(e => e.at)); window.addEventListener('bp:guard-events', f); return () => window.removeEventListener('bp:guard-events', f) }, [])
   const [healthNights, setHealthNights] = useState<Night[]>(loadHealthNights)
   const [manualNights, setManualNights] = useState<Night[]>(loadManualNights)
   const [sleepOn, setSleepOn] = useState(sleepConnected)
@@ -182,9 +180,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const rewardData = useMemo(() => ({
     thoughts, sessions, journal, focus: focusSessions, worries, anchorDays: anchorHistory,
-    sleepDates: sleepNights.map(n => n.date), guardAt, collectDays: collectDays(purchases),
+    sleepDates: sleepNights.map(n => n.date), collectDays: collectDays(purchases),
     streakDays: [...new Set([...thoughts.map(t => dayKey(t.createdAt)), ...sessions.map(s => dayKey(s.createdAt)), ...restDays(purchases)])],
-  }), [thoughts, sessions, journal, focusSessions, worries, anchorHistory, sleepNights, guardAt, purchases])
+  }), [thoughts, sessions, journal, focusSessions, worries, anchorHistory, sleepNights, purchases])
   const earned = useMemo(() => computeEarnings(rewardData), [rewardData])
   const achievementList = useMemo(() => computeAchievements(rewardData), [rewardData])
   const [coinHW, setCoinHW] = useState(loadCoinHighWater)

@@ -55,7 +55,7 @@ extension WidgetSnapshot {
                       Anchor(id: "3", label: "Write", emoji: "pen", done: true, auto: true), Anchor(id: "4", label: "Bed by 11", emoji: "bed", done: false, auto: false),
                       Anchor(id: "5", label: "No phone", emoji: "phoneoff", done: false, auto: false)],
             worriesOpen: 3, sleep: Sleep(lastMin: 440, avgMin: 400), prompt: "A small win I might be overlooking", coins: 340,
-            focus: Guard(enabled: true, apps: 3, challenges: 2, reps: 25, minutes: 15, week: [1, 0, 2, 1, 3, 0, 2]),
+            focus: Guard(enabled: true, apps: 3, challenges: 2, reps: 4, minutes: 50, week: [1, 0, 2, 1, 3, 0, 2]),
             wobbi: Wobbi(text: "You showed up 5 days this week.", pose: "love"))
     }
 }
@@ -180,7 +180,7 @@ struct WorryJarWidget: Widget {
     var body: some WidgetConfiguration { cfg("WobbiWorryJar", "Worry jar", "Worries you parked, safe until worry time.", [.systemSmall, .accessoryInline]) { WorryJarView(entry: $0) } }
 }
 struct GuardWidget: Widget {
-    var body: some WidgetConfiguration { cfg("WobbiGuard", "Focus guard", "Brain rot, beaten: challenges and minutes you earned.", [.systemSmall, .systemLarge]) { GuardView(entry: $0) } }
+    var body: some WidgetConfiguration { cfg("WobbiGuard", "Focus", "Focus blocks today, minutes and your week.", [.systemSmall, .systemLarge]) { GuardView(entry: $0) } }
 }
 struct JournalWidget: Widget {
     var body: some WidgetConfiguration { cfg("WobbiJournal", "Journal prompt", "A fresh question every day.", [.systemSmall]) { JournalView(entry: $0) } }

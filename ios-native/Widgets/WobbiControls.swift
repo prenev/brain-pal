@@ -33,5 +33,5 @@ struct ParkControl: ControlWidget {
 }
 @available(iOS 18.0, *)
 struct GuardControl: ControlWidget {
-    var body: some ControlWidgetConfiguration { button("com.brainpal.app.control.guard", .focus, "Focus guard", "shield.lefthalf.filled", "Open the focus guard.") }
+    var body: some ControlWidgetConfiguration { button("com.brainpal.app.control.guard", .focus, "Focus", "timer", "Start or check a focus block.") }
 }

@@ -3,7 +3,7 @@ import { dayKey } from './dates.ts'
 
 /**
  * Focus guard ("anti brain rot"): apps you pick stay paused until you earn a few minutes with a quick activity.
- * Pure rules only; the actual blocking is iOS Screen Time (ios-native/MindfulPlugin.swift), the screens are components/Guard.tsx.
+ * Pure rules only; the actual blocking is iOS Screen Time (ios-native/MindfulPlugin.swift), its only UI now is "Block apps during focus" (components/FocusHub.tsx); the challenge rules are kept for old data.
  * Honest by design: reps are an honour system (we can't watch you), so we only stop the cheapest cheating (tapping fast).
  */
 export type ChallengeId = 'pushups' | 'squats' | 'plank' | 'walk' | 'breathe' | 'journal'

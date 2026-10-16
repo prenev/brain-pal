@@ -1,6 +1,6 @@
 import { dayKey, shift } from './dates.ts'
 import { pickPrompt } from './journal.ts'
-import type { GuardConfig, GuardEvent } from './guard.ts'
+import { isPomoStep } from './pomodoro.ts'
 
 /**
  * Home-screen / lock-screen widgets (iPhone). The app writes one small JSON snapshot into the shared App Group;
@@ -27,6 +27,8 @@ export interface WidgetSnapshot {
   sleep: { lastMin: number | null; avgMin: number | null }
   prompt: string
   coins: number
+  /** Focus (pomodoro). Kept under the old Focus-guard key/field names so widgets already on a home screen keep decoding:
+   *  enabled = block apps during focus, challenges = blocks today, reps = daily goal, minutes = focused today, week = blocks per day. */
   guard: { enabled: boolean; apps: number; challenges: number; reps: number; minutes: number; week: number[] }
   wobbi: { text: string; pose: string }
 }
@@ -39,8 +41,7 @@ export interface WidgetInput {
   worriesOpen: number
   nights: { date: string; asleepMin: number }[]
   coins: number
-  guard: GuardConfig
-  guardEvents: GuardEvent[]
+  focus: { block: boolean; apps: number; goal: number; blocks: { createdAt: string; actualSec: number; completed: boolean; step: string }[] }
   /** Breathing sessions + journal entries: only their dates matter here. */
   sessions: { createdAt: string }[]
   journal: { createdAt: string }[]
@@ -67,8 +68,8 @@ export function buildSnapshot(i: WidgetInput): WidgetSnapshot {
   const recent = i.nights.filter(n => n.date >= shift(today, -13) && n.date !== last?.date).map(n => n.asleepMin)
   const avgMin = avg(recent)
 
-  const gEvents = i.guardEvents.filter(e => dayKey(e.at) === today)
-  const gWeek = days.map(day => i.guardEvents.filter(e => dayKey(e.at) === day).length)
+  const blocks = i.focus.blocks.filter(b => b.completed && isPomoStep(b.step))
+  const todays = blocks.filter(b => dayKey(b.createdAt) === today)
 
   const snap: WidgetSnapshot = {
     v: WIDGET_VERSION,
@@ -85,9 +86,8 @@ export function buildSnapshot(i: WidgetInput): WidgetSnapshot {
     prompt: pickPrompt(today).text,
     coins: i.coins,
     guard: {
-      enabled: i.guard.enabled, apps: i.guard.appCount,
-      challenges: gEvents.length, reps: gEvents.reduce((a, e) => a + e.reps, 0), minutes: gEvents.reduce((a, e) => a + e.minutes, 0),
-      week: gWeek,
+      enabled: i.focus.block && i.focus.apps > 0, apps: i.focus.apps, challenges: todays.length, reps: i.focus.goal,
+      minutes: Math.round(todays.reduce((a, b) => a + Math.max(0, b.actualSec), 0) / 60), week: days.map(day => blocks.filter(b => dayKey(b.createdAt) === day).length),
     },
     wobbi: { text: '', pose: 'idle' },
   }

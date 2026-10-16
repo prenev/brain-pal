@@ -17,7 +17,7 @@ export const TIER_COLOR: Record<Tier, [string, string, string]> = {
 /** Coins for unlocking a tier: small on purpose, a thank-you and not a reason to chase. */
 export const TIER_COINS: Record<Tier, number> = { bronze: 10, silver: 20, gold: 40, platinum: 75, diamond: 150 }
 
-export type FamilyId = 'checkin' | 'reframe' | 'calm' | 'journal' | 'focus' | 'worry' | 'anchors' | 'sleep' | 'streak' | 'days' | 'guard' | 'collector'
+export type FamilyId = 'checkin' | 'reframe' | 'calm' | 'journal' | 'focus' | 'worry' | 'anchors' | 'sleep' | 'streak' | 'days' | 'hours' | 'collector'
 export interface FamilySpec { id: FamilyId; name: string; emoji: string; pose: PoseName; unit: string; unitOne: string; verb: string; tiers: { at: number; tier: Tier; title: string }[] }
 
 const t = (at: number, tier: Tier, title: string) => ({ at, tier, title })
@@ -32,7 +32,7 @@ export const FAMILIES: FamilySpec[] = [
   { id: 'sleep', name: 'Sleep', emoji: 'sleep', pose: 'nap', unit: 'nights logged', unitOne: 'night logged', verb: 'Logged', tiers: [t(1, 'bronze', 'First night'), t(7, 'silver', 'Sleep week'), t(30, 'gold', 'Sleep tracker'), t(100, 'platinum', 'Rested regular'), t(300, 'diamond', 'Dream keeper')] },
   { id: 'streak', name: 'Streak', emoji: 'fire', pose: 'celebrate', unit: 'day streak', unitOne: 'day streak', verb: 'Reached a', tiers: [t(3, 'bronze', 'Warming up'), t(7, 'silver', 'One week'), t(14, 'gold', 'Two weeks strong'), t(30, 'platinum', 'A whole month'), t(100, 'diamond', 'Hundred-day club')] },
   { id: 'days', name: 'Showing up', emoji: 'seedling', pose: 'wave', unit: 'active days', unitOne: 'active day', verb: 'Showed up on', tiers: [t(7, 'bronze', 'Seedling'), t(30, 'silver', 'Sprout'), t(100, 'gold', 'Growing strong'), t(250, 'platinum', 'Deep roots'), t(365, 'diamond', 'A full year')] },
-  { id: 'guard', name: 'Focus guard', emoji: 'shield', pose: 'flex', unit: 'challenges before scrolling', unitOne: 'challenge before scrolling', verb: 'Beat', tiers: [t(1, 'bronze', 'First push-up'), t(10, 'silver', 'Scroll resister'), t(50, 'gold', 'Brain-rot buster'), t(200, 'platinum', 'Iron will'), t(500, 'diamond', 'Unbreakable')] },
+  { id: 'hours', name: 'Focus time', emoji: 'hourglass', pose: 'focus', unit: 'hours', unitOne: 'hour', verb: 'Focused for', tiers: [t(1, 'bronze', 'First hour'), t(5, 'silver', 'Five hours in'), t(20, 'gold', 'Deep diver'), t(50, 'platinum', 'Flow master'), t(100, 'diamond', 'Hundred hours')] },
   { id: 'collector', name: 'Collector', emoji: 'star', pose: 'party', unit: 'collectibles', unitOne: 'collectible', verb: 'Collected', tiers: [t(1, 'bronze', 'First find'), t(5, 'silver', 'Starter collection'), t(12, 'gold', 'Collector'), t(24, 'platinum', 'Curator'), t(36, 'diamond', 'Completionist')] },
 ]
 export const familyById = (id: FamilyId) => FAMILIES.find(f => f.id === id)!
@@ -41,11 +41,10 @@ export interface AchievementData {
   thoughts: { createdAt: string; alternateThought: string }[]
   sessions: { createdAt: string; completed: boolean }[]
   journal: { createdAt: string }[]
-  focus: { createdAt: string; completed: boolean }[]
+  focus: { createdAt: string; completed: boolean; actualSec?: number }[]
   worries: { status: string; reviewedAt: string | null }[]
   anchorDays: { day: string; done: number; total: number }[]
   sleepDates: string[]
-  guardAt: string[]
   /** Days (YYYY-MM-DD) on which a collectible was bought, one entry per item. */
   collectDays: string[]
   /** Days that count towards the streak (activity plus rest days). */
@@ -61,6 +60,14 @@ export interface Achievement {
 }
 
 const days = (isos: string[]) => isos.map(dayKey).sort()
+/** Entry n is the day the n-th full hour of finished focus time was reached. */
+function hoursReached(focus: AchievementData['focus']): string[] {
+  const done = focus.filter(f => f.completed && (f.actualSec ?? 0) > 0).sort((a, b) => a.createdAt.localeCompare(b.createdAt)), out: string[] = []
+  let sec = 0
+  for (const f of done) { sec += f.actualSec!; while (out.length < Math.floor(sec / 3600)) out.push(dayKey(f.createdAt)) }
+  return out
+}
+
 /** Family → the day of every qualifying event, oldest first (so the n-th entry is the day the n-th one happened). */
 export function familyDays(d: AchievementData): Record<Exclude<FamilyId, 'streak'>, string[]> {
   const active = new Set<string>()
@@ -75,7 +82,7 @@ export function familyDays(d: AchievementData): Record<Exclude<FamilyId, 'streak
     anchors: d.anchorDays.filter(a => a.total > 0 && a.done >= a.total).map(a => a.day).sort(),
     sleep: [...new Set(d.sleepDates)].sort(),
     days: [...active].sort(),
-    guard: days(d.guardAt),
+    hours: hoursReached(d.focus),
     collector: [...d.collectDays].sort(),
   }
 }

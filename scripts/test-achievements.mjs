@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { achievements, familyProgress, FAMILIES, longestRun, newlyUnlocked, streakMilestoneDays, TIER_COINS, TIERS } from '../src/lib/achievements.ts'
 import { COLLECTIBLES } from '../src/lib/shop.ts'
 
-const data = (o = {}) => ({ thoughts: [], sessions: [], journal: [], focus: [], worries: [], anchorDays: [], sleepDates: [], guardAt: [], collectDays: [], streakDays: [], ...o })
+const data = (o = {}) => ({ thoughts: [], sessions: [], journal: [], focus: [], worries: [], anchorDays: [], sleepDates: [], collectDays: [], streakDays: [], ...o })
 const run = n => Array.from({ length: n }, (_, i) => { const d = new Date(2026, 8, 1 + i); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })
 const th = (day, alt = '') => ({ createdAt: `${day}T10:00:00`, alternateThought: alt })
 const byId = (all, id) => all.find(a => a.id === id)
@@ -35,9 +35,12 @@ for (const id of ['calm-1', 'focus-1', 'worry-1']) assert.equal(byId(all, id).un
 all = achievements(data({ sessions: [{ createdAt: '2026-09-02T10:00:00', completed: true }], focus: [{ createdAt: '2026-09-03T10:00:00', completed: true }], worries: [{ status: 'let-go', reviewedAt: '2026-09-04T10:00:00' }] }))
 assert.deepEqual(['calm-1', 'focus-1', 'worry-1'].map(id => byId(all, id).day), ['2026-09-02', '2026-09-03', '2026-09-04'])
 // anchors: only days with EVERY anchor done; sleep: once a night; guard; collector
-all = achievements(data({ anchorDays: [{ day: '2026-09-01', done: 2, total: 3 }, { day: '2026-09-02', done: 3, total: 3 }, { day: '2026-09-03', done: 0, total: 0 }], sleepDates: ['2026-09-05', '2026-09-05'], guardAt: ['2026-09-06T08:00:00'], collectDays: ['2026-09-07'] }))
+all = achievements(data({ anchorDays: [{ day: '2026-09-01', done: 2, total: 3 }, { day: '2026-09-02', done: 3, total: 3 }, { day: '2026-09-03', done: 0, total: 0 }], sleepDates: ['2026-09-05', '2026-09-05'], collectDays: ['2026-09-07'] }))
 assert.equal(byId(all, 'anchors-1').day, '2026-09-02'); assert.equal(byId(all, 'sleep-1').day, '2026-09-05'); assert.equal(byId(all, 'sleep-7').unlocked, false)
-assert.equal(byId(all, 'guard-1').day, '2026-09-06'); assert.equal(byId(all, 'collector-1').day, '2026-09-07')
+assert.equal(byId(all, 'collector-1').day, '2026-09-07')
+// focus time: the day the n-th full hour of FINISHED focus was reached
+all = achievements(data({ focus: [{ createdAt: '2026-09-01T10:00:00', completed: true, actualSec: 1500 }, { createdAt: '2026-09-02T10:00:00', completed: true, actualSec: 2400 }, { createdAt: '2026-09-03T10:00:00', completed: false, actualSec: 3600 }, { createdAt: '2026-09-04T10:00:00', completed: true, actualSec: 14400 }] }))
+assert.equal(byId(all, 'hours-1').day, '2026-09-02'); assert.equal(byId(all, 'hours-5').day, '2026-09-04'); assert.equal(byId(all, 'hours-5').count, 5, 'unfinished blocks do not count'); assert.equal(byId(all, 'hours-20').unlocked, false); assert.equal(byId(all, 'hours-1').text, 'Focused for 1 hour')
 // showing up counts distinct days of any activity
 all = achievements(data({ thoughts: Array.from({ length: 7 }, (_, i) => th(run(7)[i])), sessions: [{ createdAt: '2026-09-01T09:00:00', completed: true }] }))
 assert.equal(byId(all, 'days-7').day, '2026-09-07')

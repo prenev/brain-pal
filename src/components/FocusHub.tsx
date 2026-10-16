@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, ListChecks, Minus, Plus, Settings, SkipForward, RotateCcw, Target, Trash2 } from 'lucide-react'
 import Pal from './Pal'
 import { Sheet, Toggle } from './ui'
@@ -7,6 +7,8 @@ import { usePomo } from '../lib/pomoStore'
 import { fmtClock } from '../lib/focus.ts'
 import { PHASE_LABEL, phaseMinutes, POMO_PRESETS, type PomoPhase } from '../lib/pomodoro.ts'
 import type { PoseName } from '../lib/pal.ts'
+import { loadGuard, saveGuard } from '../lib/extras'
+import { guardPickApps, guardRequestAuth, guardStatus, guardSupported, type GuardStatus } from '../lib/guardNative'
 
 const PHASES: PomoPhase[] = ['work', 'short', 'long']
 const N = 24, RING = 112
@@ -140,6 +142,35 @@ function Stepper({ label, value, min, max, step = 1, unit = '', onChange }: { la
   )
 }
 
+/** Screen Time: pick the apps that pull you in; they stay blocked while a focus block runs. iOS only hands us opaque tokens, never app names or usage. */
+function BlockApps() {
+  const { settings: s, setSettings } = usePomo()
+  const [st, setSt] = useState<GuardStatus | null>(null), [err, setErr] = useState('')
+  const native = guardSupported()
+  useEffect(() => { if (native) guardStatus().then(setSt) }, [native])
+  const pick = async () => {
+    setErr('')
+    if (!st?.authorized) { const a = await guardRequestAuth(); if (!a.authorized) { setErr(a.error ? `Screen Time said: ${a.error}` : 'Wobbi needs Screen Time access to block apps.'); return } }
+    const n = await guardPickApps(); const next = await guardStatus(); setSt(next)
+    saveGuard({ ...loadGuard(), appCount: n ?? next.appCount })   // for the widgets (the app never learns which apps)
+    if ((n ?? next.appCount) > 0 && !s.block) setSettings({ block: true })
+  }
+  const n = st?.appCount ?? 0
+  return (
+    <div className="block-apps" aria-label="Block apps during focus">
+      <b>Block apps during focus</b>
+      {!native && <p className="muted small">Works in the iPhone app: the apps you choose stay blocked while a focus block runs.</p>}
+      {native && st && !st.available && <p className="muted small">Not available in this build (needs iOS 16 and Screen Time access).</p>}
+      {native && st?.available && <>
+        <p className="muted small">While a focus block runs, these apps won’t open. Breaks open them again. SOS in Wobbi always works.</p>
+        <button className="btn" onClick={pick}>{n ? `Change apps · ${n} chosen` : 'Choose apps to block'}</button>
+        {n > 0 && <Toggle label="Block them during focus" on={s.block} onChange={v => setSettings({ block: v })} />}
+      </>}
+      {err && <p role="alert" style={{ color: 'var(--danger)', margin: '6px 2px 0' }}>{err}</p>}
+    </div>
+  )
+}
+
 function SettingsSheet({ onClose }: { onClose: () => void }) {
   const { settings: s, setSettings, run } = usePomo()
   const locked = !!run.timer
@@ -159,6 +190,7 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         <Toggle label="Start breaks automatically" on={s.autoBreak} onChange={v => setSettings({ autoBreak: v })} />
         <Toggle label="Start focus automatically after a break" on={s.autoFocus} onChange={v => setSettings({ autoFocus: v })} />
         <Toggle label="Soft bell when a block ends" hint="A reminder also arrives as a notification in the iPhone app." on={s.bell} onChange={v => setSettings({ bell: v })} />
+        <BlockApps />
       </div>
     </Sheet>
   )

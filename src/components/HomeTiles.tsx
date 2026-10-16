@@ -1,38 +1,60 @@
-import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Check, Lock, Pause, PenLine, Play } from 'lucide-react'
+import Pal from './Pal'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
-import { loadGuard } from '../lib/extras'
-import { guardStatus, guardSupported } from '../lib/guardNative'
-import { isUnlocked, minutesLeft } from '../lib/guard.ts'
-import { stepChoices } from '../lib/focus.ts'
+import { usePomo } from '../lib/pomoStore'
+import { guardSupported } from '../lib/guardNative'
+import { dayKey } from '../lib/dates'
+import { pickPrompt } from '../lib/journal.ts'
+import { fmtClock, stepChoices } from '../lib/focus.ts'
+import { PHASE_LABEL, phaseMinutes, shouldBlock } from '../lib/pomodoro.ts'
+import type { PoseName } from '../lib/pal.ts'
 
-/** Half-width Focus-guard tile: what's blocked and whether it is locked right now, or an invitation to pick apps. */
-export function GuardTile({ onOpen }: { onOpen: () => void }) {
-  const [cfg, setCfg] = useState(loadGuard)
-  const [until, setUntil] = useState<number | null>(null)
-  const [count, setCount] = useState<number | null>(null)
-  const native = guardSupported()
-  useEffect(() => {
-    setCfg(loadGuard()); if (!native) return
-    let off = false
-    guardStatus().then(s => { if (off) return; setUntil(s.unlockedUntil); if (s.available) setCount(s.appCount) }).catch(() => {})
-    return () => { off = true }
-  }, [native])
-  const n = count ?? cfg.appCount
-  const now = Date.now(), open = isUnlocked(until, now)
-  const state = !native ? 'web' : cfg.enabled && n > 0 ? (open ? 'open' : 'locked') : 'empty'
+/** Big Focus card, drawn like the widgets: Wobbi in the pose of the moment, and the live clock while a block runs. */
+export function FocusCard({ onOpen }: { onOpen: () => void }) {
+  const p = usePomo()
+  const { run, settings: s } = p
+  const on = !!run.timer, brk = run.phase !== 'work'
+  const pose: PoseName = !on ? 'holdPlay' : p.paused ? 'think' : brk ? (run.phase === 'long' ? 'nap' : 'coffee') : 'focus'
+  const locked = guardSupported() && shouldBlock(run, s)
   return (
-    <button className={`card home-tile guard-tile ${state}`} onClick={onOpen} aria-label="Focus guard">
-      <span className="tile-art" aria-hidden="true"><Emoji name="shield" size={44} /></span>
-      <span className="tile-body">
-        <b>Focus guard</b>
-        {state === 'locked' && <span className="tile-sub"><i className="dot lock" />{n} {n === 1 ? 'app' : 'apps'} blocked · earn time to open them</span>}
-        {state === 'open' && <span className="tile-sub"><i className="dot open" />{n} {n === 1 ? 'app' : 'apps'} open for {minutesLeft(until!, now)} more min</span>}
-        {state === 'empty' && <span className="tile-sub">Pick the apps that eat your time, and earn them back.</span>}
-        {state === 'web' && <span className="tile-sub">Pause distracting apps until you move. Works in the iPhone app.</span>}
-      </span>
-      {state === 'empty' && <span className="tile-cta"><Plus size={16} strokeWidth={3} /> Add apps</span>}
+    <div role="button" tabIndex={0} className={`big-card focus-card ${on ? (brk ? 'brk' : 'live') : ''}`} onClick={onOpen} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }} aria-label={on ? `Focus: ${PHASE_LABEL[run.phase]}, ${fmtClock(p.left)} left` : 'Focus'}>
+      <span className="big-kicker">{on ? <><i className="live-dot" />{p.paused ? 'Paused' : PHASE_LABEL[run.phase]}</> : 'Focus'}</span>
+      {on ? <b className="big-num">{fmtClock(p.left)}</b> : <b className="big-title">Start a<br />focus block</b>}
+      <span className="big-sub">{on && !brk && p.task ? p.task.text : `${p.stats.today.blocks}/${s.goal} blocks today`}</span>
+      {locked && <span className="big-badge"><Lock size={12} strokeWidth={3} /> Apps blocked</span>}
+      {!on && <span className="big-cta"><Play size={14} strokeWidth={3} fill="currentColor" /> {phaseMinutes('work', s)} min</span>}
+      {on && <button className="big-cta" aria-label={p.paused ? 'Resume focus' : 'Pause focus'} onClick={e => { e.stopPropagation(); p.startPause() }}>
+        {p.paused ? <><Play size={14} strokeWidth={3} fill="currentColor" /> Resume</> : <><Pause size={14} strokeWidth={3} fill="currentColor" /> Pause</>}
+      </button>}
+      <span className="big-art" aria-hidden="true"><Pal pose={pose} size={118} motion={on && !p.paused ? 'none' : 'bob'} /></span>
+      {on && <span className="big-bar" aria-hidden="true"><i style={{ width: `${Math.round(p.progress * 100)}%` }} /></span>}
+    </div>
+  )
+}
+
+/** Big Journal card: today's prompt and how often you wrote this week, with Wobbi reading. */
+export function JournalCard({ onOpen }: { onOpen: () => void }) {
+  const { journal } = useStore()
+  const today = dayKey(new Date()), week = new Date(Date.now() - 6 * 864e5).toISOString()
+  const n = journal.filter(e => e.createdAt >= week).length
+  const wrote = journal.some(e => dayKey(e.createdAt) === today)
+  return (
+    <button className="big-card journal-card" onClick={onOpen} aria-label="Journal">
+      <span className="big-kicker">{wrote ? <><Check size={13} strokeWidth={3.4} /> Written today</> : 'Journal'}</span>
+      <b className="big-prompt">“{pickPrompt(today).text}”</b>
+      <span className="big-sub">{n ? `${n} ${n === 1 ? 'entry' : 'entries'} this week` : 'Write or talk it out'}</span>
+      <span className="big-cta"><PenLine size={14} strokeWidth={3} /> Write</span>
+      <span className="big-art" aria-hidden="true"><Pal pose="read" size={112} motion="bob" /></span>
+    </button>
+  )
+}
+
+/** 5-4-3-2-1 grounding, straight from Home (it used to live only inside SOS). */
+export function GroundTool({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button className="card tool" onClick={onOpen} aria-label="Ground yourself: 5-4-3-2-1">
+      <Emoji name="herb" size={30} /><b>Ground</b><small>5-4-3-2-1</small>
     </button>
   )
 }
