@@ -1,5 +1,6 @@
 import { MAX_RECORD_SEC, pickMime } from './audio'
 import type { AudioClip } from './types'
+import { audioMode } from './audioRoute'
 
 export interface Recording {
   /** Stops and resolves with the finished clip. */
@@ -39,7 +40,7 @@ export async function startRecording(onAutoStop: (clip: AudioClip) => void): Pro
 
   const finish = (): Promise<AudioClip> => new Promise(res => {
     rec.onstop = () => {
-      stream.getTracks().forEach(t => t.stop()); void ctx.close(); clearTimeout(timer)
+      stream.getTracks().forEach(t => t.stop()); void ctx.close(); clearTimeout(timer); audioMode('playback')      // leave "record" mode so the memo plays from the loudspeaker
       const type = rec.mimeType || mime || 'audio/webm'
       res({ blob: new Blob(chunks, { type }), durationSec: Math.min(MAX_RECORD_SEC, Math.max(1, Math.round((performance.now() - t0) / 1000))), mime: type, transcript: null })
     }

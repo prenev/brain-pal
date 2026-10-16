@@ -89,6 +89,7 @@ async function connectAi(p) {
   await p.click('[aria-label=Back]'); await tab(p, 'Home')
 }
 async function record(p, secs = 1.6) {
+  if (await p.locator('button:has-text("Speak instead")').count()) await p.click('button:has-text("Speak instead")')
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio', { state: 'attached' })
 }
 
@@ -189,7 +190,7 @@ test('voice memo: record, play, transcribe by hand, persist across reload, free 
 
 test('voice memo: cancel discards, and AI controls stay hidden until enabled', async () => {
   const s = await open(); const p = s.page
-  await newEntry(p, { mood: 3 }); await toStep(p, 1)
+  await newEntry(p, { mood: 3 }); await toStep(p, 1); await p.click('button:has-text("Speak instead")')
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.click('button:has-text("Cancel")')
   await p.waitForSelector('text=● Record'); assert.equal(await p.locator('audio').count(), 0)
   await record(p); assert.equal(await p.locator('button:has-text("Transcribe")').count(), 0)

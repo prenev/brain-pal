@@ -64,6 +64,12 @@ assert.match(canBuy(rest, 100, two, now, { forDay: '2026-10-15' }).reason, new R
 assert.equal(canBuy(rest, 100, two, new Date(2026, 10, 1, 9), { forDay: '2026-11-01' }).ok, true, 'a new month resets the allowance')
 assert.deepEqual(restDays(two), ['2026-10-14', '2026-10-10'])
 // balance never goes negative from rules alone, and spending only reduces it
-const earned = earnings(data({ thoughts: many(3) })); assert.equal(balance(earned, []), 15); assert.equal(balance(earned, owned), -25, 'purchases are checked by canBuy; balance is just the arithmetic')
+const earned = earnings(data({ thoughts: many(3) })); assert.equal(balance(earned, []), 15); assert.equal(balance(earned, owned), 0, 'the balance is never negative (purchases are checked by canBuy)')
+// regression: coins once went negative. Earnings are derived from your data, so deleting entries after spending used to shrink them. The high-water mark keeps what you earned.
+const spentSome = [{ id: 'p1', itemId: 'ocean', at: new Date().toISOString(), cost: 12 }]
+const afterDelete = earnings(data({ thoughts: many(1) }))   // 5 coins left after deleting two entries
+assert.equal(balance(afterDelete, spentSome), 0, 'without a floor it would be -7: clamped')
+assert.equal(balance(afterDelete, spentSome, 15), 3, 'with the 15 coins ever earned as the floor you still have 15 - 12')
+assert.equal(balance(earned, [], 5), 15, 'the floor never lowers what you really have')
 assert.equal(spent(owned), 40)
 console.log('rewards: all tests passed')

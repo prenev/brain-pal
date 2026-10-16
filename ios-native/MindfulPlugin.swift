@@ -8,6 +8,7 @@ import SwiftUI
 import FamilyControls
 import ManagedSettings
 import StoreKit
+import AVFoundation
 
 /// Saves breathing / grounding sessions to Apple Health as "Mindful Minutes" (HKCategoryType .mindfulSession).
 /// JS name: "Mindful"  (see src/lib/native.ts). Write-only: we never read your health data.
@@ -39,7 +40,8 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "proRestore", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "proStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "proRedeemCode", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "audioSession", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -375,6 +377,18 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             call.resolve()
         }
+    }
+
+    /// Voice-memo playback must come out of the loudspeaker even right after a recording (iOS leaves the session in "record" mode, which routes to the quiet earpiece:
+    /// the first play sounded silent). "playback" for memos, "ambient" (follows the silent switch) for our little UI sounds.
+    @objc func audioSession(_ call: CAPPluginCall) {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if call.getString("mode") == "playback" { try session.setCategory(.playback, mode: .default, options: []) }
+            else { try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers]) }
+            try session.setActive(true)
+        } catch { /* best effort: playback still works the old way */ }
+        call.resolve()
     }
 
     @objc func proStatus(_ call: CAPPluginCall) {

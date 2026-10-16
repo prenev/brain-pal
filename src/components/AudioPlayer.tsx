@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
+import { audioMode } from '../lib/audioRoute'
 
 const clock = (s: number) => { const t = Math.max(0, Math.round(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` }
 
@@ -13,16 +14,25 @@ export default function AudioPlayer({ src, durationSec, label = 'Voice memo' }: 
   useEffect(() => { setT(0); setPlaying(false); if (durationSec) setDur(durationSec) }, [src, durationSec])
   const total = Number.isFinite(el.current?.duration) && (el.current?.duration ?? 0) > 0 ? el.current!.duration : dur
 
-  const toggle = () => { const a = el.current; if (!a) return; if (a.paused) void a.play().catch(() => setPlaying(false)); else a.pause() }
+  // First play after a recording was silent on iPhone (the audio session was still in "record" mode) and the second play fixed itself.
+  // So: switch the session to playback first, and if the clock hasn't moved shortly after play(), restart once, like the second tap would.
+  const toggle = async () => {
+    const a = el.current; if (!a) return
+    if (!a.paused) { a.pause(); return }
+    audioMode('playback'); a.muted = false; a.volume = 1
+    try { await a.play() } catch { setPlaying(false); return }
+    const at = a.currentTime
+    setTimeout(() => { if (!a.paused && a.currentTime <= at + 0.05) { a.pause(); a.currentTime = at; void a.play().catch(() => setPlaying(false)) } }, 700)
+  }
   const seek = (v: number) => { const a = el.current; if (!a || !total) return; a.currentTime = (v / 100) * total; setT(a.currentTime) }
 
   return (
     <div className="player" role="group" aria-label={label}>
       <audio ref={el} src={src} preload="metadata" hidden
-        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); setT(0) }}
+        onPlay={() => setPlaying(true)} onPause={() => { setPlaying(false); audioMode('ambient') }} onEnded={() => { setPlaying(false); setT(0); audioMode('ambient') }}
         onTimeUpdate={e => setT(e.currentTarget.currentTime)}
         onLoadedMetadata={e => { if (Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) setDur(e.currentTarget.duration) }} />
-      <button type="button" className="player-btn" aria-label={playing ? 'Pause' : 'Play'} onClick={toggle}>{playing ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}</button>
+      <button type="button" className="player-btn" aria-label={playing ? 'Pause' : 'Play'} onClick={() => void toggle()}>{playing ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}</button>
       <input className="player-bar" type="range" min={0} max={100} step={0.5} aria-label="Position" value={total ? Math.min(100, (t / total) * 100) : 0}
         style={{ ['--p' as string]: `${total ? Math.min(100, (t / total) * 100) : 0}%` }} onChange={e => seek(+e.target.value)} />
       <span className="player-time">{clock(playing || t > 0 ? t : total)}</span>

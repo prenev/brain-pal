@@ -1,4 +1,5 @@
 import { dayKey } from './dates.ts'
+import { stripMd } from './mdlite.ts'
 
 /** Free-writing journal, separate from the structured thought record. Pure helpers only (storage lives in extras.ts). */
 export interface JournalEntry {
@@ -12,6 +13,8 @@ export interface JournalEntry {
   tags: string[]
   /** Id of the prompt the entry started from, if any. */
   prompt: string | null
+  /** An optional voice note. The audio itself lives in IndexedDB under `ref` on the device that recorded it; only this small description syncs. */
+  audio?: { ref: string; durationSec: number; mime: string; transcript: string | null } | null
 }
 
 export const MAX_TITLE = 80
@@ -72,11 +75,38 @@ export function groupByMonth(entries: JournalEntry[]): MonthGroup[] {
 
 /** One-line preview for lists. */
 export function previewOf(e: Pick<JournalEntry, 'body'>, max = 140): string {
-  const flat = e.body.replace(/\s+/g, ' ').trim()
+  const flat = stripMd(e.body).replace(/\s+/g, ' ').trim()
   return flat.length <= max ? flat : `${flat.slice(0, max).trimEnd()}…`
 }
 
 export const allJournalTags = (entries: JournalEntry[]): string[] => {
   const c = new Map<string, number>(); for (const e of entries) for (const t of e.tags) c.set(t, (c.get(t) ?? 0) + 1)
   return [...c.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(x => x[0])
+}
+
+/** Topic ideas shown as chips above an empty page. A new random handful each time; `exclude` keeps a shuffle from repeating itself. */
+export const TOPICS: { id: string; chip: string; text: string }[] = [
+  { id: 't-today', chip: 'Today so far', text: 'How my day has gone so far:' },
+  { id: 't-grateful', chip: 'Grateful for', text: 'Three things I’m grateful for right now:' },
+  { id: 't-head', chip: 'In my head', text: 'What is taking up space in my head:' },
+  { id: 't-win', chip: 'A small win', text: 'A small win I might be overlooking:' },
+  { id: 't-body', chip: 'My body', text: 'How my body feels, and what it needs:' },
+  { id: 't-avoid', chip: 'Avoiding', text: 'Something I’ve been avoiding, and the tiniest first step:' },
+  { id: 't-friend', chip: 'Advice to a friend', text: 'What I would tell a friend who felt like this:' },
+  { id: 't-tomorrow', chip: 'Tomorrow', text: 'One small thing I’ll do for future me:' },
+  { id: 't-people', chip: 'People', text: 'Someone who matters to me, and why:' },
+  { id: 't-work', chip: 'Work or study', text: 'What’s going on with work or study:' },
+  { id: 't-proud', chip: 'Proud of', text: 'Something I handled better than I would have a year ago:' },
+  { id: 't-worry', chip: 'A worry', text: 'A worry I want to put on paper:' },
+  { id: 't-joy', chip: 'A good moment', text: 'A moment today that felt good, even a little:' },
+  { id: 't-need', chip: 'What I need', text: 'What I need more of, and less of:' },
+  { id: 't-letter', chip: 'Letter to me', text: 'Dear me,' },
+  { id: 't-sleep', chip: 'Sleep', text: 'How I slept, and how I feel because of it:' },
+  { id: 't-change', chip: 'One change', text: 'One thing I’d like to change, and why it matters:' },
+  { id: 't-free', chip: 'Free write', text: 'Whatever comes, for two minutes without stopping:' },
+]
+export function pickTopics(n = 4, exclude: string[] = [], rnd: () => number = Math.random) {
+  const pool = TOPICS.filter(t => !exclude.includes(t.id)); const list = pool.length >= n ? pool : TOPICS
+  const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }
+  return a.slice(0, n)
 }

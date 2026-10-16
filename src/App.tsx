@@ -133,7 +133,7 @@ function Shell() {
   return (
     <>
       <div className="app">
-        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onBreathe={() => setTab('breathe')} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} onSupport={() => { setMoreView('support'); setTab('more') }} />}
+        {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
         {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
@@ -148,7 +148,7 @@ function Shell() {
             </button>
           ))}
         </nav>}
-        {tab !== 'more' && tab !== 'breathe' && <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={3} /></button>}
+        {tab !== 'more' && tab !== 'breathe' && tab !== 'entries' && <button className="fab" aria-label="New entry" onClick={() => setMenu(true)}><Plus size={34} strokeWidth={3} /></button>}
       </div>
 
       {menu && (

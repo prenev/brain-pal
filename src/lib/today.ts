@@ -41,3 +41,32 @@ export function rankByUse(options: string[], uses: string[][], opts: { starters?
 export function shortList(ranked: string[], selected: string[], n = 6): string[] {
   return [...new Set([...ranked.slice(0, n), ...selected.filter(s => ranked.includes(s))])]
 }
+
+/* ---- Home highlights: the few things worth a glance today ---- */
+export interface Highlight { id: 'sleep' | 'worries' | 'step' | 'streak'; tone: 'good' | 'warn' | 'info'; emoji: string; text: string; go: 'sleep' | 'worry' | 'step' | 'checkin' }
+export interface HighlightInput {
+  today: string
+  /** the newest sleep night, if any (date = the morning you woke up) */
+  night: { date: string; asleepMin: number } | null
+  openWorries: number
+  plannedStep: string | null
+  /** days in the current streak, only when it ends tonight (nothing logged yet today) */
+  streakEndsTonight: number | null
+}
+const hm = (min: number) => `${Math.floor(min / 60)}h ${String(Math.round(min % 60)).padStart(2, '0')}m`
+export const LOW_SLEEP_MIN = 300, GOOD_SLEEP_MIN = 420
+
+/** Short, kind, factual lines (never advice about health). At most three, most useful first. */
+export function highlights(i: HighlightInput): Highlight[] {
+  const out: Highlight[] = []
+  if (i.night && i.night.date === i.today) {
+    const m = i.night.asleepMin
+    out.push(m < LOW_SLEEP_MIN ? { id: 'sleep', tone: 'warn', emoji: 'sleep', text: `Sleep was low last night: ${hm(m)}. Go easy on yourself today.`, go: 'sleep' }
+      : m >= GOOD_SLEEP_MIN ? { id: 'sleep', tone: 'good', emoji: 'sleep', text: `You slept ${hm(m)} last night. Nicely rested.`, go: 'sleep' }
+      : { id: 'sleep', tone: 'info', emoji: 'sleep', text: `You slept ${hm(m)} last night.`, go: 'sleep' })
+  }
+  if (i.openWorries > 0) out.push({ id: 'worries', tone: 'info', emoji: 'worry', text: `${i.openWorries} parked ${i.openWorries === 1 ? 'worry is' : 'worries are'} waiting. Look at ${i.openWorries === 1 ? 'it' : 'them'} when you’re ready.`, go: 'worry' })
+  if (i.plannedStep) out.push({ id: 'step', tone: 'info', emoji: 'rocket', text: `A small step is waiting: ${i.plannedStep}`, go: 'step' })
+  if (i.streakEndsTonight && i.streakEndsTonight > 0) out.push({ id: 'streak', tone: 'warn', emoji: 'fire', text: `Your ${i.streakEndsTonight}-day streak ends tonight. A mood check-in keeps it.`, go: 'checkin' })
+  return out.slice(0, 3)
+}

@@ -103,3 +103,8 @@ import { normalizeFx, type FxSettings } from './sfx.ts'
 const K_FX = 'bp.fx'
 export const loadFx = (): FxSettings => normalizeFx(read<unknown>(K_FX, null))
 export const saveFx = (f: FxSettings) => write(K_FX, f)
+
+// Most coins ever earned (earnings are derived from your data; this keeps them from shrinking when something is deleted)
+const K_COIN_HW = 'bp.coins.hw'
+export const loadCoinHighWater = (): number => { const v = read<unknown>(K_COIN_HW, 0); return typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0 }
+export const saveCoinHighWater = (n: number) => write(K_COIN_HW, n)

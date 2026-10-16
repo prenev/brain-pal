@@ -84,7 +84,8 @@ export const SHOP: ShopItem[] = [
 export const itemById = (id: string) => SHOP.find(i => i.id === id)
 
 export const spent = (p: Purchase[]) => p.reduce((a, x) => a + x.cost, 0)
-export const balance = (e: Earning[], p: Purchase[]) => total(e) - spent(p)
+/** `floor` = the most this person has ever earned (deleting an entry or un-ticking an anchor must never make earned coins vanish, so spending can't push the balance below zero). */
+export const balance = (e: Earning[], p: Purchase[], floor = 0) => Math.max(0, Math.max(total(e), floor) - spent(p))
 export const restDays = (p: Purchase[]) => p.filter(x => x.itemId === 'restday' && x.forDay).map(x => x.forDay!)
 export const ownedThemes = (p: Purchase[]) => p.filter(x => itemById(x.itemId)?.kind === 'theme').map(x => x.itemId)
 

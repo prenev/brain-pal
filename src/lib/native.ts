@@ -43,6 +43,7 @@ export interface MindfulPlugin {
   proStatus(): Promise<{ active: boolean; until?: number }>
   proRedeemCode(): Promise<{ shown: boolean }>
   requestReview(): Promise<void>
+  audioSession(opts: { mode: 'playback' | 'ambient' }): Promise<void>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
 }

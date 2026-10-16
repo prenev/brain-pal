@@ -12,7 +12,7 @@ import { deleteBlob, getBlob } from './blobstore'
 import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
-import { loadAnchors, loadChecks, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadPurchases, loadRituals, loadTheme, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme } from './extras'
+import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadPurchases, loadRituals, loadTheme, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
 import { cleanText, type JournalEntry } from './journal.ts'
 import type { FocusSession } from './focus.ts'
 import { balance as coinBalance, canBuy, earnings as computeEarnings, itemById, ownedThemes, restDays, type BuyCheck, type Earning, type Purchase } from './rewards.ts'
@@ -69,8 +69,8 @@ interface Ctx {
   focusSessions: FocusSession[]
   addFocus(d: Omit<FocusSession, 'id' | 'createdAt'>): FocusSession
   journal: JournalEntry[]
-  addJournal(d: { title: string; body: string; mood: number | null; tags: string[]; prompt: string | null }): JournalEntry
-  updateJournal(id: string, d: { title: string; body: string; mood: number | null; tags: string[] }): void
+  addJournal(d: { title: string; body: string; mood: number | null; tags: string[]; prompt: string | null; audio?: JournalEntry['audio'] }): JournalEntry
+  updateJournal(id: string, d: { title: string; body: string; mood: number | null; tags: string[]; audio?: JournalEntry['audio'] }): void
   deleteJournal(id: string): void
   anchors: Anchor[]
   anchorsToday: DayProgress
@@ -171,7 +171,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     sleepDates: sleepNights.map(n => n.date),
     streakDays: [...new Set([...thoughts.map(t => dayKey(t.createdAt)), ...sessions.map(s => dayKey(s.createdAt)), ...restDays(purchases)])],
   }), [thoughts, sessions, journal, focusSessions, worries, anchorHistory, sleepNights, purchases])
-  const coins = coinBalance(earned, purchases)
+  const [coinHW, setCoinHW] = useState(loadCoinHighWater)
+  const earnedNow = earned.reduce((a, e) => a + e.coins, 0)
+  useEffect(() => { if (loaded && earnedNow > coinHW) { setCoinHW(earnedNow); saveCoinHighWater(earnedNow) } }, [loaded, earnedNow, coinHW])
+  const coins = coinBalance(earned, purchases, coinHW)
   // Apply the chosen accent theme (only if you actually own it).
   useEffect(() => { const item = themeId && ownedThemes(purchases).includes(themeId) ? itemById(themeId) : null; applyTheme(item?.color ?? null) }, [themeId, purchases])
 
@@ -304,10 +307,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     journal,
     addJournal(d) {
       const c = cleanText(d.title, d.body, d.tags), now = new Date().toISOString()
-      const e: JournalEntry = { id: crypto.randomUUID(), createdAt: now, updatedAt: now, ...c, mood: d.mood, prompt: d.prompt }
+      const e: JournalEntry = { id: crypto.randomUUID(), createdAt: now, updatedAt: now, ...c, mood: d.mood, prompt: d.prompt, audio: d.audio ?? null }
       updateJournalList([e, ...journal]); return e
     },
-    updateJournal(id, d) { const c = cleanText(d.title, d.body, d.tags); updateJournalList(journal.map(e => (e.id === id ? { ...e, ...c, mood: d.mood, updatedAt: new Date().toISOString() } : e))) },
+    updateJournal(id, d) { const c = cleanText(d.title, d.body, d.tags); updateJournalList(journal.map(e => (e.id === id ? { ...e, ...c, mood: d.mood, audio: d.audio === undefined ? e.audio ?? null : d.audio, updatedAt: new Date().toISOString() } : e))) },
     deleteJournal(id) { updateJournalList(journal.filter(e => e.id !== id)) },
     anchors, anchorsToday, anchorHistory, levels, anchorStreak: anchorStreakVal,
     addAnchor(label, emoji, link) {
@@ -334,7 +337,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (pending > 0 && !force) return pending
       }
       // The account is the source of truth in cloud mode: clear this device's copies so the next person on this browser never sees them.
-      for (const k of ['bp.anchors', 'bp.anchorChecks', 'bp.journal', 'bp.journal.draft', 'bp.focus', 'bp.sleep.nights', 'bp.sleep.manual', 'bp.sleep.health', 'bp.sleep.synced', 'bp.purchases', 'bp.theme', 'bp.rituals', 'bp.sync.meta', 'bp.levels.seen'])
+      for (const k of ['bp.anchors', 'bp.anchorChecks', 'bp.journal', 'bp.journal.draft', 'bp.focus', 'bp.sleep.nights', 'bp.sleep.manual', 'bp.sleep.health', 'bp.sleep.synced', 'bp.purchases', 'bp.coins.hw', 'bp.theme', 'bp.rituals', 'bp.sync.meta', 'bp.levels.seen'])
         try { localStorage.removeItem(k) } catch { /* ignore */ }
       setJournal([]); setAnchors([]); setChecks(new Set()); setFocusSessions([]); setManualNights([]); setHealthNights([]); setSleepOn(false)
       setPurchases([]); setRitualsState(normalizeRituals(DEFAULT_RITUALS)); setThemeId(null); setSyncState({ status: 'idle', at: null, pending: 0 })

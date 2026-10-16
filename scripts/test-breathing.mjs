@@ -26,3 +26,16 @@ assert.equal(new Set([-0.016, 0, 0.016, 0.032, 1, 3.9].map(id)).size, 1)
 assert.equal(breathAt(1, { inhale: 0, hold1: 0, exhale: 0, hold2: 0 }, 3).done, true)        // empty pattern can't loop forever
 assert.equal(breathAt(1, box, 0).done, true)
 console.log('breathing: all tests passed')
+
+// ---- techniques on the Breathe tab ----
+import { TECHNIQUES, MINUTE_CHOICES, clampSec, roundsFor, breathsPerMinute, patternLabel, wavePath, cycleLength as cl } from '../src/lib/breathing.ts'
+assert.equal(new Set(TECHNIQUES.map(t => t.id)).size, TECHNIQUES.length); assert.ok(TECHNIQUES.some(t => t.id === 'box') && TECHNIQUES.some(t => t.id === 'coherent') && TECHNIQUES.some(t => t.id === 'custom'), 'box and paced options both exist')
+for (const t of TECHNIQUES) { assert.ok(t.name && t.tag && t.blurb, t.id); assert.ok(cl(t.pattern) >= 8 && cl(t.pattern) <= 24, `${t.id} cycle is a sane length`); assert.ok(t.pattern.exhale >= t.pattern.inhale || t.id === 'box' || t.id === 'coherent' || t.id === 'custom', `${t.id}: calming patterns breathe out at least as long as in`) }
+assert.equal(roundsFor(2, { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }), 12); assert.equal(roundsFor(1, { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }), 4); assert.equal(roundsFor(0, { inhale: 4, hold1: 0, exhale: 6, hold2: 0 }), 1, 'always at least one round')
+assert.ok(MINUTE_CHOICES.every(m => m >= 1)); assert.equal(clampSec(1), 2); assert.equal(clampSec(99), 12); assert.equal(clampSec(5.3), 5.5); assert.equal(clampSec(5.2), 5)
+assert.equal(breathsPerMinute({ inhale: 5.5, hold1: 0, exhale: 5.5, hold2: 0 }), 5.5); assert.equal(patternLabel({ inhale: 4, hold1: 7, exhale: 8, hold2: 0 }), '4 · 7 · 8')
+const wave = wavePath({ inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, 96, 40)
+assert.match(wave, /^M0 36 C/); assert.equal((wave.match(/L/g) ?? []).length, 2, 'a box has two level holds'); assert.ok(wavePath({ inhale: 4, hold1: 0, exhale: 6, hold2: 0 }).indexOf('L') === -1, 'paced breathing has no flat parts')
+// a mid-way breath (5.5 s) still lands on the right phase
+assert.equal(breathAt(5.6, { inhale: 5.5, hold1: 0, exhale: 5.5, hold2: 0 }, 3).key, 'exhale')
+console.log('breathing techniques ok')

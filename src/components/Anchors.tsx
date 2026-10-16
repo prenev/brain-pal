@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, X } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type AnchorLink } from '../lib/anchors.ts'
@@ -23,28 +23,33 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
     toggleAnchor(id); if (!done) sfx('success')
     if (!done && p.done + 1 === p.total) onAllDone()
   }
+  const all = p.done === p.total
+  const R = 15, C = 2 * Math.PI * R
   return (
-    <div className="card anchors" aria-label="Daily anchors">
-      <div className="row spread" style={{ marginBottom: 8 }}>
-        <b style={{ fontSize: 17 }}>Daily anchors</b>
-        <span className="row" style={{ gap: 10 }}>
-          <span className="muted" style={{ fontWeight: 800 }} aria-label={`${p.done} of ${p.total} done`}>{p.done}/{p.total}</span>
-          <button className="linkbtn" onClick={onEdit}>Edit</button>
+    <div className={`card anchors ${all ? 'all-done' : ''}`} aria-label="Daily anchors">
+      <div className="anchors-head">
+        <div>
+          <b>Today’s anchors</b>
+          <span className="muted small">{all ? 'Every one done. That counts.' : st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : 'Small things that make a day count'}</span>
+        </div>
+        <span className="ring" role="img" aria-label={`${p.done} of ${p.total} done`}>
+          <svg viewBox="0 0 38 38" width="46" height="46"><circle cx="19" cy="19" r={R} /><circle className="fg" cx="19" cy="19" r={R} strokeDasharray={C} strokeDashoffset={C * (1 - p.done / p.total)} /></svg>
+          <i>{p.done}/{p.total}</i>
         </span>
       </div>
-      <div className="bar"><i style={{ width: `${(p.done / p.total) * 100}%` }} /></div>
-      <div className="anchor-list">
+      <ul className="anchor-rows">
         {p.items.map(({ anchor, done, auto, manual }) => (
-          <button key={anchor.id} role="checkbox" aria-checked={done} aria-label={anchor.label}
-            className={`anchor-item ${done ? 'done' : ''}`} disabled={auto && !manual}
-            title={auto && !manual ? 'Done automatically — you did it in the app' : undefined}
-            onClick={() => tick(anchor.id, manual)}>
-            <span className="anchor-box">{done ? <Emoji name="check" size={26} /> : <Emoji name={anchor.emoji} size={26} />}{auto && !manual && <em className="auto" aria-hidden="true" />}</span>
-            <span className="anchor-label">{anchor.label}</span>
-          </button>
+          <li key={anchor.id}>
+            <button role="checkbox" aria-checked={done} aria-label={anchor.label} className={`arow ${done ? 'done' : ''}`} disabled={auto && !manual}
+              title={auto && !manual ? 'Done automatically: you did it in the app' : undefined} onClick={() => tick(anchor.id, manual)}>
+              <span className="tickbox">{done && <Check size={18} strokeWidth={3.4} />}</span>
+              <Emoji name={anchor.emoji} size={24} /><span className="alabel">{anchor.label}</span>
+              {auto && !manual && <em className="auto">auto</em>}
+            </button>
+          </li>
         ))}
-      </div>
-      {st.current > 0 && <p className="muted small" style={{ margin: '10px 0 0' }}><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {st.current} {st.current === 1 ? 'day' : 'days'} with every anchor done</p>}
+      </ul>
+      <button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>
     </div>
   )
 }

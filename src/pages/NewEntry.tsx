@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Camera, ChevronLeft, Images, Plus, X } from 'lucide-react'
+import { Camera, ChevronLeft, Images, Mic, Plus, X } from 'lucide-react'
 import { IconGrid } from '../components/ui'
 import { PalSays } from '../components/Pal'
 import VoiceRecorder from '../components/VoiceRecorder'
@@ -51,6 +51,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const [ideaBusy, setIdeaBusy] = useState(false)
   const [ideaErr, setIdeaErr] = useState('')
   const [step, setStep] = useState<StepId>('feel')
+  const [showVoice, setShowVoice] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -107,7 +108,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   const steps: StepId[] = ['feel', 'happened', 'thought', ...(thought.trim() ? ['kinder' as const] : []), 'finish']
   const at = Math.max(0, steps.indexOf(step))
   const go = (d: 1 | -1) => { const n = at + d; if (n < 0) setMood(null); else if (n < steps.length) setStep(steps[n]) }
-  const filledHere: Record<StepId, boolean> = { feel: emotions.length > 0, happened: !!situation.trim() || !!clip, thought: !!thought.trim() || traps.length > 0, kinder: !!alt.trim(), finish: true }
+  const filledHere: Record<StepId, boolean> = { feel: emotions.length > 0, happened: !!situation.trim() || !!clip, thought: !!thought.trim() || traps.length > 0 || !!clip, kinder: !!alt.trim() || !!clip, finish: true }
 
   if (mood === null) return (
     <div className="overlay"><div className="inner mood-stage">
@@ -127,6 +128,15 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   )
 
   const last = step === 'finish'
+  // "Speak instead": one voice memo for the whole entry, offered on every writing step. A memo counts as an answer.
+  const voice = (
+    <div className="wiz-voice">
+      {!showVoice && !clip
+        ? <button type="button" className="btn block" onClick={() => setShowVoice(true)}><Mic size={18} style={{ display: 'inline', verticalAlign: -3, marginRight: 8 }} />Speak instead</button>
+        : <><VoiceRecorder clip={clip} onChange={setClip} onFill={applyStructured} />
+          {filled && <p role="status" style={{ color: 'var(--accent)', margin: '4px 6px', fontWeight: 800 }}>✨ Filled in from your memo. Review as you go.</p>}</>}
+    </div>
+  )
   return (
     <div className="overlay wiz"><div className="inner wiz-inner">
       <div className="wiz-head">
@@ -141,7 +151,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
         <PalSays pose={SAY[step].pose} size={72}>{SAY[step].text}</PalSays>
         {crisis && <div role="alert"><Support /></div>}
 
-        {step === 'feel' && <div className="wiz-card">
+        {step === 'feel' && <><div className="wiz-card">
           <IconGrid options={[...emoOptions, ...customEmos]} value={emotions.map(e => e.name)} onChange={setEmos} />
           <div className="row spread" style={{ marginTop: 4 }}>
             <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllEmos(!allEmos)}>{allEmos ? 'Show fewer' : `More emotions (${EMOTIONS.length - emoOptions.length})`}</button>
@@ -158,16 +168,17 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
               </div>
             ))}
           </>}
-        </div>}
+        </div>
+        <button type="button" className="linkbtn" style={{ alignSelf: 'center' }} disabled={saving} onClick={save}>Just save my mood</button></>}
 
         {step === 'happened' && <>
           <label className="field"><span className="sr-only">Situation</span><textarea className="input wiz-text" autoFocus value={situation} onChange={e => setSituation(e.target.value)} placeholder="What was happening?" /></label>
-          <VoiceRecorder clip={clip} onChange={setClip} onFill={applyStructured} />
-          {filled && <p role="status" style={{ color: 'var(--accent)', margin: '4px 6px', fontWeight: 800 }}>✨ Filled in from your memo. Review as you go.</p>}
+          {voice}
         </>}
 
         {step === 'thought' && <>
           <label className="field"><span className="sr-only">The thought</span><textarea className="input wiz-text" autoFocus value={thought} onChange={e => setThought(e.target.value)} placeholder="What went through your mind?" /></label>
+          {voice}
           <div className="wiz-card">
             <b>Does it fit a thinking trap?</b><span className="muted small"> (optional)</span>
             <div className="chips" style={{ marginTop: 10 }}>{TRAPS.map(t => (
@@ -181,6 +192,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
         {step === 'kinder' && <>
           <div className="wiz-quote" aria-label="Your thought">“{thought.trim()}”</div>
           <label className="field"><span className="sr-only">Alternate thought</span><textarea className="input wiz-text" autoFocus value={alt} onChange={e => setAlt(e.target.value)} placeholder="What would you tell a friend? What’s the evidence?" /></label>
+          {voice}
           <div className="wiz-card">
             <span className="muted small">Need a nudge? Tap a question.</span>
             <div style={{ marginTop: 8 }}>{REFRAME_QUESTIONS.slice(0, 4).map(q => <button type="button" key={q} className="qbtn" onClick={() => setAlt(a => (a ? a + '\n' : '') + q + ' ')}>{q}</button>)}</div>

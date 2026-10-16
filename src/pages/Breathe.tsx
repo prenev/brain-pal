@@ -1,36 +1,46 @@
-import { Siren } from 'lucide-react'
-import { useState } from 'react'
+import { Minus, Plus, Siren } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../lib/store'
 import { PalTip } from '../components/Pal'
 import BreathRunner, { type BreathResult } from '../components/BreathRunner'
 import { Toggle } from '../components/ui'
 import { Emoji } from '../lib/emoji'
 import { burst } from '../lib/confetti'
+import { breathsPerMinute, clampSec, MINUTE_CHOICES, patternLabel, roundsFor, TECHNIQUES, wavePath, type Technique } from '../lib/breathing.ts'
 import type { BreathPattern } from '../lib/types'
 
-const PRESETS: Record<string, BreathPattern> = {
-  'Box 4': { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
-  'Box 5': { inhale: 5, hold1: 5, exhale: 5, hold2: 5 },
-  'Box 6': { inhale: 6, hold1: 6, exhale: 6, hold2: 6 },
-  'Calm 4-6': { inhale: 4, hold1: 0, exhale: 6, hold2: 0 },
-  '4-7-8': { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+const BOX_SECONDS = [3, 4, 5, 6]
+
+/** A little line drawing of the breath: up while you breathe in, level on holds, down on the way out. */
+function Wave({ p, on }: { p: BreathPattern; on: boolean }) {
+  return <svg className={`wave ${on ? 'on' : ''}`} viewBox="0 0 96 40" width="96" height="40" aria-hidden="true"><path d={wavePath(p)} /></svg>
 }
-const HINTS: Record<string, string> = {
-  'Calm 4-6': 'A longer exhale than inhale slows your heart rate — the quickest way to settle anxiety.',
-  '4-7-8': 'Deeply relaxing; good before sleep. Skip it if holding your breath feels uncomfortable.',
+function Stepper({ label, value, onChange, min = 0, max = 12 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number }) {
+  return (
+    <div className="stepper" role="group" aria-label={label}>
+      <span>{label}</span>
+      <button aria-label={`Shorter ${label.toLowerCase()}`} disabled={value <= min} onClick={() => onChange(clampSec(value - 0.5, min, max))}><Minus size={18} /></button>
+      <b>{value}s</b>
+      <button aria-label={`Longer ${label.toLowerCase()}`} disabled={value >= max} onClick={() => onChange(clampSec(value + 0.5, min, max))}><Plus size={18} /></button>
+    </div>
+  )
 }
 
 export default function Breathe({ onSos }: { onSos: () => void }) {
   const { addSession } = useStore()
-  const [preset, setPreset] = useState('Box 4')
-  const [cycles, setCycles] = useState(6)
+  const [techId, setTechId] = useState<Technique['id']>('calm')
+  const [boxSec, setBoxSec] = useState(4)
+  const [custom, setCustom] = useState({ inhale: 5, hold1: 0, exhale: 5, hold2: 0 })
+  const [minutes, setMinutes] = useState<number>(2)
   const [vibrate, setVibrate] = useState(true)
   const [sound, setSound] = useState(false)
   const [running, setRunning] = useState(false)
   const [done, setDone] = useState<null | { cycles: number; sec: number }>(null)
 
-  const pattern = PRESETS[preset]
-  const total = (pattern.inhale + pattern.hold1 + pattern.exhale + pattern.hold2) * cycles
+  const tech = TECHNIQUES.find(t => t.id === techId)!
+  const pattern: BreathPattern = techId === 'box' ? { inhale: boxSec, hold1: boxSec, exhale: boxSec, hold2: boxSec } : techId === 'custom' ? custom : tech.pattern
+  const cycles = useMemo(() => roundsFor(minutes, pattern), [minutes, pattern])
+  const bpm = breathsPerMinute(pattern)
 
   function finish(r: BreathResult) {
     setRunning(false)
@@ -53,17 +63,34 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
         ? <BreathRunner pattern={pattern} cycles={cycles} vibrate={vibrate} sound={sound} onFinish={finish} />
         : <>
           {done && <div className="card" style={{ textAlign: 'center' }}><Emoji name="lotus" size={64} /><div style={{ fontWeight: 900, fontSize: 20, marginTop: 6 }}>Nice work!</div><div className="muted">{done.cycles} rounds · {Math.floor(done.sec / 60)}m {done.sec % 60}s logged</div></div>}
-          <PalTip id="breathe" pose="breatheIn">Pick a pattern and follow the circle. A long, slow breath out is the secret.</PalTip>
-          <div className="card">
-            <div className="seg" role="tablist" aria-label="Pattern">
-              {Object.keys(PRESETS).map(p => <button key={p} className={p === preset ? 'on' : ''} onClick={() => setPreset(p)}>{p}</button>)}
-            </div>
-            {HINTS[preset] && <p className="muted small" style={{ margin: '12px 4px 0' }}>{HINTS[preset]}</p>}
-            <div style={{ margin: '16px 0 4px' }} className="row spread"><span>Rounds</span><b>{cycles}</b></div>
-            <input type="range" min={2} max={20} value={cycles} onChange={e => setCycles(+e.target.value)} aria-label="Rounds" />
-            <Toggle label="Vibration" hint="Pulses mark each phase. Strongest on Android; limited on iPhone web." on={vibrate} onChange={setVibrate} />
+          <PalTip id="breathe" pose="breatheIn">Pick a rhythm. A long, slow breath out is the secret.</PalTip>
+
+          <div className="techs" role="radiogroup" aria-label="Breathing style">
+            {TECHNIQUES.map(t => {
+              const p = t.id === 'box' ? { inhale: boxSec, hold1: boxSec, exhale: boxSec, hold2: boxSec } : t.id === 'custom' ? custom : t.pattern, on = t.id === techId
+              return (
+                <button key={t.id} role="radio" aria-checked={on} className={`tech ${on ? 'on' : ''}`} onClick={() => setTechId(t.id)}>
+                  <Wave p={p} on={on} />
+                  <span className="tech-text"><b>{t.name}</b><em>{t.tag}</em><small>{patternLabel(p)} s</small></span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="card tech-detail">
+            <p className="muted" style={{ margin: '0 0 14px' }}>{tech.blurb}</p>
+            {techId === 'box' && <div className="seg" role="group" aria-label="Box length">{BOX_SECONDS.map(n => <button key={n} className={n === boxSec ? 'on' : ''} onClick={() => setBoxSec(n)}>{n} sec</button>)}</div>}
+            {techId === 'custom' && <div className="steppers">
+              <Stepper label="Breathe in" value={custom.inhale} min={2} onChange={v => setCustom({ ...custom, inhale: v })} />
+              <Stepper label="Hold" value={custom.hold1} min={0} max={10} onChange={v => setCustom({ ...custom, hold1: v })} />
+              <Stepper label="Breathe out" value={custom.exhale} min={2} onChange={v => setCustom({ ...custom, exhale: v })} />
+              <Stepper label="Rest" value={custom.hold2} min={0} max={10} onChange={v => setCustom({ ...custom, hold2: v })} />
+            </div>}
+            <div className="row spread" style={{ margin: '16px 0 8px' }}><span>How long</span><span className="muted small">{bpm} breaths a minute</span></div>
+            <div className="seg" role="group" aria-label="Session length">{MINUTE_CHOICES.map(m => <button key={m} className={m === minutes ? 'on' : ''} onClick={() => setMinutes(m)}>{m} min</button>)}</div>
+            <Toggle label="Vibration" hint="Pulses mark each phase. Strongest on iPhone with the app." on={vibrate} onChange={setVibrate} />
             <Toggle label="Soft tones" on={sound} onChange={setSound} />
-            <button className="btn primary block" style={{ marginTop: 10 }} onClick={() => { setDone(null); setRunning(true) }}>Start · {Math.round(total / 60 * 10) / 10} min</button>
+            <button className="btn primary block" style={{ marginTop: 10 }} onClick={() => { setDone(null); setRunning(true) }}>Start · {minutes} min</button>
           </div>
         </>}
     </>

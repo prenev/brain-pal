@@ -37,3 +37,33 @@ assert.equal(previewOf({ body: 'short  text\nhere' }), 'short text here'); asser
 // tags by frequency then name
 assert.deepEqual(allJournalTags([e('1', 'x', '', '', ['b', 'a']), e('2', 'x', '', '', ['b']), e('3', 'x', '', '', ['c'])]), ['b', 'a', 'c'])
 console.log('journal: all tests passed')
+
+// ---- formatting toolbar (Markdown-lite) ----
+import { applyFormat, parseInline, parseMd, stripMd } from '../src/lib/mdlite.ts'
+import { pickTopics, TOPICS } from '../src/lib/journal.ts'
+{
+  const f = (t, a, b, k) => applyFormat(t, a, b, k)
+  assert.deepEqual(f('hello world', 6, 11, 'bold'), { text: 'hello **world**', start: 8, end: 13 })
+  assert.deepEqual(f('hello **world**', 8, 13, 'bold'), { text: 'hello world', start: 6, end: 11 }, 'bold toggles off (selection inside the markers)')
+  assert.equal(f('hello **world**', 6, 15, 'bold').text, 'hello world', 'bold toggles off (selection includes the markers)')
+  assert.deepEqual(f('hi', 2, 2, 'italic'), { text: 'hi**', start: 3, end: 3 }, 'no selection: markers go in, cursor sits between')
+  assert.equal(f('a\nb\nc', 0, 5, 'bullet').text, '- a\n- b\n- c'); assert.equal(f('- a\n- b', 0, 7, 'bullet').text, 'a\nb', 'bullets toggle off')
+  assert.equal(f('a\nb', 0, 3, 'number').text, '1. a\n2. b'); assert.equal(f('x', 0, 1, 'heading').text, '# x'); assert.equal(f('- x', 0, 3, 'quote').text, '> x', 'a line format replaces another')
+  assert.equal(f('one\ntwo', 5, 5, 'quote').text, 'one\n> two', 'only the lines touched change')
+  assert.deepEqual(parseInline('a **b** *c* ~~d~~'), [{ t: 'text', v: 'a ' }, { t: 'b', c: [{ t: 'text', v: 'b' }] }, { t: 'text', v: ' ' }, { t: 'i', c: [{ t: 'text', v: 'c' }] }, { t: 'text', v: ' ' }, { t: 's', c: [{ t: 'text', v: 'd' }] }])
+  assert.deepEqual(parseInline('2 * 3 * 4'), [{ t: 'text', v: '2 * 3 * 4' }], 'spaced stars are maths, not italics'); assert.deepEqual(parseInline('**open'), [{ t: 'text', v: '**open' }])
+  const blocks = parseMd('# Title\n\nSome *text*\nmore\n\n- a\n- b\n\n1. x\n2. y\n\n> quote\n---')
+  assert.deepEqual(blocks.map(b => b.t), ['h', 'p', 'ul', 'ol', 'quote', 'hr']); assert.equal(blocks[2].items.length, 2)
+  // markup is data, never HTML: nothing in the output can carry a tag
+  assert.deepEqual(parseMd('<img src=x onerror=alert(1)>')[0], { t: 'p', c: [{ t: 'text', v: '<img src=x onerror=alert(1)>' }] })
+  assert.equal(stripMd('# Hi\n**bold** and *it* ~~no~~\n- item\n> q'), 'Hi\nbold and it no\nitem\nq')
+  assert.equal(previewOf({ body: '**Great** day\n- walked' }), 'Great day walked', 'list previews show words, not markers')
+}
+// ---- topic chips ----
+{
+  assert.equal(new Set(TOPICS.map(t => t.id)).size, TOPICS.length); assert.ok(TOPICS.length >= 16)
+  const a = pickTopics(4, [], () => 0.1), b = pickTopics(4, a.map(t => t.id), () => 0.1)
+  assert.equal(a.length, 4); assert.ok(b.every(t => !a.some(x => x.id === t.id)), 'a shuffle never repeats what was just shown')
+  assert.equal(new Set(Array.from({ length: 40 }, () => pickTopics(4).map(t => t.id).join())).size > 5, true, 'a different handful each time')
+}
+console.log('journal formatting + topics ok')

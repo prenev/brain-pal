@@ -1,16 +1,49 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, Search, Smile, Tag, Trash2 } from 'lucide-react'
+import { Bold, ChevronLeft, Eye, Heading1, Italic, List, ListOrdered, Mic, Plus, Quote, Search, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
 import { PalEmpty, PalTip } from './Pal'
 import Support from './Support'
-import { Emoji } from '../lib/emoji'
+import VoiceRecorder from './VoiceRecorder'
+import AudioPlayer from './AudioPlayer'
+import { applyFormat, parseMd, type FormatKind, type Inline } from '../lib/mdlite.ts'
+import { blobUrl, deleteBlob, putBlob } from '../lib/blobstore'
+import type { AudioClip } from '../lib/types'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
 import { looksLikeCrisis } from '../lib/gemini'
-import { dayKey, fmtDate } from '../lib/dates.ts'
-import { allJournalTags, cleanText, filterByTag, groupByMonth, isBlank, MAX_BODY, MAX_TITLE, pickPrompt, previewOf, promptText, searchJournal, wordCount, type JournalEntry } from '../lib/journal.ts'
+import { fmtDate } from '../lib/dates.ts'
+import { allJournalTags, cleanText, filterByTag, groupByMonth, isBlank, MAX_BODY, MAX_TITLE, pickTopics, previewOf, searchJournal, wordCount, type JournalEntry } from '../lib/journal.ts'
 import { clearDraft, loadDraft, saveDraft } from '../lib/extras'
 import { DEFAULT_TAGS } from '../lib/constants'
+
+const FORMATS: { kind: FormatKind; label: string; icon: typeof Bold }[] = [
+  { kind: 'bold', label: 'Bold', icon: Bold }, { kind: 'italic', label: 'Italic', icon: Italic }, { kind: 'strike', label: 'Strikethrough', icon: Strikethrough },
+  { kind: 'heading', label: 'Heading', icon: Heading1 }, { kind: 'bullet', label: 'Bulleted list', icon: List }, { kind: 'number', label: 'Numbered list', icon: ListOrdered }, { kind: 'quote', label: 'Quote', icon: Quote },
+]
+
+/** How far the on-screen keyboard covers the page, so the tool bar can ride just above it (iOS Safari does not move fixed bars by itself). */
+function useKeyboardInset() {
+  const [inset, setInset] = useState(0)
+  useEffect(() => {
+    const vv = window.visualViewport; if (!vv) return
+    const f = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)))
+    f(); vv.addEventListener('resize', f); vv.addEventListener('scroll', f)
+    return () => { vv.removeEventListener('resize', f); vv.removeEventListener('scroll', f) }
+  }, [])
+  return inset
+}
+
+const inline = (c: Inline[]): React.ReactNode[] => c.map((n, i) => n.t === 'text' ? n.v : n.t === 'b' ? <strong key={i}>{inline(n.c)}</strong> : n.t === 'i' ? <em key={i}>{inline(n.c)}</em> : <s key={i}>{inline(n.c)}</s>)
+/** Rendered journal text (the same Markdown-lite the toolbar writes). Text only: nothing typed can become HTML. */
+export function Rendered({ text }: { text: string }) {
+  return <div className="md">{parseMd(text).map((b, i) => {
+    if (b.t === 'h') return <h3 key={i}>{inline(b.c)}</h3>
+    if (b.t === 'quote') return <blockquote key={i}>{inline(b.c)}</blockquote>
+    if (b.t === 'hr') return <hr key={i} />
+    if ('items' in b) { const li = b.items.map((it, j) => <li key={j}>{inline(it)}</li>); return b.t === 'ul' ? <ul key={i}>{li}</ul> : <ol key={i}>{li}</ol> }
+    return <p key={i}>{inline(b.c)}</p>
+  })}</div>
+}
 
 /** Full-screen writing space. New entries autosave a draft so nothing is lost if you leave; existing entries edit in place. */
 export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntry; onClose: () => void; onSaved: () => void }) {
@@ -22,11 +55,17 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
   const [mood, setMood] = useState<number | null>(entry?.mood ?? (hasDraft ? draft!.mood : null))
   const [tags, setTags] = useState<string[]>(entry?.tags ?? (hasDraft ? draft!.tags : []))
   const [prompt, setPrompt] = useState<string | null>(entry ? null : hasDraft ? draft!.prompt : null)
+  const [topics, setTopics] = useState(() => pickTopics(4))
+  const [preview, setPreview] = useState(false)
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const [clip, setClip] = useState<AudioClip | null>(null)
+  const [dropAudio, setDropAudio] = useState(false)
+  const [oldAudioUrl, setOldAudioUrl] = useState<string | null>(null)
+  const kb = useKeyboardInset()
   const [restored] = useState(hasDraft)
   const [err, setErr] = useState('')
   const [panel, setPanel] = useState<'mood' | 'tags' | null>(null)
   const area = useRef<HTMLTextAreaElement>(null)
-  const todayPrompt = pickPrompt(dayKey(new Date()))
   const tagChoices = useMemo(() => [...new Set([...allJournalTags(journal), ...DEFAULT_TAGS.slice(0, 6), ...tags])].slice(0, 12), [journal, tags])
   const crisis = looksLikeCrisis(`${title} ${body}`)
 
@@ -37,19 +76,32 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
     return () => clearTimeout(t)
   }, [entry, title, body, mood, tags, prompt])
   useEffect(() => { area.current?.focus() }, [])
+  useEffect(() => { if (entry?.audio) void blobUrl(entry.audio.ref).then(setOldAudioUrl) }, [entry])
   useLayoutEffect(() => { const a = area.current; if (a) { a.style.height = 'auto'; a.style.height = `${a.scrollHeight}px` } }, [body])
 
-  function save() {
+  async function save() {
     const c = cleanText(title, body, tags)
-    if (!c.title && !c.body) { setErr('Write a few words first — even one line counts.'); return }
-    if (entry) updateJournal(entry.id, { ...c, mood }); else addJournal({ ...c, mood, prompt })
-    clearDraft(); onSaved()
+    if (!c.title && !c.body && !clip) { setErr('Write a few words first — even one line counts.'); return }
+    try {
+      let audio = dropAudio ? null : entry?.audio ?? null
+      if ((dropAudio || clip) && entry?.audio) await deleteBlob(entry.audio.ref).catch(() => {})
+      if (clip) { const ref = `jaudio-${crypto.randomUUID()}`; await putBlob(ref, clip.blob); audio = { ref, durationSec: clip.durationSec, mime: clip.mime, transcript: clip.transcript } }
+      if (entry) updateJournal(entry.id, { ...c, mood, audio }); else addJournal({ ...c, mood, prompt, audio })
+      clearDraft(); onSaved()
+    } catch { setErr('Couldn’t save the voice note. Try again, or save without it.') }
   }
   function remove() {
     if (!entry || !confirm('Delete this journal entry? This cannot be undone.')) return
+    if (entry.audio) void deleteBlob(entry.audio.ref).catch(() => {})
     deleteJournal(entry.id); onClose()
   }
 
+  const fmt = (kind: FormatKind) => {
+    const a = area.current; if (!a) return
+    const r = applyFormat(body, a.selectionStart, a.selectionEnd, kind)
+    setBody(r.text); requestAnimationFrame(() => { a.focus(); a.setSelectionRange(r.start, r.end) })
+  }
+  const useTopic = (t: { id: string; text: string }) => { setBody(b => (b.trim() ? `${b.replace(/\s+$/, '')}\n\n` : '') + t.text + '\n'); setPrompt(t.id); requestAnimationFrame(() => { const a = area.current; if (a) { a.focus(); a.setSelectionRange(a.value.length, a.value.length) } }) }
   const words = wordCount(body)
   const when = new Date(entry?.createdAt ?? Date.now()).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
 
@@ -65,13 +117,19 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
       {restored && <p className="muted small" role="status" style={{ textAlign: 'center' }}>Picked up where you left off.</p>}
       {crisis && <div role="alert"><Support /></div>}
 
-      {!entry && !prompt && <button className="notes-prompt" onClick={() => setPrompt(todayPrompt.id)}><Emoji name="bulb" size={20} /><span>Need a place to start? <u>{todayPrompt.text}</u></span></button>}
-      {prompt && <div className="notes-prompt" role="note"><Emoji name="bulb" size={20} /><i style={{ flex: 1 }}>{promptText(prompt)}</i><button className="linkbtn" onClick={() => setPrompt(null)}>Clear</button></div>}
-
       <input className="notes-title" aria-label="Title" maxLength={MAX_TITLE} placeholder="Title" value={title} onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); area.current?.focus() } }} />
-      <textarea ref={area} className="notes-body" aria-label="Journal entry" maxLength={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={e => { setBody(e.target.value); setErr('') }} />
+      {!body.trim() && !preview && <div className="topic-row" role="group" aria-label="Topic ideas">
+        {topics.map(t => <button key={t.id} type="button" className="chip" onClick={() => useTopic(t)}>{t.chip}</button>)}
+        <button type="button" className="chip shuffle" aria-label="More topic ideas" onClick={() => setTopics(pickTopics(4, topics.map(t => t.id)))}><Shuffle size={14} /></button>
+      </div>}
+      {preview ? <div className="notes-preview" aria-label="Preview"><Rendered text={body || '*Nothing written yet.*'} /></div>
+        : <textarea ref={area} className="notes-body" aria-label="Journal entry" maxLength={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={e => { setBody(e.target.value); setErr('') }} />}
+      {(entry?.audio && !dropAudio && !clip) && <div className="notes-voice">{oldAudioUrl ? <AudioPlayer src={oldAudioUrl} durationSec={entry.audio.durationSec} label="Voice note" /> : <p className="muted small">This voice note was recorded on another device.</p>}
+        <button className="linkbtn" onClick={() => setDropAudio(true)}>Remove voice note</button></div>}
+      {voiceOpen && <div className="notes-voice"><VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setVoiceOpen(false) }} onFill={() => {}} /></div>}
 
+      <div className="notes-dock" style={{ ['--kb' as string]: `${kb}px` }}>
       {panel && <div className="notes-panel" role="group" aria-label={panel === 'mood' ? 'Choose a mood' : 'Choose tags'}>
         {panel === 'mood'
           ? <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -81,6 +139,9 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
               {tagChoices.map(t => <button key={t} type="button" className={`chip ${tags.includes(t) ? 'on' : ''}`} aria-pressed={tags.includes(t)} onClick={() => setTags(tags.includes(t) ? tags.filter(x => x !== t) : [...tags, t])}>{t}</button>)}
             </div>}
       </div>}
+      {!preview && <div className="fmt-bar" role="toolbar" aria-label="Formatting">
+        {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} onPointerDown={e => e.preventDefault()} onClick={() => fmt(kind)}><Icon size={20} /></button>)}
+      </div>}
       <div className="notes-tools">
         <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
           {mood ? <Face mood={mood} size={26} /> : <Smile size={24} />}
@@ -88,8 +149,11 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
         <button aria-label="Tags" aria-expanded={panel === 'tags'} className={panel === 'tags' ? 'on' : ''} onClick={() => setPanel(panel === 'tags' ? null : 'tags')}>
           <Tag size={22} />{tags.length > 0 && <span className="small">{tags.length}</span>}
         </button>
+        <button aria-label="Voice note" aria-expanded={voiceOpen} className={voiceOpen || clip ? 'on' : ''} onClick={() => setVoiceOpen(!voiceOpen)}><Mic size={22} /></button>
+        <button aria-label={preview ? 'Back to writing' : 'Preview'} aria-pressed={preview} className={preview ? 'on' : ''} onClick={() => setPreview(!preview)}><Eye size={22} /></button>
         <span className="notes-count">{err ? <span role="alert" style={{ color: 'var(--danger)' }}>{err}</span> : `${words} ${words === 1 ? 'word' : 'words'}`}</span>
         {entry && <button aria-label="Delete entry" onClick={remove}><Trash2 size={22} /></button>}
+      </div>
       </div>
     </div></div>
   )
@@ -108,7 +172,6 @@ export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => 
   return (
     <>
       <PalTip id="journal" pose="think">Write anything. A line is enough. Only you can read it.</PalTip>
-      <button className="btn primary block" onClick={onWrite} style={{ marginBottom: 14 }}>Write something</button>
       {journal.length > 0 && <>
         <div className="searchbar"><Search size={20} /><input aria-label="Search journal" placeholder="Search your journal" value={q} onChange={e => setQ(e.target.value)} /></div>
         {tags.length > 0 && <div className="chips" style={{ margin: '10px 0' }} role="group" aria-label="Filter by tag">
@@ -122,7 +185,7 @@ export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => 
           <h2 className="sec">{monthName(g.key)}</h2>
           {g.entries.map(e => (
             <button key={e.id} className="card jentry" onClick={() => onOpen(e)} aria-label={`Journal entry: ${e.title || previewOf(e, 40) || 'untitled'}`}>
-              <div className="row spread"><span className="muted small">{fmtDate(e.createdAt)}</span>{e.mood && <Face mood={e.mood} size={26} />}</div>
+              <div className="row spread"><span className="muted small">{fmtDate(e.createdAt)}</span><span className="row" style={{ gap: 8 }}>{e.audio && <Mic size={18} aria-label="Has a voice note" />}{e.mood && <Face mood={e.mood} size={26} />}</span></div>
               {e.title && <b style={{ display: 'block', marginTop: 4 }}>{e.title}</b>}
               <p style={{ margin: '4px 0 0' }}>{previewOf(e)}</p>
               {e.tags.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{e.tags.map(t => <span key={t} className="chip">{t}</span>)}</div>}
@@ -130,6 +193,7 @@ export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => 
           ))}
         </section>
       ))}
+      <button className="fab journal-fab" aria-label="New journal entry" onClick={onWrite}><Plus size={34} strokeWidth={3} /></button>
     </>
   )
 }
