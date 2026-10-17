@@ -4,7 +4,7 @@ import Face from './Face'
 import CuteIcon from './CuteIcon'
 import Wallet from './Wallet'
 import { Screen } from './ui'
-import { PalEmpty } from './Pal'
+import { PalEmpty, PalTip } from './Pal'
 import { useStore } from '../lib/store'
 import { dayKey, shift } from '../lib/dates.ts'
 import { allJournalTags, filterByTag, groupByMonth, previewOf, searchJournal, type JournalEntry } from '../lib/journal.ts'
@@ -87,6 +87,7 @@ export default function JournalHome({ onClose, onOpen, onWrite, onVoice }: { onC
         <button className="jgrab" aria-label={monthOpen ? 'Show only this week' : 'Show the whole month'} onClick={toggleMonth}><i /></button>
       </div>
 
+      <PalTip id="journal" pose="think">Write anything. A line is enough. Only you can read it.</PalTip>
       {journal.length > 0 && tags.length > 0 && <div className="chips" style={{ margin: '4px 0 10px' }} role="group" aria-label="Filter by tag">
         {tags.map(t => <button key={t} className={`chip ${tag === t ? 'on' : ''}`} aria-pressed={tag === t} onClick={() => setTag(tag === t ? null : t)}>{t}</button>)}
       </div>}

@@ -834,7 +834,7 @@ test('shop: a treat you name yourself, and a quiet +N when you earn', async () =
 const until = async (fn, ms = 12000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return; await new Promise(r => setTimeout(r, 100)) } throw new Error(`timed out waiting for: ${fn}`) }
 const hasDoc = (acct, kind) => [...acct.rows.keys()].some(k => k.startsWith(kind + '|'))
 const bodyOf = (acct, kind) => [...acct.rows.values()].find(r => r.kind === kind && !r.deleted)?.data?.body
-const moreRoot = async p => { await tab(p, 'More'); if (await p.locator('.topbar [aria-label=Back]').count()) await p.click('.topbar [aria-label=Back]') }
+const moreRoot = async p => { if (await p.locator('.journal-home').count()) await p.click('.journal-home [aria-label=Back]'); await tab(p, 'More'); if (await p.locator('.topbar [aria-label=Back]').count()) await p.click('.topbar [aria-label=Back]') }   // the journal is a full-screen page now: leave it first
 const syncNowUi = async p => { await moreRoot(p); await p.click('.li >> text=Account'); await p.click('button:has-text("Sync now")'); await p.waitForSelector('[aria-label="Sync status"] >> text=/Everything is saved|Couldn’t reach/') }
 const openJournalList = async p => { await moreRoot(p); await p.click('.li >> text=Journal') }
 
@@ -1232,7 +1232,7 @@ test('home: layout is mood → anchors → big Focus + Journal cards → Worries
 })
 
 test('home: tapping a face opens the entry flow with that mood and "just save my mood" logs it; the worry tile shows what is parked; Sleep shows last night', async () => {
-  const night = (asleepMin) => ({ date: new Date().toISOString().slice(0, 10), start: 0, end: 1, asleepMin, inBedMin: asleepMin + 20, awakeMin: 20, deepMin: 60, remMin: 80, coreMin: asleepMin - 140, unspecifiedMin: 0, efficiency: 90, source: 'manual', quality: null })
+  const night = (asleepMin) => ({ date: '2026-10-16', start: 0, end: 1, asleepMin, inBedMin: asleepMin + 20, awakeMin: 20, deepMin: 60, remMin: 80, coreMin: asleepMin - 140, unspecifiedMin: 0, efficiency: 90, source: 'manual', quality: null })
   const w = (id, text) => ({ id, createdAt: new Date().toISOString(), text, status: 'open', action: null, reviewedAt: null })
   const s = await open({ 'bp.sleep.manual': [night(250)], 'bp.worries': [w('w1', 'the deadline'), w('w2', 'rent is due'), w('w3', 'my friend seems upset')] }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
   await p.waitForSelector('.worry-tool >> text=3 parked')
