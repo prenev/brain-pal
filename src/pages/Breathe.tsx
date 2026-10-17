@@ -105,7 +105,6 @@ export default function Breathe({ onSos, onDone }: { onSos: () => void; onDone?:
               <Orb p={pattern} color={TECH_COLOR[techId]} />
               <em className="b-tag">{tech.tag}</em>
               <h2>{tech.name}</h2>
-              <p>{tech.blurb}</p>
               <span className="b-pat">{patternLabel(pattern)} s · {bpm} breaths a minute</span>
             </div>
             {techId === 'box' && <div className="b-ctl"><span>Box length</span><div className="seg" role="group" aria-label="Box length">{BOX_SECONDS.map(n => <button key={n} className={n === boxSec ? 'on' : ''} onClick={() => setBoxSec(n)}>{n}s</button>)}</div></div>}
