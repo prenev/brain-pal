@@ -524,6 +524,57 @@ test('journal home: a week ribbon with a mood face per day, tap a day to filter,
   await done(s)
 })
 
+// A browser that recognises speech on the device (what Chrome's `processLocally` promises): results arrive a moment after start().
+const mockSpeech = () => {
+  const mk = (t, final) => Object.assign([{ transcript: t }], { isFinal: final })
+  window.SpeechRecognition = class { constructor() { this.onresult = null; this.onend = null }
+    start() { window.__speechStarted = (window.__speechStarted ?? 0) + 1; setTimeout(() => this.onresult?.({ results: [mk('i went for a walk', true)] }), 250); setTimeout(() => this.onresult?.({ results: [mk('i went for a walk', true), mk('and it helped', false)] }), 500) }
+    stop() { setTimeout(() => this.onend?.(), 10) } abort() {} }
+  window.SpeechRecognition.prototype.processLocally = false     // (Chrome exposes it on the prototype: that is how we know local recognition exists)
+}
+const openVoice = async p => { await tab(p, 'Home'); await p.click('.journal-card'); await p.click('[aria-label="New journal entry"]'); await p.click('[aria-label="Record a voice journal"]'); await p.waitForSelector('.voicej') }
+
+test('voice journal: + → Voice is a full-screen recorder; live captions appear while you talk (on the device only); stopping opens the editor with the words and the audio', async () => {
+  const s = await open(); const p = s.page
+  await s.ctx.addInitScript(mockSpeech); await reload(p)
+  await openVoice(p)
+  const box = await p.locator('.voicej').boundingBox(), vp = p.viewportSize(); assert.deepEqual([Math.round(box.width), Math.round(box.height)], [vp.width, vp.height], 'full screen')
+  await p.waitForSelector('.vj-caps >> text=Captions appear here as you speak, worked out on your phone only')
+  await p.click('[aria-label="Start recording"]'); await p.waitForSelector('.vj-btn.stop'); await p.waitForSelector('.vj-caps >> text=I went for a walk'.replace('I went', 'i went')); await p.waitForSelector('.vj-caps .interim >> text=and it helped')
+  assert.match(await p.locator('.vj-time').innerText(), /^0:0\d/); await p.waitForTimeout(900)
+  await p.click('[aria-label="Stop and keep"]'); await p.waitForSelector('[aria-label="Journal entry"]'); assert.equal(await p.locator('.voicej').count(), 0)
+  assert.equal(await p.innerText('[aria-label="Journal entry"]'), 'I went for a walk and it helped', 'the captions become the entry text, tidied')
+  await p.waitForSelector('.notes-voicepanel .player'); assert.equal(await p.inputValue('.notes-voicepanel textarea'), 'I went for a walk and it helped', 'and the memo’s transcript')
+  await saveJournalEntry(p)
+  await p.click('.journal-card'); await p.waitForSelector('.jentry [aria-label="Has a voice note"]'); assert.match(await p.locator('.jentry').innerText(), /I went for a walk and it helped/)
+  assert.equal((await idbKeys(p)).filter(k => String(k).startsWith('jaudio-')).length, 1, 'the audio is kept on the device')
+  await done(s)
+
+  // a browser with no on-device recogniser: no captions, no network, the recording is still saved
+  const n = await open(); const q = n.page
+  await n.ctx.addInitScript(() => { delete window.SpeechRecognition; delete window.webkitSpeechRecognition }); await reload(q)
+  await openVoice(q); await q.waitForSelector('.vj-caps >> text=no live captions on this device'); await q.click('[aria-label="Start recording"]'); await q.waitForSelector('.vj-btn.stop'); await q.waitForTimeout(1200); await q.click('[aria-label="Stop and keep"]')
+  await q.waitForSelector('[aria-label="Journal entry"]'); assert.equal(await q.innerText('[aria-label="Journal entry"]'), ''); await q.waitForSelector('.notes-voicepanel .player'); await saveJournalEntry(q)
+  assert.equal(n.gemini.calls.length, 0, 'nothing went to the AI helper'); await done(n)
+  // closing without recording leaves nothing behind
+  const c = await open(); await c.ctx.addInitScript(() => { delete window.SpeechRecognition; delete window.webkitSpeechRecognition }); await reload(c.page); await openVoice(c.page); await c.page.click('[aria-label="Close voice journal"]'); await c.page.waitForSelector('.voicej', { state: 'detached' }); assert.equal(await c.page.locator('[aria-label="Journal entry"]').count(), 0); await done(c)
+})
+
+test('voice journal (iPhone app): captions come from the on-device recogniser through the native plugin; crisis words show support; the recogniser stops with the recording', async () => {
+  const s = await open(null, { native: true, reply: { 'Mindful.speechAvailable': { available: true, onDevice: true } } }); const p = s.page
+  await openVoice(p); await p.click('[aria-label="Start recording"]'); await p.waitForSelector('.vj-btn.stop'); await p.waitForFunction(() => window.__native.some(c => c.method === 'speechStart'))
+  assert.equal((await nativeCalls(p, 'speechStart'))[0].locale.length > 1, true, 'asked in the phone’s language')
+  await p.evaluate(() => window.__fire('Mindful', 'speechResult', { text: 'hello', isFinal: false })); await p.waitForSelector('.vj-caps .interim >> text=hello')
+  await p.evaluate(() => window.__fire('Mindful', 'speechResult', { text: 'hello there my friend', isFinal: true })); await p.waitForSelector('.vj-caps >> text=hello there my friend'); assert.equal(await p.locator('.vj-caps .interim').count(), 0, 'a finished phrase is no longer dimmed')
+  await p.evaluate(() => window.__fire('Mindful', 'speechResult', { text: 'sometimes i want to kill myself', isFinal: false })); await p.waitForSelector('text=You don’t have to do this alone')
+  await p.click('[aria-label="Stop and keep"]'); await p.waitForFunction(() => window.__native.some(c => c.method === 'speechStop'))
+  await p.waitForSelector('[aria-label="Journal entry"]'); assert.match(await p.innerText('[aria-label="Journal entry"]'), /^Hello there my friend sometimes i want to kill myself/); await p.waitForSelector('text=You don’t have to do this alone')
+  await done(s)
+  // a phone that can't recognise speech on the device gets no captions and the plugin is never asked to start
+  const n = await open(null, { native: true }); await openVoice(n.page); await n.page.waitForSelector('.vj-caps >> text=no live captions on this device'); await n.page.click('[aria-label="Start recording"]'); await n.page.waitForSelector('.vj-btn.stop')
+  assert.equal((await nativeCalls(n.page, 'speechStart')).length, 0); await n.page.click('[aria-label="Close voice journal"]'); await done(n)
+})
+
 test('journal: draft survives leaving, blank saves are refused, and text is only ever text', async () => {
   const s = await open(); const p = s.page
   await openJournal(p); await p.click('button:has-text("Save")'); await p.waitForSelector('[role=alert]:has-text("Write a few words first")')

@@ -136,6 +136,7 @@ t = ip.read_text()
 def add_key(t, key, xml):
     return t if f'<key>{key}</key>' in t else t.replace('</dict>\n</plist>', f'\t<key>{key}</key>\n\t{xml}\n</dict>\n</plist>')
 t = add_key(t, 'NSMicrophoneUsageDescription', '<string>Wobbi uses the microphone to record voice memos for your entries.</string>')
+t = add_key(t, 'NSSpeechRecognitionUsageDescription', '<string>Wobbi turns what you say into text on your phone, never online, while you record a voice journal.</string>')
 t = add_key(t, 'NSCameraUsageDescription', '<string>Wobbi uses the camera so you can attach photos to your entries.</string>')
 t = add_key(t, 'NSPhotoLibraryUsageDescription', '<string>Wobbi lets you attach photos from your library to your entries.</string>')
 t = add_key(t, 'NSHealthUpdateUsageDescription', '<string>Wobbi saves your breathing sessions to Apple Health as Mindful Minutes.</string>')

@@ -826,3 +826,17 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .notes-body.rich ul, .notes-body.rich ol { margin: 0 0 12px; padding-left: 24px; } .notes-body.rich li { margin: 4px 0; }
 .notes-body.rich blockquote { margin: 0 0 12px; padding: 4px 14px; border-left: 4px solid var(--accent); color: #c9d6f2; font-style: italic; }
 .notes-body.rich b, .notes-body.rich strong { font-weight: 900; }
+
+/* ---- Voice journal (full screen) ---- */
+.voicej .inner { display: flex; flex-direction: column; min-height: 100dvh; padding-bottom: calc(var(--safe-b, 0px) + 18px); }
+.vj-bar { display: flex; align-items: center; justify-content: space-between; padding-top: calc(var(--safe-t, 0px) + 10px); } .vj-bar .title { font-size: 20px; font-weight: 900; }
+.vj-stage { display: grid; justify-items: center; gap: 6px; margin-top: 18px; }
+.vj-ring { --lvl: 0; width: 190px; height: 190px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle, rgba(53,208,127,.14), rgba(53,208,127,0) 70%); box-shadow: 0 0 0 calc(4px + var(--lvl) * 16px) rgba(53,208,127,.16); transition: box-shadow .08s linear; }
+.vj-ring.live { background: radial-gradient(circle, rgba(255,93,115,.18), rgba(255,93,115,0) 70%); box-shadow: 0 0 0 calc(4px + var(--lvl) * 18px) rgba(255,93,115,.2); }
+.vj-time { font-size: 40px; font-weight: 900; font-variant-numeric: tabular-nums; } .vj-say { margin: 0; color: #b8c4e0; font-weight: 800; }
+.vj-caps { flex: 1; min-height: 120px; max-height: 38dvh; overflow-y: auto; margin: 16px 0 8px; padding: 14px 16px; border-radius: 22px; background: var(--card); border: 2px solid var(--edge); font-size: 19px; line-height: 1.55; font-weight: 600; }
+.vj-caps p { margin: 0; } .vj-caps .interim { color: var(--muted); }
+.vj-foot { display: grid; justify-items: center; gap: 8px; padding-top: 6px; }
+.vj-btn { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink, #04130a); border-bottom: 6px solid var(--accent-dark); box-shadow: 0 8px 24px rgba(0,0,0,.35); } .vj-btn:active { transform: translateY(3px); border-bottom-width: 3px; }
+.vj-btn.stop { background: #ff5d73; border-bottom-color: #c8344b; color: #fff; }
+@media (prefers-reduced-motion: reduce) { .vj-ring { transition: none; } }

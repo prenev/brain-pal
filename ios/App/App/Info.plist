@@ -82,5 +82,7 @@
 	<string>Dark</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Wobbi turns what you say into text on your phone, never online, while you record a voice journal.</string>
 </dict>
 </plist>

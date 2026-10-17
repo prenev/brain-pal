@@ -53,7 +53,14 @@ export interface MindfulPlugin {
   /** `remainingSec` set = paused (the clock stops at that value); otherwise counts down to `endsAt`. */
   liveActivityUpdate(opts: { title: string; subtitle: string; startsAt: number; endsAt: number; remainingSec?: number }): Promise<void>
   liveActivityEnd(): Promise<void>
+  /** Live captions for the voice journal. `available` only when the phone can recognise speech ON the device (nothing is ever sent to Apple's servers). */
+  speechAvailable(): Promise<{ available: boolean; onDevice: boolean }>
+  /** Asks for speech permission if needed, then streams `speechResult` events until speechStop. */
+  speechStart(opts: { locale?: string }): Promise<void>
+  speechStop(): Promise<{ text: string }>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
+  /** Live captions: the whole phrase heard so far (it grows and is replaced); isFinal closes the phrase. */
+  addListener(eventName: 'speechResult', cb: (e: { text: string; isFinal: boolean }) => void): Promise<PluginListenerHandle>
 }
 export const Mindful = registerPlugin<MindfulPlugin>('Mindful')

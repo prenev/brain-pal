@@ -45,18 +45,18 @@ export function Rendered({ text }: { text: string }) {
 }
 
 /** Full-screen writing space. New entries autosave a draft so nothing is lost if you leave; existing entries edit in place. */
-export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: { entry?: JournalEntry; startVoice?: boolean; onClose: () => void; onSaved: () => void }) {
+export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: JournalEntry; /** a voice journal that was just recorded: the words and the audio */ initial?: { body: string; clip: AudioClip }; onClose: () => void; onSaved: () => void }) {
   const { addJournal, updateJournal, deleteJournal, journal } = useStore()
   const draft = useMemo(() => (entry ? null : loadDraft()), [entry])
   const hasDraft = !!draft && !isBlank(draft.title, draft.body)
   const [title, setTitle] = useState(entry?.title ?? (hasDraft ? draft!.title : ''))
-  const [body, setBody] = useState(entry?.body ?? (hasDraft ? draft!.body : ''))
+  const [body, setBody] = useState(entry?.body ?? [hasDraft ? draft!.body : '', initial?.body ?? ''].filter(b => b.trim()).join('\n\n'))
   const [mood, setMood] = useState<number | null>(entry?.mood ?? (hasDraft ? draft!.mood : null))
   const [tags, setTags] = useState<string[]>(entry?.tags ?? (hasDraft ? draft!.tags : []))
   const [prompt, setPrompt] = useState<string | null>(entry ? null : hasDraft ? draft!.prompt : null)
   const [topics, setTopics] = useState(() => pickTopics(4))
-  const [voiceOpen, setVoiceOpen] = useState(startVoice)
-  const [clip, setClip] = useState<AudioClip | null>(null)
+  const [voiceOpen, setVoiceOpen] = useState(!!initial)
+  const [clip, setClip] = useState<AudioClip | null>(initial?.clip ?? null)
   const [dropAudio, setDropAudio] = useState(false)
   const [oldAudioUrl, setOldAudioUrl] = useState<string | null>(null)
   const kb = useKeyboardInset()

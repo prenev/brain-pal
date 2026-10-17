@@ -9,6 +9,7 @@ import FamilyControls
 import ManagedSettings
 import StoreKit
 import AVFoundation
+import Speech
 import WidgetKit
 #if canImport(ActivityKit)
 import ActivityKit
@@ -50,7 +51,10 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "widgetTake", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "liveActivityStart", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "liveActivityUpdate", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "liveActivityEnd", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "liveActivityEnd", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "speechAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "speechStart", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "speechStop", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -291,6 +295,96 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         guard #available(iOS 16.0, *) else { call.resolve(); return }
         ScreenTimeGuard.shared.clear()
         call.resolve()
+    }
+
+
+    // MARK: Live captions for the voice journal (Speech framework, ON DEVICE ONLY)
+    // We refuse to run unless the recogniser can work offline, so what you say is never sent to Apple's servers.
+    private var speechEngine = AVAudioEngine()
+    private var speechRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var speechTask: SFSpeechRecognitionTask?
+    private var speechRecognizer: SFSpeechRecognizer?
+    private var speechActive = false
+    private var speechLast = ""
+
+    private func makeRecognizer(_ locale: String?) -> SFSpeechRecognizer? {
+        let l = locale.map { Locale(identifier: $0) } ?? Locale.current
+        return SFSpeechRecognizer(locale: l) ?? SFSpeechRecognizer()
+    }
+
+    @objc func speechAvailable(_ call: CAPPluginCall) {
+        let r = makeRecognizer(nil)
+        call.resolve(["available": r?.isAvailable ?? false, "onDevice": r?.supportsOnDeviceRecognition ?? false])
+    }
+
+    @objc func speechStart(_ call: CAPPluginCall) {
+        guard let recognizer = makeRecognizer(call.getString("locale")), recognizer.isAvailable, recognizer.supportsOnDeviceRecognition else {
+            call.reject("Live captions need speech recognition that works on this phone without internet.", "UNAVAILABLE"); return
+        }
+        SFSpeechRecognizer.requestAuthorization { status in
+            DispatchQueue.main.async {
+                guard status == .authorized else { call.reject("Speech recognition is turned off for Wobbi. You can allow it in Settings.", "DENIED"); return }
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    DispatchQueue.main.async {
+                        guard granted else { call.reject("The microphone is turned off for Wobbi. You can allow it in Settings.", "DENIED"); return }
+                        do { try self.beginSpeech(recognizer); call.resolve() }
+                        catch { self.endSpeech(); call.reject("Couldn’t start live captions.", "FAILED") }
+                    }
+                }
+            }
+        }
+    }
+
+    private func beginSpeech(_ recognizer: SFSpeechRecognizer) throws {
+        endSpeech()
+        speechRecognizer = recognizer; speechActive = true; speechLast = ""
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
+        try session.setActive(true)
+        let input = speechEngine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        input.removeTap(onBus: 0)
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in self?.speechRequest?.append(buffer) }
+        speechEngine.prepare()
+        try speechEngine.start()
+        startSpeechTask()
+    }
+
+    /// One recognition task per phrase run; when it finishes while we are still listening, a new one takes over without dropping audio.
+    private func startSpeechTask() {
+        guard speechActive, let recognizer = speechRecognizer else { return }
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = true
+        speechRequest = request
+        speechTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            guard let self = self else { return }
+            if let result = result {
+                self.speechLast = result.bestTranscription.formattedString
+                self.notifyListeners("speechResult", data: ["text": self.speechLast, "isFinal": result.isFinal])
+            }
+            if (result?.isFinal ?? false) || error != nil {
+                DispatchQueue.main.async {
+                    self.speechTask = nil
+                    if self.speechActive { self.startSpeechTask() }
+                }
+            }
+        }
+    }
+
+    private func endSpeech() {
+        speechActive = false
+        speechRequest?.endAudio()
+        speechTask?.cancel()
+        speechTask = nil; speechRequest = nil
+        if speechEngine.isRunning { speechEngine.stop() }
+        speechEngine.inputNode.removeTap(onBus: 0)
+    }
+
+    @objc func speechStop(_ call: CAPPluginCall) {
+        let text = speechLast
+        endSpeech()
+        call.resolve(["text": text])
     }
 
     // MARK: Wobbi Pro (StoreKit 2, auto-renewing monthly subscription)
