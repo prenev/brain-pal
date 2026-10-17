@@ -1068,3 +1068,7 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .celebrate .cel-stats .stat { background: rgba(255,255,255,.08) !important; border: 2px solid rgba(255,255,255,.14) !important; border-bottom-width: 4px !important; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .celebrate .cel-foot .btn:not(.primary) { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.16); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .celebrate::before, .celebrate::after { animation: none; opacity: 0; } }
+/* entry flow: the buttons sit at the end of the page (scroll to them); they don't float or ride up with the keyboard */
+.wiz-foot.inpage { position: static; inset: auto; padding: 6px 0 calc(var(--safe-b, 0px) + 18px); background: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-top: 0; transition: none; }
+.wiz:has(.wiz-foot.inpage) .wiz-body { padding-bottom: 8px !important; flex: none; }
+.wiz-foot.inpage .btn.back { flex: none; width: 56px; padding-left: 0; padding-right: 0; display: grid; place-items: center; }

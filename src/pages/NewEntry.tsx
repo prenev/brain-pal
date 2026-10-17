@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Camera, ChevronRight, Plus, X } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
 import { NameIcon } from '../lib/icons'
 import { IconGrid } from '../components/ui'
 import { PalSays } from '../components/Pal'
@@ -191,7 +191,8 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
         {error && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
       </div>
 
-      <div className="wiz-foot">
+      <div className="wiz-foot inpage">
+        <button className="btn back" aria-label="Back" onClick={() => (at === 0 ? setMood(null) : setStep(steps[at - 1]))}><ChevronLeft size={22} style={{ display: 'block' }} /></button>
         {step === 'next'
           ? <button className="btn primary" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
           : <>
