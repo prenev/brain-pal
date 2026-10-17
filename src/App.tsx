@@ -177,7 +177,7 @@ function Shell() {
         {tab === 'entries' && <Entries onTool={(t: HomeTool) => (t === 'worry' ? setWorryTime(true) : t === 'ground' ? setGround(true) : setScreen(t))} onStep={() => setFocusOpen(true)} onCompose={m => { setComposeMood(m); setComposeAt(new Date()) }} onWorry={() => setWorryTime(true)} onPark={() => setPark(true)} onAllAnchors={() => setCel({ emoji: 'trophy', title: 'Every anchor done!', sub: 'You showed up for yourself today. That counts.' })} onSos={() => setSos(true)} />}
         {tab === 'stats' && <Stats />}
         {tab === 'calendar' && <CalendarPage onNewOn={d => { const n = new Date(); d.setHours(n.getHours(), n.getMinutes()); start(d) }} />}
-        {tab === 'breathe' && <Breathe onSos={() => setSos(true)} />}
+        {tab === 'breathe' && <Breathe onSos={() => setSos(true)} onDone={r => { const m = Math.floor(r.sec / 60), sec = r.sec % 60; setCel({ emoji: 'lotus', title: r.completed ? 'Nice work' : 'Every breath counts', sub: `${m ? `${m} min ` : ''}${sec} s of slow breathing, ${r.rounds} ${r.rounds === 1 ? 'round' : 'rounds'}. Notice how you feel now.` }) }} />}
         {tab === 'more' && <More key={moreView ?? 'm'} initial={moreView} onWorry={() => setWorryTime(true)} onJournalList={() => setScreen('journal')} />}
       </div>
 
