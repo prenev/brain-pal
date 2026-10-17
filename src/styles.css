@@ -978,8 +978,7 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 /* every anchor done: a compact celebration card, same surface as the mood card */
 .anchors-done { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; text-align: left; padding: 12px 14px !important; margin-bottom: 14px; border-radius: 26px;
   background: var(--card) !important; border: 2px solid var(--edge) !important; border-bottom-width: 4px !important; }
-.ad-art { grid-row: span 3; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 3px solid rgba(255,255,255,.85); }
-.ad-art .pal { width: 58px !important; height: 58px !important; }
+.ad-art { grid-row: span 2; display: grid; place-items: center; }
 .anchors-done b { font-size: 17px; color: var(--text); letter-spacing: -.01em; line-height: 1.2; }
 .ad-streak { color: var(--muted); font-weight: 800; font-size: 13px; }
 .ad-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; margin-top: 2px; padding: 0; background: none; color: var(--accent); font-weight: 900; font-size: 15px; }
