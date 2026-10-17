@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Minus, Plus, Siren } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useStore } from '../lib/store'
-import { PalTip } from '../components/Pal'
+import Pal from '../components/Pal'
 import BreathRunner, { type BreathResult } from '../components/BreathRunner'
 import { Toggle } from '../components/ui'
 import { Emoji } from '../lib/emoji'
@@ -27,7 +27,8 @@ function Stepper({ label, value, onChange, min = 0, max = 12 }: { label: string;
 }
 
 export default function Breathe({ onSos }: { onSos: () => void }) {
-  const { addSession } = useStore()
+  const { addSession, sessions } = useStore()
+  const weekMin = Math.round(sessions.filter(x => Date.now() - new Date(x.createdAt).getTime() < 7 * 864e5).reduce((a, x) => a + x.durationSec, 0) / 60)
   const [techId, setTechId] = useState<Technique['id']>('calm')
   const [boxSec, setBoxSec] = useState(4)
   const [custom, setCustom] = useState({ inhale: 5, hold1: 0, exhale: 5, hold2: 0 })
@@ -67,7 +68,14 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
         : step === 'pick'
           ? <>
             {done && <div className="card" style={{ textAlign: 'center' }}><Emoji name="lotus" size={64} /><div style={{ fontWeight: 900, fontSize: 20, marginTop: 6 }}>Nice work!</div><div className="muted">{done.cycles} rounds · {Math.floor(done.sec / 60)}m {done.sec % 60}s logged</div></div>}
-            <PalTip id="breathe" pose="breatheIn">Pick a rhythm. A long, slow breath out is the secret.</PalTip>
+            <button className="jwobbi" onClick={() => { setTechId('calm'); setDone(null); setStep('setup') }} aria-label="Start calm breathing">
+              <span className="jw-pal"><Pal pose="breatheIn" size={74} motion="still" /></span>
+              <span className="jw-bubble">
+                <small>{weekMin > 0 ? `${weekMin} ${weekMin === 1 ? 'minute' : 'minutes'} breathed this week` : 'One minute is enough to start'}</small>
+                <b>Pick a rhythm. A long, slow breath out is the secret.</b>
+                <em>Start with Calm 4-6 <ChevronRight size={15} strokeWidth={3} /></em>
+              </span>
+            </button>
             <div className="techs">
               {TECHNIQUES.map(t => {
                 const p = t.id === 'box' ? { inhale: boxSec, hold1: boxSec, exhale: boxSec, hold2: boxSec } : t.id === 'custom' ? custom : t.pattern
