@@ -12,7 +12,6 @@ import { worryStats } from '../lib/worries'
 import { disablePush, enablePush, fmtHour, getReminder, isIOS, isStandalone, sendTest } from '../lib/push'
 import { Toggle } from '../components/ui'
 import { AnchorsManager } from '../components/Anchors'
-import { JournalList } from '../components/Journal'
 import Rituals from '../components/Rituals'
 import Wallet from '../components/Wallet'
 import Legal from '../components/Legal'
@@ -26,7 +25,6 @@ import { RELEASES } from '../lib/whatsnew.ts'
 import { resetCoach } from '../components/Coach'
 import { loadFx } from '../lib/extras'
 import { APP_VERSION } from '../lib/appInfo.ts'
-import type { JournalEntry } from '../lib/journal.ts'
 import { activeAnchors } from '../lib/anchors.ts'
 
 function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; color: string; label: string; value?: string; onClick?: () => void }) {
@@ -38,9 +36,9 @@ function Row({ icon, color, label, value, onClick }: { icon: React.ReactNode; co
   )
 }
 
-export default function More({ initial = null, onWorry, onJournal }: { initial?: 'support' | 'journal' | null; onWorry: () => void; onJournal: (e?: JournalEntry) => void }) {
+export default function More({ initial = null, onWorry, onJournalList }: { initial?: 'support' | null; onWorry: () => void; onJournalList: () => void }) {
   const { mode, cloudAvailable, openLogin, session, signOut, thoughts, sessions, worries, importLocal, anchors, journal, rituals, coins, achievements, sync, syncNow } = useStore()
-  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'journal' | 'coins' | 'achievements' | 'legal' | 'stickers' | 'feedback'>(initial)
+  const [view, setView] = useState<null | 'gallery' | 'reminders' | 'health' | 'account' | 'support' | 'ai' | 'anchors' | 'coins' | 'achievements' | 'legal' | 'stickers' | 'feedback'>(initial)
   const [rem, setRem] = useState(getReminder)
   const [health, setHealth] = useState(healthEnabled)
   const [healthMsg, setHealthMsg] = useState('')
@@ -108,7 +106,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
     <>
       <div className="topbar">
         <button className="glass round green" aria-label="Back" onClick={() => setView(null)}><ArrowLeft /></button>
-        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', journal: 'Journal', coins: 'Rewards', achievements: 'Rewards', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers', feedback: 'Sounds & haptics' }[view]}</span>
+        <span className="title">{{ gallery: 'Photo Gallery', reminders: 'Reminders', health: 'Apple Health', account: 'Account', support: 'Get support', ai: 'AI helper', anchors: 'Daily anchors', coins: 'Rewards', achievements: 'Rewards', legal: 'About & legal', guard: 'Focus guard', stickers: 'Wobbi stickers', feedback: 'Sounds & haptics' }[view]}</span>
         <span style={{ width: 50 }} />
       </div>
       {view === 'gallery' && (photos.length ? <div className="gallery">{photos.map((p, i) => <img key={i} src={p} alt="" />)}</div> : <div className="card empty">No photos yet.</div>)}
@@ -126,7 +124,6 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
       {view === 'anchors' && <AnchorsManager />}
       {view === 'coins' && <Wallet />}
       {view === 'achievements' && <Wallet initial="achievements" />}
-      {view === 'journal' && <JournalList onOpen={onJournal} onWrite={() => onJournal()} />}
       {view === 'support' && <Support />}
       {view === 'legal' && <Legal />}
       {view === 'stickers' && <Stickers />}
@@ -194,7 +191,7 @@ export default function More({ initial = null, onWorry, onJournal }: { initial?:
         {mode !== 'cloud' && cloudAvailable && <Row icon={<Emoji name="cloud" size={30} />} color="var(--card2)" label="Sync across devices" value="Off" onClick={() => openLogin()} />}
         <Row icon={<Emoji name="star" size={30} />} color="var(--card2)" label="Coins & shop" value={String(coins)} onClick={() => setView('coins')} />
         <Row icon={<Emoji name="trophy" size={30} />} color="var(--card2)" label="Achievements" value={`${achievements.filter(a => a.unlocked).length}`} onClick={() => setView('achievements')} />
-        <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={() => setView('journal')} />
+        <Row icon={<Emoji name="notebook" size={30} />} color="var(--card2)" label="Journal" value={journal.length ? String(journal.length) : ''} onClick={onJournalList} />
         <Row icon={<Emoji name="target" size={30} />} color="var(--card2)" label="Daily anchors" value={activeAnchors(anchors).length ? `${activeAnchors(anchors).length}/5` : ''} onClick={() => setView('anchors')} />
         <Row icon={<Emoji name="worry" size={30} />} color="var(--card2)" label="Worry time" value={worryStats(worries).open ? `${worryStats(worries).open} parked` : ''} onClick={onWorry} />
         <Row icon={<Emoji name="robot" size={30} />} color="var(--card2)" label="AI helper" value={aiEnabled() ? 'On' : 'Off'} onClick={() => setView('ai')} />

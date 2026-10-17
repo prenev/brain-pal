@@ -392,7 +392,7 @@ test('Summary: plain-language day / week / month recap you can share', async () 
 })
 
 
-const openJournal = async p => { await tab(p, 'Home'); await p.click('.journal-card'); await p.click('[aria-label="New journal entry"]'); await p.waitForSelector('[aria-label="Journal entry"]') }
+const openJournal = async p => { await tab(p, 'Home'); await p.click('.journal-card'); await p.click('[aria-label="New journal entry"]'); await p.click('[aria-label="Write an entry"]'); await p.waitForSelector('[aria-label="Journal entry"]') }   // + fans out to Write / Voice
 const saveJournalEntry = async p => { await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate >> text=Saved to your journal'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.topbar'); if (await p.locator('.overlay [aria-label=Back]').count()) await p.click('.overlay [aria-label=Back]') }   // saving from the Journal list drops you back on the list: leave it
 
 test('journal: write, list, search, filter, edit, delete — and it persists', async () => {
@@ -406,7 +406,7 @@ test('journal: write, list, search, filter, edit, delete — and it persists', a
   await tab(p, 'More'); await p.waitForSelector('.li:has-text("Journal") >> text=2'); await p.click('.li >> text=Journal')
   assert.equal(await p.locator('.jentry').count(), 2)
   assert.match(await p.locator('.jentry').first().innerText(), /Deadline stress/, 'newest first')
-  await p.fill('[aria-label="Search journal"]', 'river'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
+  await p.click('[aria-label="Search your journal"]'); await p.fill('[aria-label="Search journal"]', 'river'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
   assert.match(await p.locator('.jentry').innerText(), /Quiet morning/); await p.fill('[aria-label="Search journal"]', '')
   await p.click('[role=group][aria-label="Filter by tag"] >> text=work'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
   assert.match(await p.locator('.jentry').innerText(), /Deadline/); await p.click('[role=group][aria-label="Filter by tag"] >> text=work')
@@ -476,6 +476,41 @@ test('voice memo playback: the first play switches the iPhone audio session to p
   await p.click('.overlay [aria-label=Play]')
   await p.waitForFunction(() => window.__native.some(c => c.method === 'audioSession' && c.options.mode === 'playback'))
   await p.waitForFunction(() => window.__plays >= 2, null, { timeout: 4000 })               // nothing played within 0.7 s: it retried, like the second tap does
+  await done(s)
+})
+
+test('journal home: a week ribbon with a mood face per day, tap a day to filter, pull open the month; search and coins live in the app bar; + fans out to Write and Voice', async () => {
+  const J = (id, day, mood, body) => ({ id, createdAt: new Date(`${day}T09:00:00`).toISOString(), updatedAt: new Date(`${day}T09:00:00`).toISOString(), title: '', body, mood, tags: [], prompt: null })
+  const s = await open({ 'bp.journal': [J('a', '2026-10-16', 4, 'today I walked by the river'), J('b', '2026-10-14', 2, 'a rough one'), J('c', '2026-09-20', null, 'a note from last month')] }, { time: new Date('2026-10-16T12:00:00') }); const p = s.page
+  await p.click('.journal-card'); await p.waitForSelector('.jribbon')
+  const days = p.locator('.jweek .jday'); assert.equal(await days.count(), 7, 'a week: Monday to Sunday'); assert.deepEqual(await p.locator('.jwd span').allInnerTexts(), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+  assert.deepEqual(await days.locator('.jnum').allInnerTexts(), ['12', '13', '14', '15', '16', '17', '18']); assert.equal(await p.locator('.jweek .jday.today .jnum').innerText(), '16')
+  assert.equal(await p.locator('.jweek .jday-mark').count(), 2, 'a face on the two days with entries'); assert.equal(await p.locator('.jweek .jday-ghost').count(), 5, 'a dim ghost on the rest')
+  assert.ok(await p.locator('.jweek .jday-mark svg').count() >= 1, 'the mood face is drawn')
+  // the app bar: month, coins, search
+  assert.match(await p.locator('.jmonth').innerText(), /October 2026/); assert.equal(await p.locator('.jbar [aria-label^="Search"]').count(), 1); assert.equal(await p.locator('.searchbar').count(), 0, 'no search box until you ask for one')
+  await p.click('.jcoins'); await p.waitForSelector('.store-hero'); await p.locator('[aria-label=Back]').last().click(); await p.waitForSelector('.store-hero', { state: 'detached' }); assert.equal(await p.locator('.jribbon').count(), 1, 'Rewards opened on top of the journal: Back returns to it')
+  // tap a day to filter, tap again to clear
+  assert.equal(await p.locator('.jentry').count(), 3); await days.nth(2).click(); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1)
+  assert.match(await p.locator('.jentry').innerText(), /a rough one/); assert.equal(await p.locator('.jpicked').count(), 1); assert.equal(await days.nth(2).getAttribute('aria-pressed'), 'true')
+  await p.click('.jpicked >> text=Show all'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 3)
+  await days.nth(3).click(); await p.waitForSelector('text=/Nothing written on/'); await days.nth(3).click()
+  // pull open the month
+  await p.click('.jgrab'); await p.waitForSelector('.jmonthgrid'); assert.equal(await p.locator('.jmonthgrid .jday').count(), 42)
+  await p.click('[aria-label="Previous month"]'); await p.waitForFunction(() => /September 2026/.test(document.querySelector('.jmonth').textContent))
+  await p.locator('.jmonthgrid .jday:not(.off)').nth(19).click(); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1); assert.match(await p.locator('.jentry').innerText(), /last month/)
+  await p.click('.jgrab'); await p.waitForSelector('.jweek'); assert.equal(await p.locator('.jmonthgrid').count(), 0)
+  await p.click('.jpicked >> text=Show all')
+  // swipe the ribbon to the week before
+  const box = await p.locator('.jribbon').boundingBox(); await p.mouse.move(box.x + 300, box.y + 60); await p.mouse.down(); await p.mouse.move(box.x + 80, box.y + 60, { steps: 6 }); await p.mouse.up()
+  // search lives in the app bar
+  await p.click('[aria-label="Search your journal"]'); await p.fill('[aria-label="Search journal"]', 'river'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 1); await p.click('[aria-label="Close search"]'); await p.waitForFunction(() => document.querySelectorAll('.jentry').length === 3)
+  // the + fans out
+  assert.equal(await p.locator('.fan-item.fan-text[aria-hidden="true"]').count(), 1, 'collapsed at first')
+  await p.click('[aria-label="New journal entry"]'); await p.waitForSelector('.fab-fan.open'); assert.equal(await p.getAttribute('[aria-label="New journal entry"]', 'aria-expanded'), 'true')
+  await p.waitForSelector('[aria-label="Record a voice journal"]:not([aria-hidden=true])'); await p.waitForSelector('[aria-label="Write an entry"]:not([aria-hidden=true])')
+  await p.click('.fab-scrim', { position: { x: 20, y: 200 } }); await p.waitForSelector('.fab-fan:not(.open)')
+  await p.click('[aria-label="New journal entry"]'); await p.click('[aria-label="Write an entry"]'); await p.waitForSelector('[aria-label="Journal entry"]'); assert.equal(await p.locator('[aria-label="Voice note"][aria-expanded=true]').count(), 0)
   await done(s)
 })
 

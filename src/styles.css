@@ -787,3 +787,34 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .seg > button small { display: block; font-size: 11px; font-weight: 800; opacity: .75; }
 .seg.four > button { font-size: 14px; padding-left: 2px; padding-right: 2px; }
 @media (prefers-reduced-motion: reduce) { .seg::before { transition: none; } }
+
+/* ---- Journal home: ribbon, month, fanned + button ---- */
+.jbar { gap: 8px; } .jbar .jmonth { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 20px; font-weight: 900; letter-spacing: -.01em; white-space: nowrap; }
+.jmonth .flip { transform: rotate(180deg); } .jmonth svg { transition: transform .2s; }
+.jcoins { min-width: 0; } .jsearch { margin: 0 0 12px; }
+.jribbon { position: relative; margin: 0 -2px 12px; padding: 4px 2px 0; touch-action: pan-y; }
+.jnav { position: absolute; top: -48px; right: 0; display: none; }
+.jwd, .jweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.jwd span { font-size: 12px; font-weight: 800; color: var(--muted); padding-bottom: 4px; }
+.jday { display: grid; justify-items: center; gap: 6px; padding: 6px 0 8px; border-radius: 16px; border: 2px solid transparent; position: relative; }
+.jday .jnum { font-size: 13px; font-weight: 800; color: var(--muted); } .jday.today .jnum { color: var(--accent); }
+.jday.picked { border-color: var(--accent); background: rgba(53,208,127,.1); } .jday.off { opacity: .35; }
+.jday-mark, .jday-ghost { position: relative; display: grid; place-items: center; flex: none; }
+.jday-ghost { border-radius: 50%; background: rgba(255,255,255,.05); }
+.jday-dot { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; background: rgba(53,208,127,.2); color: var(--accent); }
+.jday-mark b { position: absolute; right: -4px; top: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: var(--accent-ink, #04130a); font-size: 10px; display: grid; place-items: center; }
+.jmonthgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; } .jday.small { padding: 4px 0 6px; gap: 3px; }
+.jgrab { display: grid; place-items: center; width: 100%; padding: 8px 0 2px; } .jgrab i { width: 44px; height: 5px; border-radius: 3px; background: var(--edge); }
+.jribbon .jnav { display: flex; position: static; justify-content: space-between; margin: -2px 0 2px; } .jnav button { width: 34px; height: 28px; display: grid; place-items: center; color: var(--muted); border-radius: 10px; }
+.jpicked { margin: 2px 2px 8px; }
+/* the fanned + button */
+.fab-fan { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+.fab-fan > * { pointer-events: auto; }
+.fab-scrim { position: fixed; inset: 0; background: rgba(5,9,16,.55); backdrop-filter: blur(2px); animation: fadeIn .18s ease; }
+.fab-fan .journal-fab { position: fixed; transition: transform .2s ease; } .fab-fan.open .fab-plus { transform: rotate(45deg); } .fab-plus { transition: transform .2s ease; }
+.fan-item { position: fixed; right: 16px; bottom: calc(max(12px, calc(var(--safe-b) - 4px)) + 96px); width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; align-content: center; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; color: var(--accent); opacity: 0; pointer-events: none; transform: translate(0, 0) scale(.5); transition: transform .24s cubic-bezier(.2,.9,.3,1.2), opacity .16s ease; }
+.fan-item span { position: absolute; font-size: 12px; font-weight: 900; color: #e6ecfb; white-space: nowrap; right: 66px; top: 50%; transform: translateY(-50%); padding: 4px 10px; border-radius: 10px; background: var(--card); border: 2px solid var(--edge); }
+.fab-fan.open .fan-item { opacity: 1; pointer-events: auto; }
+.fab-fan.open .fan-voice { transform: translate(0, -158px) scale(1); transition-delay: .04s; } .fab-fan.open .fan-text { transform: translate(0, -84px) scale(1); }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .fan-item, .fab-plus { transition: none; } }

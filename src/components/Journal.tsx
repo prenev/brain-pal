@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Bold, ChevronLeft, Eye, Heading1, Italic, List, ListOrdered, Mic, Plus, Quote, Search, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
+import { Bold, ChevronLeft, Eye, Heading1, Italic, List, ListOrdered, Mic, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
-import { PalEmpty, PalTip } from './Pal'
 import Support from './Support'
 import VoiceRecorder from './VoiceRecorder'
 import AudioPlayer from './AudioPlayer'
@@ -11,8 +10,7 @@ import type { AudioClip } from '../lib/types'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
 import { looksLikeCrisis } from '../lib/gemini'
-import { fmtDate } from '../lib/dates.ts'
-import { allJournalTags, cleanText, filterByTag, groupByMonth, isBlank, MAX_BODY, MAX_TITLE, pickTopics, previewOf, searchJournal, wordCount, type JournalEntry } from '../lib/journal.ts'
+import { allJournalTags, cleanText, isBlank, MAX_BODY, MAX_TITLE, pickTopics, wordCount, type JournalEntry } from '../lib/journal.ts'
 import { clearDraft, loadDraft, saveDraft } from '../lib/extras'
 import { DEFAULT_TAGS } from '../lib/constants'
 
@@ -46,7 +44,7 @@ export function Rendered({ text }: { text: string }) {
 }
 
 /** Full-screen writing space. New entries autosave a draft so nothing is lost if you leave; existing entries edit in place. */
-export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntry; onClose: () => void; onSaved: () => void }) {
+export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: { entry?: JournalEntry; startVoice?: boolean; onClose: () => void; onSaved: () => void }) {
   const { addJournal, updateJournal, deleteJournal, journal } = useStore()
   const draft = useMemo(() => (entry ? null : loadDraft()), [entry])
   const hasDraft = !!draft && !isBlank(draft.title, draft.body)
@@ -57,7 +55,7 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
   const [prompt, setPrompt] = useState<string | null>(entry ? null : hasDraft ? draft!.prompt : null)
   const [topics, setTopics] = useState(() => pickTopics(4))
   const [preview, setPreview] = useState(false)
-  const [voiceOpen, setVoiceOpen] = useState(false)
+  const [voiceOpen, setVoiceOpen] = useState(startVoice)
   const [clip, setClip] = useState<AudioClip | null>(null)
   const [dropAudio, setDropAudio] = useState(false)
   const [oldAudioUrl, setOldAudioUrl] = useState<string | null>(null)
@@ -156,44 +154,5 @@ export function JournalEditor({ entry, onClose, onSaved }: { entry?: JournalEntr
       </div>
       </div>
     </div></div>
-  )
-}
-
-/** Browse, search and filter your journal. */
-export function JournalList({ onOpen, onWrite }: { onOpen: (e: JournalEntry) => void; onWrite: () => void }) {
-  const { journal } = useStore()
-  const [q, setQ] = useState('')
-  const [tag, setTag] = useState<string | null>(null)
-  const shown = useMemo(() => filterByTag(searchJournal(journal, q), tag), [journal, q, tag])
-  const groups = useMemo(() => groupByMonth(shown), [shown])
-  const tags = useMemo(() => allJournalTags(journal), [journal])
-  const monthName = (key: string) => new Date(+key.slice(0, 4), +key.slice(5, 7) - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-
-  return (
-    <>
-      <PalTip id="journal" pose="think">Write anything. A line is enough. Only you can read it.</PalTip>
-      {journal.length > 0 && <>
-        <div className="searchbar"><Search size={20} /><input aria-label="Search journal" placeholder="Search your journal" value={q} onChange={e => setQ(e.target.value)} /></div>
-        {tags.length > 0 && <div className="chips" style={{ margin: '10px 0' }} role="group" aria-label="Filter by tag">
-          {tags.map(t => <button key={t} className={`chip ${tag === t ? 'on' : ''}`} aria-pressed={tag === t} onClick={() => setTag(tag === t ? null : t)}>{t}</button>)}
-        </div>}
-      </>}
-      {journal.length === 0 && <PalEmpty pose="think">Nothing here yet. Write a few lines — it doesn’t have to be good, and nobody else will read it.</PalEmpty>}
-      {journal.length > 0 && shown.length === 0 && <div className="card empty">No entries match.</div>}
-      {groups.map(g => (
-        <section key={g.key}>
-          <h2 className="sec">{monthName(g.key)}</h2>
-          {g.entries.map(e => (
-            <button key={e.id} className="card jentry" onClick={() => onOpen(e)} aria-label={`Journal entry: ${e.title || previewOf(e, 40) || 'untitled'}`}>
-              <div className="row spread"><span className="muted small">{fmtDate(e.createdAt)}</span><span className="row" style={{ gap: 8 }}>{e.audio && <Mic size={18} aria-label="Has a voice note" />}{e.mood && <Face mood={e.mood} size={26} />}</span></div>
-              {e.title && <b style={{ display: 'block', marginTop: 4 }}>{e.title}</b>}
-              <p style={{ margin: '4px 0 0' }}>{previewOf(e)}</p>
-              {e.tags.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{e.tags.map(t => <span key={t} className="chip">{t}</span>)}</div>}
-            </button>
-          ))}
-        </section>
-      ))}
-      <button className="fab journal-fab" aria-label="New journal entry" onClick={onWrite}><Plus size={34} strokeWidth={3} /></button>
-    </>
   )
 }

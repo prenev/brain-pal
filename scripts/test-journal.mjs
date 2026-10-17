@@ -67,3 +67,20 @@ import { pickTopics, TOPICS } from '../src/lib/journal.ts'
   assert.equal(new Set(Array.from({ length: 40 }, () => pickTopics(4).map(t => t.id).join())).size > 5, true, 'a different handful each time')
 }
 console.log('journal formatting + topics ok')
+
+// ---- calendar ribbon helpers ----
+{
+  const { weekStart, weekOf, infoByDay, monthGrid, shiftMonth, filterByDay } = await import('../src/lib/journalCal.ts')
+  assert.equal(weekStart('2026-10-16'), '2026-10-12', 'Friday → that week’s Monday'); assert.equal(weekStart('2026-10-12'), '2026-10-12'); assert.equal(weekStart('2026-10-18'), '2026-10-12', 'Sunday belongs to the week before Monday')
+  assert.deepEqual(weekOf('2026-10-16'), ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'])
+  assert.deepEqual(weekOf('2026-12-31').slice(0, 1).concat(weekOf('2026-12-31').slice(-1)), ['2026-12-28', '2027-01-03'], 'across the year boundary')
+  const e = (id, day, mood, h = 10) => ({ id, createdAt: new Date(`${day}T${String(h).padStart(2, '0')}:00:00`).toISOString(), updatedAt: '', title: '', body: 'x', mood, tags: [], prompt: null })
+  const list = [e('a', '2026-10-15', 4), e('b', '2026-10-15', 2, 18), e('c', '2026-10-14', null), e('d', '2026-10-13', 5)]
+  const info = infoByDay(list)
+  assert.deepEqual(info.get('2026-10-15'), { day: '2026-10-15', count: 2, mood: 3 }); assert.equal(info.get('2026-10-14').mood, null, 'an entry without a mood has none'); assert.equal(info.get('2026-10-13').mood, 5); assert.equal(info.has('2026-10-16'), false)
+  const g = monthGrid('2026-10'); assert.equal(g.length, 42); assert.equal(g[0].day, '2026-09-28'); assert.equal(g[0].inMonth, false); assert.equal(g.find(x => x.day === '2026-10-01').inMonth, true); assert.equal(g.filter(x => x.inMonth).length, 31); assert.equal(g[0].day, weekStart('2026-10-01'))
+  assert.equal(monthGrid('2026-02').filter(x => x.inMonth).length, 28)
+  assert.equal(shiftMonth('2026-01', -1), '2025-12'); assert.equal(shiftMonth('2026-12', 1), '2027-01'); assert.equal(shiftMonth('2026-10', 0), '2026-10')
+  assert.deepEqual(filterByDay(list, '2026-10-15').map(x => x.id), ['a', 'b']); assert.equal(filterByDay(list, null).length, 4); assert.equal(filterByDay(list, '2026-01-01').length, 0)
+  console.log('journal calendar ok')
+}
