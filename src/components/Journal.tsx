@@ -40,6 +40,8 @@ function useKeyboardInset() {
   return inset
 }
 
+const FMT_EVENT = 'bp:formatted'   // fired right after a tool tap, so the button updates in the same frame
+
 /** Which formats are on where the cursor is, so their buttons light up (and tapping again visibly turns them off). */
 function useActiveFormats(): Set<FormatKind> {
   const [on, setOn] = useState<Set<FormatKind>>(new Set())
@@ -48,15 +50,19 @@ function useActiveFormats(): Set<FormatKind> {
       const sel = window.getSelection(), node = sel?.anchorNode ?? null
       const el = node ? (node.nodeType === 1 ? node as Element : node.parentElement) : null
       if (!el?.closest('.notes-body')) { setOn(new Set()); return }
-      // read the real tags around the cursor (the browser calls a heading "bold", which lit up two buttons at once)
-      const next = new Set<FormatKind>()
-      if (el.closest('b,strong')) next.add('bold'); if (el.closest('i,em')) next.add('italic'); if (el.closest('s,strike,del')) next.add('strike')
+      // the browser's own state covers a style switched on with nothing selected yet (the next letters); the real tags cover the rest.
+      // A heading counts as "bold" to the browser, so bold inside a heading only counts when it is really bold.
+      const q = (c: string) => { try { return document.queryCommandState(c) } catch { return false } }
+      const inHead = !!el.closest('h1,h2,h3'), next = new Set<FormatKind>()
+      if (el.closest('b,strong') || (q('bold') && !inHead)) next.add('bold')
+      if (el.closest('i,em') || q('italic')) next.add('italic')
+      if (el.closest('s,strike,del') || q('strikeThrough')) next.add('strike')
       if (el.closest('ul')) next.add('bullet'); if (el.closest('ol')) next.add('number')
       if (el.closest('h1,h2,h3')) next.add('heading'); if (el.closest('blockquote')) next.add('quote')
       setOn(cur => (cur.size === next.size && [...next].every(k => cur.has(k)) ? cur : next))
     }
-    document.addEventListener('selectionchange', read); document.addEventListener('input', read)
-    return () => { document.removeEventListener('selectionchange', read); document.removeEventListener('input', read) }
+    document.addEventListener('selectionchange', read); document.addEventListener('input', read); document.addEventListener(FMT_EVENT, read)
+    return () => { document.removeEventListener('selectionchange', read); document.removeEventListener('input', read); document.removeEventListener(FMT_EVENT, read) }
   }, [])
   return on
 }
@@ -163,7 +169,7 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
       {voiceOpen && <div className="notes-voicepanel"><VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setVoiceOpen(false) }} onFill={() => {}} /></div>}
       <div className="notes-row" role="toolbar" aria-label="Formatting and extras">
         <span className="fmt-bar">
-          {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} aria-pressed={activeFmt.has(kind)} className={activeFmt.has(kind) ? 'on' : ''} onPointerDown={e => e.preventDefault()} onClick={() => { fmt(kind); document.dispatchEvent(new Event('selectionchange')) }}><Icon size={20} /></button>)}
+          {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} aria-pressed={activeFmt.has(kind)} className={activeFmt.has(kind) ? 'on' : ''} onPointerDown={e => e.preventDefault()} onClick={() => { fmt(kind); document.dispatchEvent(new Event(FMT_EVENT)) }}><Icon size={20} /></button>)}
           <i className="vsep" />
         </span>
         <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
