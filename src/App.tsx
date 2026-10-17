@@ -35,6 +35,7 @@ import { PaywallProvider, usePaywallOpen } from './components/Pro'
 import Sleep from './components/Sleep'
 import FocusHub from './components/FocusHub'
 import GroundNow from './components/GroundNow'
+import { AnchorsManager } from './components/Anchors'
 import { PomoProvider } from './lib/pomoStore'
 import Progress from './components/Progress'
 import Summary from './components/Summary'
@@ -80,7 +81,7 @@ function Shell() {
   useEffect(() => { if (!coinToast) return; const t = setTimeout(() => setCoinToast(null), 2600); return () => clearTimeout(t) }, [coinToast])
   useEffect(() => { noteFirstSeen() }, [])
   const [tab, setTab] = useState<Tab>('entries')
-  const [screen, setScreen] = useState<'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'achievements' | 'focus' | null>(null)   // full-screen pages opened from Home
+  const [screen, setScreen] = useState<'anchors' | 'journal' | 'thoughts' | 'search' | 'sleep' | 'progress' | 'summary' | 'coins' | 'achievements' | 'focus' | null>(null)   // full-screen pages opened from Home
   const [menu, setMenu] = useState(false)
   const [composeAt, setComposeAt] = useState<Date | null>(null)
   const [otherDay, setOtherDay] = useState(false)
@@ -220,6 +221,7 @@ function Shell() {
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
       {screen === 'journal' && <JournalHome onClose={() => setScreen(null)} onOpen={e => setJournalOpen(e.audio ? { listen: e } : { entry: e })} onWrite={() => setJournalOpen({})} onVoice={() => setJournalOpen({ voice: true })} />}
       {(screen === 'thoughts' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
+      {screen === 'anchors' && <Screen title="Daily anchors" onClose={() => setScreen(null)}><AnchorsManager /></Screen>}
       {screen === 'focus' && <FocusHub onClose={() => setScreen(null)} />}
       {editing && thoughts.find(t => t.id === editing) && <NewEntry date={new Date(thoughts.find(t => t.id === editing)!.createdAt)} edit={thoughts.find(t => t.id === editing)} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />}
       {ground && <GroundNow onClose={() => setGround(false)} onDone={() => { setGround(false); setCel({ emoji: 'herb', title: 'Back in the room', sub: 'You noticed what is here, right now. That is grounding.' }) }} />}

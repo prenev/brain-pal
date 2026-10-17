@@ -1,6 +1,7 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
-import { ArrowDown, ArrowUp, Check, Pencil, Plus, SkipForward, SlidersHorizontal, Undo2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Pencil, Plus, SkipForward, SlidersHorizontal, Trash2, Undo2 } from 'lucide-react'
 import CuteIcon from './CuteIcon'
+import { PalSays } from './Pal'
 import { sfx } from '../lib/sound'
 import { hapticSuccess } from '../lib/haptics'
 import { burstAt } from '../lib/confetti'
@@ -104,52 +105,66 @@ export function AnchorsManager() {
   const [label, setLabel] = useState('')
   const [emoji, setEmoji] = useState(ANCHOR_EMOJI[0])
   const [link, setLink] = useState<AnchorLink | ''>('')
+  const [picking, setPicking] = useState(false)
   const full = !canAdd(anchors)
   const left = STARTERS.filter(s => !list.some(a => a.label.toLowerCase() === s.label.toLowerCase()))
+  const add = () => { if (addAnchor(label, emoji, link || null)) { setLabel(''); setLink(''); setPicking(false) } }
 
   return (
-    <div>
-      <div className="card">
-        <p style={{ marginTop: 0 }}>Pick up to <b>{MAX_ANCHORS}</b> small, doable things. Do them and the day counts — that’s all.</p>
-        <p className="muted small" style={{ marginBottom: 0 }}>This isn’t a to-do list: it stays short on purpose, and a missed day is just a missed day.</p>
+    <div className="aman">
+      <PalSays pose="wave" size={78} motion="still">
+        <b>Anchors</b> are a few small things that steady your day: water, a walk, a minute of breathing. Do them and the day counts. Keep it short, this isn’t a to-do list.
+      </PalSays>
+
+      <div className="aman-slots" aria-label={`${list.length} of ${MAX_ANCHORS} anchors`}>
+        <span>{list.length} of {MAX_ANCHORS}</span>
+        <span className="aman-dots">{Array.from({ length: MAX_ANCHORS }, (_, i) => <i key={i} className={i < list.length ? 'on' : ''} />)}</span>
       </div>
 
-      {list.length > 0 && <div className="card">
-        <b>Your anchors <span className="muted">({list.length}/{MAX_ANCHORS})</span></b>
-        <ul className="anchor-edit">
+      {list.length > 0 && <section>
+        <h3 className="aman-h">Your anchors</h3>
+        <ul className="aman-list">
           {list.map((a, i) => (
-            <li key={a.id} className="row">
-              <Emoji name={a.emoji} size={28} />
-              <span style={{ flex: 1, minWidth: 0 }}>{a.label}{a.link && <span className="muted small"> · ticks itself after {LINK_LABEL[a.link]}</span>}</span>
-              <button className="iconbtn" aria-label={`Move ${a.label} up`} disabled={i === 0} onClick={() => moveAnchor(a.id, -1)}><ArrowUp size={18} /></button>
-              <button className="iconbtn" aria-label={`Move ${a.label} down`} disabled={i === list.length - 1} onClick={() => moveAnchor(a.id, 1)}><ArrowDown size={18} /></button>
-              <button className="iconbtn" aria-label={`Remove ${a.label}`} onClick={() => removeAnchor(a.id)}><X size={18} /></button>
+            <li key={a.id} className="aman-tile">
+              <span className="ablob"><Emoji name={a.emoji} size={30} /></span>
+              <span className="aman-text"><b>{a.label}</b>{a.link && <small>Ticks itself after {LINK_LABEL[a.link]}</small>}</span>
+              <span className="aman-move">
+                <button aria-label={`Move ${a.label} up`} disabled={i === 0} onClick={() => moveAnchor(a.id, -1)}><ArrowUp size={16} strokeWidth={2.8} /></button>
+                <button aria-label={`Move ${a.label} down`} disabled={i === list.length - 1} onClick={() => moveAnchor(a.id, 1)}><ArrowDown size={16} strokeWidth={2.8} /></button>
+              </span>
+              <button className="aman-del" aria-label={`Remove ${a.label}`} onClick={() => removeAnchor(a.id)}><Trash2 size={18} /></button>
             </li>
           ))}
         </ul>
-      </div>}
+      </section>}
 
-      {full ? <p className="card muted" role="status">You have {MAX_ANCHORS} anchors — that’s the maximum, on purpose. Remove one to add another.</p> : <>
-        <div className="card">
-          <b>Ideas</b>
-          <div className="chips" style={{ marginTop: 10 }}>
-            {left.map(s => <button key={s.label} className="chip" onClick={() => addAnchor(s.label, s.emoji, s.link)}>{s.label}</button>)}
+      {full ? <p className="aman-full" role="status">That’s {MAX_ANCHORS}, the most on purpose. Remove one to add another.</p> : <>
+        <section>
+          <h3 className="aman-h">Add your own</h3>
+          <form className="aman-compose" onSubmit={e => { e.preventDefault(); add() }}>
+            <div className="aman-row">
+              <button type="button" className="aman-icon" aria-label="Choose an icon" aria-expanded={picking} onClick={() => setPicking(!picking)}><Emoji name={emoji} size={30} /></button>
+              <input className="aman-input" maxLength={MAX_LABEL} value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Call a friend" aria-label="Anchor name" />
+              <button className="aman-add" type="submit" disabled={!label.trim()} aria-label="Add anchor"><Plus size={22} strokeWidth={3} /></button>
+            </div>
+            {picking && <div className="aman-emojis" role="radiogroup" aria-label="Icon">
+              {ANCHOR_EMOJI.map(n => <button type="button" key={n} role="radio" aria-checked={emoji === n} aria-label={`Icon ${n}`} className={emoji === n ? 'on' : ''} onClick={() => { setEmoji(n); setPicking(false) }}><Emoji name={n} size={26} /></button>)}
+            </div>}
+            <div className="aman-auto">
+              <span>Ticks itself after</span>
+              <div className="aman-chips" role="radiogroup" aria-label="Tick it automatically after">
+                <button type="button" role="radio" aria-checked={link === ''} className={link === '' ? 'on' : ''} onClick={() => setLink('')}>Nothing</button>
+                {(Object.keys(LINK_LABEL) as AnchorLink[]).map(k => <button type="button" key={k} role="radio" aria-checked={link === k} className={link === k ? 'on' : ''} onClick={() => setLink(k)}>{LINK_LABEL[k]}</button>)}
+              </div>
+            </div>
+          </form>
+        </section>
+        {left.length > 0 && <section>
+          <h3 className="aman-h">Ideas</h3>
+          <div className="aman-ideas">
+            {left.map(s => <button key={s.label} className="aman-idea" onClick={() => addAnchor(s.label, s.emoji, s.link)}><Emoji name={s.emoji} size={26} /><span>{s.label}</span><Plus size={18} strokeWidth={3} className="plus" /></button>)}
           </div>
-        </div>
-        <form className="card" onSubmit={e => { e.preventDefault(); if (addAnchor(label, emoji, link || null)) { setLabel(''); setLink('') } }}>
-          <b>Your own</b>
-          <label className="field" style={{ marginTop: 10 }}><span>Name</span>
-            <input className="input" maxLength={MAX_LABEL} value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Call a friend" /></label>
-          <div className="chips" role="radiogroup" aria-label="Icon" style={{ marginBottom: 14 }}>
-            {ANCHOR_EMOJI.map(n => <button type="button" key={n} role="radio" aria-checked={emoji === n} aria-label={`Icon ${n}`} className={`chip ${emoji === n ? 'on' : ''}`} onClick={() => setEmoji(n)}><Emoji name={n} size={22} /></button>)}
-          </div>
-          <label className="field"><span>Tick it automatically after (optional)</span>
-            <select className="input" value={link} onChange={e => setLink(e.target.value as AnchorLink | '')}>
-              <option value="">Nothing — I’ll tick it myself</option>
-              {(Object.keys(LINK_LABEL) as AnchorLink[]).map(k => <option key={k} value={k}>{LINK_LABEL[k]}</option>)}
-            </select></label>
-          <button className="btn primary block" type="submit" disabled={!label.trim()}>Add anchor</button>
-        </form>
+        </section>}
       </>}
     </div>
   )

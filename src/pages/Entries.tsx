@@ -5,8 +5,8 @@ import MoodCard from '../components/MoodCard'
 import { FocusCard, GroundTool, JournalCard, StepNudge, WorryTool } from '../components/HomeTiles'
 import { MoonStars } from '@phosphor-icons/react'
 import { fmtDuration } from '../lib/sleep.ts'
-import { AnchorCard, AnchorsManager } from '../components/Anchors'
-import { Screen, Sheet } from '../components/ui'
+import { AnchorCard } from '../components/Anchors'
+import { Screen } from '../components/ui'
 import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
 import { monthLabel } from '../components/ui'
@@ -16,12 +16,11 @@ import { PalEmpty, PalTip } from '../components/Pal'
 
 const HOME_ENTRIES = 3
 
-export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'ground' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus'
+export type HomeTool = 'thoughts' | 'anchors' | 'journal' | 'worry' | 'ground' | 'sleep' | 'progress' | 'summary' | 'coins' | 'focus'
 
 /** Home, top to bottom: how you feel, today's anchors, the big Focus + Journal cards, then Worries / Sleep / Ground, then everything logged today. */
 export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorry, onPark, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onPark: () => void; onStep: () => void }) {
   const { thoughts, streak, coins, sleepNights } = useStore()
-  const [editAnchors, setEditAnchors] = useState(false)
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
   const night = sleepNights[0]?.date === todayKey ? sleepNights[0] : null
@@ -44,7 +43,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
         <FocusCard onOpen={() => onTool('focus')} />
         <JournalCard onOpen={() => onTool('journal')} />
       </div>
-      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
+      <AnchorCard onEdit={() => onTool('anchors')} onAllDone={onAllAnchors} />
       <div className="tools-row" role="group" aria-label="Tools">
         <WorryTool onWorry={onWorry} onPark={onPark} />
         <button className="card tool" onClick={() => onTool('sleep')}>
@@ -57,7 +56,6 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       <DayCards list={latest} />
       {thoughts.length > 0 && <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries{thoughts.length > latest.length ? ` (${thoughts.length})` : ''}</button>}
 
-      {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
     </>
   )
 }

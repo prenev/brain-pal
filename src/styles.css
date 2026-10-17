@@ -983,3 +983,36 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .ad-streak { color: var(--muted); font-weight: 800; font-size: 13px; }
 .ad-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; margin-top: 4px; padding: 7px 14px 8px; border-radius: 999px; background: rgba(53,208,127,.14); border: 2px solid rgba(53,208,127,.35); border-bottom-width: 3px; color: var(--accent); font-weight: 900; font-size: 14.5px; }
 .ad-cta:active { transform: translateY(1px); border-bottom-width: 2px; }
+/* ---- Daily anchors editor (full screen): Wobbi explains, then tiles, a composer and ideas ---- */
+.aman { display: grid; gap: 18px; padding-bottom: 30px; }
+.aman .pal-says .bubble { font-size: 15px; } .aman .pal-says b { color: var(--accent); }
+.aman-slots { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 18px; background: var(--card); border: 2px solid var(--edge); font-weight: 900; }
+.aman-dots { display: flex; gap: 7px; } .aman-dots i { width: 22px; height: 10px; border-radius: 99px; background: var(--card2); border: 2px solid var(--edge); transition: background .25s; }
+.aman-dots i.on { background: var(--accent); border-color: var(--accent-dark); }
+.aman-h { margin: 0 4px 10px; font-size: 13px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.aman-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.aman-tile { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 10px; border-radius: 24px; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; }
+.aman-tile .ablob { width: 50px; height: 50px; }
+.aman-text { flex: 1; min-width: 0; display: grid; gap: 2px; } .aman-text b { font-size: 16.5px; line-height: 1.2; } .aman-text small { color: var(--muted); font-weight: 700; font-size: 12.5px; }
+.aman-move { display: grid; gap: 4px; } .aman-move button { width: 32px; height: 26px; border-radius: 9px; display: grid; place-items: center; background: var(--card2); color: var(--text); } .aman-move button:disabled { opacity: .3; }
+.aman-del { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: var(--danger); background: rgba(255,93,115,.1); flex: none; }
+.aman-compose { display: grid; gap: 12px; padding: 12px; border-radius: 24px; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; }
+.aman-row { display: flex; align-items: center; gap: 10px; }
+.aman-icon { width: 52px; height: 52px; flex: none; border-radius: 18px 20px 17px 21px; display: grid; place-items: center; background: var(--card2); border: 2px dashed #3a5280; }
+.aman-icon[aria-expanded=true] { border-style: solid; border-color: var(--accent); }
+.aman-input { flex: 1; min-width: 0; height: 50px; padding: 0 14px; border-radius: 16px; background: var(--bg); border: 2px solid var(--edge); color: var(--text); font: 800 16.5px var(--font); outline: none; }
+.aman-input:focus { border-color: var(--accent); }
+.aman-add { width: 50px; height: 50px; flex: none; border-radius: 16px; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); border-bottom: 4px solid var(--accent-dark); }
+.aman-add:disabled { background: var(--card2); color: #4b5d80; border-bottom-color: var(--edge); }
+.aman-emojis { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
+.aman-emojis button { height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--card2); border: 2px solid transparent; }
+.aman-emojis button.on { border-color: var(--accent); background: rgba(53,208,127,.14); }
+.aman-auto > span { display: block; margin: 0 2px 8px; font-size: 13px; font-weight: 800; color: var(--muted); }
+.aman-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.aman-chips button { padding: 7px 12px; border-radius: 999px; background: var(--card2); color: #c9d6f2; font-weight: 800; font-size: 13.5px; border: 2px solid transparent; }
+.aman-chips button.on { border-color: var(--accent); color: var(--accent); background: rgba(53,208,127,.12); }
+.aman-ideas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.aman-idea { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 18px; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; text-align: left; font-weight: 800; font-size: 14.5px; line-height: 1.2; }
+.aman-idea span { flex: 1; min-width: 0; } .aman-idea .plus { color: var(--accent); flex: none; }
+.aman-idea:active, .aman-tile button:active { transform: translateY(1px); }
+.aman-full { margin: 0; padding: 14px 16px; border-radius: 18px; background: var(--card); border: 2px solid var(--edge); color: var(--muted); font-weight: 700; }
