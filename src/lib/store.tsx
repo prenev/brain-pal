@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { cloudRepo, localRepo, type Repo } from './repo'
+import { cloudRepo, localRepo, type Repo, type ThoughtPatch } from './repo'
 import { supabase } from './supabase'
 import { computeStreak, dayKey, type Streak } from './dates'
 import { DEFAULT_TAGS } from './constants'
@@ -50,6 +50,7 @@ interface Ctx {
   updateWorry(id: string, patch: Parameters<Repo['updateWorry']>[1]): Promise<void>
   deleteWorry(id: string): Promise<void>
   addThought(t: NewThought): Promise<Thought>
+  updateThought(id: string, patch: ThoughtPatch): Promise<void>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
   sync: { status: 'idle' | 'syncing' | 'ok' | 'error'; at: number | null; pending: number }
@@ -295,6 +296,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async updateWorry(id, patch) { const w = await repo.updateWorry(id, patch); setWorries(p => p.map(x => (x.id === id ? w : x))) },
     async deleteWorry(id) { await repo.deleteWorry(id); setWorries(p => p.filter(w => w.id !== id)) },
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
+    async updateThought(id, patch) { await repo.updateThought(id, patch); setThoughts(p => p.map(t => (t.id === id ? { ...t, ...patch } : t))) },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
     coins, earned, purchases, themeId, achievements: achievementList, equip,

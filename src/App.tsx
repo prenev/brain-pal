@@ -15,6 +15,7 @@ import Breathe from './pages/Breathe'
 import More from './pages/More'
 import Login from './pages/Login'
 import NewEntry from './pages/NewEntry'
+import { EDIT_ENTRY } from './components/EntryCard'
 import Sos from './components/Sos'
 import WorryTime from './components/WorryTime'
 import ParkWorry from './components/ParkWorry'
@@ -86,6 +87,8 @@ function Shell() {
   const [sos, setSos] = useState(false)
   const [worryTime, setWorryTime] = useState(false)
   const [ground, setGround] = useState(false)
+  const [editing, setEditing] = useState<string | null>(null)   // id of a mood entry being edited (from its ⋯ menu)
+  useEffect(() => { const on = (e: Event) => setEditing((e as CustomEvent<string>).detail); window.addEventListener(EDIT_ENTRY, on); return () => window.removeEventListener(EDIT_ENTRY, on) }, [])
   const [park, setPark] = useState(false)
   const [moreView, setMoreView] = useState<'support' | null>(null)
   const [composeMood, setComposeMood] = useState<number | null>(null)
@@ -157,7 +160,7 @@ function Shell() {
   const paywallOpen = usePaywallOpen()
   const [immersive, setImmersive] = useState(false)
   useEffect(() => { const f = (e: Event) => setImmersive(!!(e as CustomEvent<boolean>).detail); window.addEventListener('bp:immersive', f); return () => window.removeEventListener('bp:immersive', f) }, [])
-  const overlayOpen = paywallOpen || immersive || !!screen || ground || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
+  const overlayOpen = paywallOpen || immersive || !!screen || ground || !!editing || menu || !!composeAt || sos || worryTime || park || focusOpen || !!journalOpen || !!cel
   const nativeBar = useNativeTabs(NATIVE_ITEMS, tab, !ready || loginOpen || recovery || (!onboarded && !hasData) || overlayOpen, id => { setMoreView(null); setTab(id as Tab) })
 
   if (!ready) return <Splash />
@@ -218,6 +221,7 @@ function Shell() {
       {screen === 'journal' && <JournalHome onClose={() => setScreen(null)} onOpen={e => setJournalOpen(e.audio ? { listen: e } : { entry: e })} onWrite={() => setJournalOpen({})} onVoice={() => setJournalOpen({ voice: true })} />}
       {(screen === 'thoughts' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
       {screen === 'focus' && <FocusHub onClose={() => setScreen(null)} />}
+      {editing && thoughts.find(t => t.id === editing) && <NewEntry date={new Date(thoughts.find(t => t.id === editing)!.createdAt)} edit={thoughts.find(t => t.id === editing)} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />}
       {ground && <GroundNow onClose={() => setGround(false)} onDone={() => { setGround(false); setCel({ emoji: 'herb', title: 'Back in the room', sub: 'You noticed what is here, right now. That is grounding.' }) }} />}
       {screen === 'sleep' && <Screen title="Sleep" onClose={() => setScreen(null)}><Sleep /></Screen>}
       {screen === 'progress' && <Screen title="Progress" onClose={() => setScreen(null)}><Progress /></Screen>}

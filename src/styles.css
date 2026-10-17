@@ -916,3 +916,27 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .vn-mood { margin-top: 6px; } .vn-title { margin: 8px 24px 0; text-align: center; font-size: 22px; font-weight: 900; color: #f2f5ff; }
 .vn-words { padding-top: 4px; } .vn-text { white-space: pre-wrap; font-size: 23px !important; line-height: 1.45 !important; color: #f2f5ff; }
 .rec-wave { width: 100%; } .rec-words { margin: 4px 2px 10px; font-weight: 700; color: var(--text); line-height: 1.4; text-align: center; }
+/* ---- Mood entries: one card per day, entries on a timeline, always open; ⋯ opens a small Edit / Delete popover ---- */
+.daycard { padding: 0; overflow: visible; margin-bottom: 14px; }
+.daycard-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 20px 20px 0 0; background: color-mix(in srgb, var(--dc) 22%, var(--card)); color: color-mix(in srgb, var(--dc) 80%, #fff);
+  font-size: 13.5px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.daycard-head i { width: 14px; height: 14px; border-radius: 50%; border: 3px solid currentColor; flex: none; }
+.daycard-head span { margin-left: auto; font-size: 12px; opacity: .75; letter-spacing: .04em; }
+.daycard .entry { display: flex; gap: 12px; align-items: stretch; padding: 14px 14px 0; }
+.daycard .entry.last { padding-bottom: 16px; }
+.entry-rail { display: flex; flex-direction: column; align-items: center; flex: none; width: 52px; }
+.entry-line { flex: 1; width: 3px; min-height: 18px; margin: 6px 0 -14px; border-radius: 3px; background: var(--edge); }
+.entry.last .entry-line { display: none; }
+.entry-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.entry .mood-name { font-size: 26px; }
+.entry .etags { margin: 4px 0 6px; } .entry .etag { font-size: 14px; background: none; padding: 2px 8px 2px 0; color: var(--muted); }
+.entry .etext { margin: 6px 0 0; } .esit { margin: 6px 0 0; color: var(--muted); font-weight: 700; font-size: 15px; }
+.entry .alt { margin-top: 10px; } .etraps { margin-top: 8px; } .evoice { margin-top: 10px; }
+.emenu { position: relative; flex: none; }
+.emenu-btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); color: var(--muted); }
+.emenu-btn[aria-expanded=true] { color: var(--text); background: var(--card2); }
+.emenu-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 150px; padding: 6px; border-radius: 16px; background: #22304d; border: 2px solid var(--edge);
+  box-shadow: 0 12px 30px rgba(0,0,0,.45); animation: popIn .14s ease-out; transform-origin: top right; }
+.emenu-pop button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border-radius: 11px; font-weight: 800; font-size: 15.5px; color: var(--text); text-align: left; }
+.emenu-pop button:active { background: var(--card2); } .emenu-pop button.danger { color: var(--danger); }
+@keyframes popIn { from { opacity: 0; transform: scale(.92); } }

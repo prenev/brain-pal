@@ -5,12 +5,12 @@ import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
 import { MOODS } from '../lib/mood'
 import Face from '../components/Face'
-import EntryCard from '../components/EntryCard'
+import DayCards from '../components/EntryCard'
 import { monthLabel } from '../components/ui'
 import type { Thought } from '../lib/types'
 
 export default function CalendarPage({ onNewOn }: { onNewOn: (d: Date) => void }) {
-  const { thoughts, deleteThought } = useStore()
+  const { thoughts } = useStore()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [sel, setSel] = useState<string | null>(null)
   const todayKey = dayKey(new Date())
@@ -71,7 +71,7 @@ export default function CalendarPage({ onNewOn }: { onNewOn: (d: Date) => void }
         </div>
       </div>
 
-      {sel && byDay.get(sel)?.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
+      {sel && byDay.get(sel)?.length ? <DayCards list={[...byDay.get(sel)!].sort((a, b) => b.createdAt.localeCompare(a.createdAt))} /> : null}
 
       <div className="card">
         <div className="card-head"><h3>Mood Count</h3></div>

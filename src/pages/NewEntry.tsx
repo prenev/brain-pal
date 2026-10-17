@@ -12,7 +12,7 @@ import { EMOTIONS, REFRAME_QUESTIONS, TRAPS } from '../lib/constants'
 import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
 import { rankByUse, shortList, STARTER_EMOTIONS } from '../lib/today.ts'
-import type { AudioClip, EmotionRating } from '../lib/types'
+import type { AudioClip, EmotionRating, Thought } from '../lib/types'
 import type { PoseName } from '../lib/pal.ts'
 
 const toLocalInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16)
@@ -32,20 +32,21 @@ const SAY: Record<StepId, { pose: PoseName; text: string }> = {
 /** Limits that say what each box is for: one thought, not an essay (the Journal is for long writing). */
 export const LIMITS = { thought: 280, situation: 140, alt: 280 } as const
 
-export default function NewEntry({ date, onClose, onSaved, initialMood = null }: { date: Date; onClose: () => void; onSaved: () => void; initialMood?: number | null }) {
-  const { addThought, allTags, thoughts } = useStore()
+/** `edit`: an existing entry, opened with everything filled in; saving changes its words and ratings (photos and voice stay). */
+export default function NewEntry({ date, onClose, onSaved, initialMood = null, edit }: { date: Date; onClose: () => void; onSaved: () => void; initialMood?: number | null; edit?: Thought }) {
+  const { addThought, updateThought, allTags, thoughts } = useStore()
   const [when, setWhen] = useState(date)
   const [pickDate, setPickDate] = useState(false)
-  const [mood, setMood] = useState<number | null>(initialMood)
-  const [emotions, setEmotions] = useState<EmotionRating[]>([])
-  const [tags, setTags] = useState<string[]>([])
+  const [mood, setMood] = useState<number | null>(edit?.mood ?? initialMood)
+  const [emotions, setEmotions] = useState<EmotionRating[]>(edit?.emotions ?? [])
+  const [tags, setTags] = useState<string[]>(edit?.tags ?? [])
   const [allEmos, setAllEmos] = useState(false)
   const [allTagsShown, setAllTagsShown] = useState(false)
-  const [situation, setSituation] = useState('')
-  const [thought, setThought] = useState('')
-  const [alt, setAlt] = useState('')
-  const [outcome, setOutcome] = useState<number | null>(null)
-  const [traps, setTraps] = useState<string[]>([])
+  const [situation, setSituation] = useState(edit?.situation ?? '')
+  const [thought, setThought] = useState(edit?.thought ?? '')
+  const [alt, setAlt] = useState(edit?.alternateThought ?? '')
+  const [outcome, setOutcome] = useState<number | null>(edit?.outcomeIntensity ?? null)
+  const [traps, setTraps] = useState<string[]>(edit?.distortions ?? [])
   const [files, setFiles] = useState<File[]>([])
   const [clip, setClip] = useState<AudioClip | null>(null)
   const [filled, setFilled] = useState(false)
@@ -97,6 +98,10 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
   async function save() {
     setSaving(true); setError('')
     try {
+      if (edit) {
+        await updateThought(edit.id, { mood: mood!, situation: situation.trim(), thought: thought.trim(), emotions, alternateThought: alt.trim(), outcomeIntensity: outcome, tags, distortions: traps })
+        onSaved(); return
+      }
       await addThought({
         mood: mood!, createdAt: when.toISOString(), situation: situation.trim(), thought: thought.trim(), emotions,
         internalBehaviour: '', externalBehaviour: '', alternateThought: alt.trim(),
@@ -129,7 +134,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
     </div></div>
   )
 
-  const mic = clip || showVoice ? null : <button type="button" className="note-mic" onClick={() => setShowVoice(true)}><Mic size={17} /> Voice memo</button>
+  const mic = edit || clip || showVoice ? null : <button type="button" className="note-mic" onClick={() => setShowVoice(true)}><Mic size={17} /> Voice memo</button>
   const voice = (showVoice || clip) && (
     <div className="wiz-voice">
       <VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setShowVoice(false) }} onFill={applyStructured} />
@@ -174,16 +179,16 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null }:
           {voice}
           <NoteField label="What was happening? (optional)" value={situation} onChange={setSituation} max={LIMITS.situation} placeholder="e.g. Team meeting, 3 pm" />
           <details className="wiz-extras">
-            <summary>Tags and photos <span className="muted">(optional{tags.length + files.length ? ` · ${tags.length + files.length} added` : ''})</span></summary>
+            <summary>{edit ? 'Tags' : 'Tags and photos'} <span className="muted">(optional{tags.length + files.length ? ` · ${tags.length + files.length} added` : ''})</span></summary>
             <IconGrid options={[...tagOptions, ...customTags]} value={tags} onChange={setTags} />
             <div className="row spread">
               {allTags.length > 6 ? <button type="button" className="linkbtn morebtn" style={{ margin: 0 }} onClick={() => setAllTagsShown(!allTagsShown)}>{allTagsShown ? 'Show fewer' : `More tags (${Math.max(0, allTags.length - tagOptions.length)})`}</button> : <span />}
               <button className="linkbtn" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={16} style={{ display: 'inline', verticalAlign: -3 }} /> Add your own</button>
             </div>
-            <div className="photos-edit">
+            {!edit && <div className="photos-edit">
               <label><Camera size={22} />Take photo<input hidden type="file" accept="image/*" capture="environment" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
               <label><Images size={22} />From gallery<input hidden type="file" accept="image/*" multiple onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-            </div>
+            </div>}
             {files.length > 0 && <div className="photos">{files.map((f, i) => (
               <div key={i} style={{ position: 'relative' }}><img src={URL.createObjectURL(f)} alt="" style={{ height: 96, borderRadius: 14 }} />
                 <button className="icon-btn" aria-label="Remove photo" style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, background: '#000a' }} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={16} /></button></div>))}</div>}
