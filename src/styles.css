@@ -940,3 +940,20 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .emenu-pop button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border-radius: 11px; font-weight: 800; font-size: 15.5px; color: var(--text); text-align: left; }
 .emenu-pop button:active { background: var(--card2); } .emenu-pop button.danger { color: var(--danger); }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } }
+/* ---- Today's anchors: one full-width list tile each (an older rule made this a multi-column grid: reset it); swipe left for Skip / Edit ---- */
+.anchors .anchor-list { grid-template-columns: 1fr; gap: 10px; margin-top: 0; }
+.aswipe { position: relative; border-radius: 26px; overflow: hidden; isolation: isolate; }
+.aactions { position: absolute; inset: 0; z-index: 0; display: flex; justify-content: flex-end; align-items: stretch; gap: 6px; padding: 3px 3px 8px; }
+.aactions button { width: 72px; display: grid; place-items: center; align-content: center; gap: 4px; border-radius: 20px; font-weight: 900; font-size: 13px; }
+.aactions .askip { background: #2a7fd0; color: #fff; } .aactions .aedit { background: var(--card2); color: var(--text); }
+.anchors .arow { position: relative; z-index: 1; min-height: 74px; padding: 10px 10px 10px 6px; gap: 10px; border-radius: 26px; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  transition: transform .3s cubic-bezier(.2,.9,.3,1), border-width .08s; }
+.anchors .arow.drag { transition: none; }
+.agrip { display: grid; gap: 3px; flex: none; } .agrip i { width: 4px; height: 4px; border-radius: 50%; background: #3a4f72; }
+.anchors .ablob { width: 54px; height: 54px; border-radius: 19px 22px 18px 23px; }
+.anchors .alabel { font-size: 17.5px; } .anchors .alabel small { display: block; margin-top: 2px; font-size: 12px; font-weight: 800; color: var(--muted); text-decoration: none; }
+.anchors .acoin { gap: 4px; font-size: 16px; }
+.anchors .acheck { width: 58px; height: 50px; border-radius: 17px; border-bottom-width: 4px; }
+.anchors .arow.skipped { opacity: .55; } .anchors .arow.skipped .alabel { text-decoration: none; }
+.anchors .arow.skipped .acheck { opacity: .5; }
+.anchors-head b { font-size: 18px; }

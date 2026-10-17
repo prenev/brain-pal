@@ -9,7 +9,7 @@ import { isNative } from './native'
 import { scheduleNativeRituals } from './nativeReminders'
 import { planRituals, type Ritual } from './rituals.ts'
 import { deleteBlob, getBlob } from './blobstore'
-import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
+import { activityFrom, anchorStreak, canAdd, checkKey, skipKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
 import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadEquip, loadPurchases, loadRituals, loadTheme, saveEquip, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
@@ -92,6 +92,8 @@ interface Ctx {
   removeAnchor(id: string): void
   moveAnchor(id: string, dir: -1 | 1): void
   toggleAnchor(id: string): void
+  /** Skip (or un-skip) an anchor for today: it leaves today's total, the streak doesn't break. */
+  skipAnchor(id: string): void
   /** Signs out. In cloud mode it first syncs; returns how many changes could not be saved to the account (0 = clean). Pass force to sign out anyway. */
   signOut(force?: boolean): Promise<number>
 }
@@ -354,7 +356,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     moveAnchor(id, dir) { updateAnchors(reorder(anchorsRef.current, id, dir)) },
     toggleAnchor(id) {
       const k = checkKey(id, today), next = new Set(checks)
-      if (next.has(k)) next.delete(k); else next.add(k)
+      if (next.has(k)) next.delete(k); else { next.add(k); next.delete(skipKey(id, today)) }
+      setChecks(next); saveChecks(next)
+    },
+    skipAnchor(id) {
+      const k = skipKey(id, today), next = new Set(checks)
+      if (next.has(k)) next.delete(k); else { next.add(k); next.delete(checkKey(id, today)) }
       setChecks(next); saveChecks(next)
     },
     sync: syncState, syncNow,

@@ -1,19 +1,62 @@
-import { useState, type MouseEvent } from 'react'
-import { ArrowDown, ArrowUp, Check, Plus, X } from 'lucide-react'
+import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { ArrowDown, ArrowUp, Check, Pencil, Plus, SkipForward, Undo2, X } from 'lucide-react'
+import CuteIcon from './CuteIcon'
 import { sfx } from '../lib/sound'
 import { hapticSuccess } from '../lib/haptics'
 import { burstAt } from '../lib/confetti'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
-import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type AnchorLink } from '../lib/anchors.ts'
+import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type AnchorLink, type DayItem } from '../lib/anchors.ts'
 
 const LINK_LABEL: Record<AnchorLink, string> = { breathing: 'a breathing session', checkin: 'a mood entry', journal: 'a journal entry', worry: 'reviewing a worry', focus: 'a small step' }
 
 /** Today's anchors on the home screen: one chunky tile each. Ticking one plays a chime, pops a little confetti and earns a coin. */
-export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
-  const { anchorsToday: p, anchorStreak: st, toggleAnchor } = useStore()
+const OPEN = -156   // how far a swiped tile slides to show its actions
 
-  if (p.total === 0) return (
+/** One anchor as a list tile. Swipe it left for Skip today / Edit; tap (or the check) to tick it off. */
+function AnchorTile({ item, onTick, onSkip, onEdit }: { item: DayItem; onTick: (e: MouseEvent<HTMLButtonElement>) => void; onSkip: () => void; onEdit: () => void }) {
+  const { anchor, done, auto, manual, skipped } = item
+  const [x, setX] = useState(0)
+  const [drag, setDrag] = useState(false)
+  const start = useRef<{ x: number; y: number; base: number } | null>(null)
+  const moved = useRef(false)
+  const locked = auto && !manual
+  const down = (e: PointerEvent) => { start.current = { x: e.clientX, y: e.clientY, base: x }; moved.current = false }
+  const move = (e: PointerEvent<HTMLButtonElement>) => {
+    const s = start.current; if (!s) return
+    const dx = e.clientX - s.x, dy = e.clientY - s.y
+    if (!moved.current) { if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return; moved.current = true; setDrag(true); e.currentTarget.setPointerCapture(e.pointerId) }
+    setX(Math.max(OPEN - 28, Math.min(0, s.base + dx)))
+  }
+  const up = () => { if (moved.current) setX(v => (v < OPEN / 2 ? OPEN : 0)); start.current = null; setDrag(false) }
+  const click = (e: MouseEvent<HTMLButtonElement>) => {
+    if (moved.current) { moved.current = false; return }      // that was a swipe, not a tap
+    if (x !== 0) { setX(0); return }                            // a tap on an open tile closes it
+    if (!locked) onTick(e)
+  }
+  return (
+    <li className={`aswipe ${x !== 0 ? 'open' : ''}`}>
+      <div className="aactions" aria-hidden={x === 0}>
+        <button className="askip" tabIndex={x === 0 ? -1 : 0} onClick={() => { setX(0); onSkip() }}>{skipped ? <Undo2 size={22} /> : <SkipForward size={22} />}<span>{skipped ? 'Unskip' : 'Skip'}</span></button>
+        <button className="aedit" tabIndex={x === 0 ? -1 : 0} onClick={() => { setX(0); onEdit() }}><Pencil size={20} /><span>Edit</span></button>
+      </div>
+      <button role="checkbox" aria-checked={done} aria-label={anchor.label} className={`arow ${done ? 'done' : ''} ${skipped ? 'skipped' : ''} ${drag ? 'drag' : ''}`}
+        style={{ transform: `translateX(${x}px)` }} title={locked ? 'Done automatically: you did it in the app' : undefined}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={click}>
+        <span className="agrip" aria-hidden="true"><i /><i /><i /></span>
+        <span className="ablob"><Emoji name={anchor.emoji} size={32} /></span>
+        <span className="alabel">{anchor.label}{skipped && <small>Skipped today</small>}{locked && <small className="auto">Done in the app</small>}</span>
+        {!skipped && <span className="acoin">1<CuteIcon name="coin" size={18} /></span>}
+        <span className="acheck" aria-hidden="true"><Check size={26} strokeWidth={3.6} /></span>
+      </button>
+    </li>
+  )
+}
+
+export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
+  const { anchorsToday: p, anchorStreak: st, toggleAnchor, skipAnchor } = useStore()
+
+  if (p.items.length === 0) return (
     <button className="arow add" onClick={onEdit}>
       <span className="ablob"><Plus size={22} aria-hidden="true" /></span>
       <span className="alabel">Choose your daily anchors</span>
@@ -27,28 +70,17 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
     sfx('success'); hapticSuccess(); burstAt(r.left + r.width / 2, r.top + r.height / 2)
     if (p.done + 1 === p.total) onAllDone()
   }
+  const left = p.total - p.done
   const streakLine = st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : null
   return (
     <section className="anchors" aria-label="Daily anchors">
       <div className="anchors-head">
-        <b>Today’s anchors</b>
-        <span className="anchors-count" role="img" aria-label={`${p.done} of ${p.total} done`}>{p.done}/{p.total}</span>
+        <b role="img" aria-label={`${p.done} of ${p.total} done`}>{left > 0 ? `${left} ${left === 1 ? 'anchor' : 'anchors'} left for today` : 'All anchors done today!'}</b>
+        <button className="linkbtn anchors-edit" onClick={onEdit}>Edit</button>
         {streakLine && <span className="muted small anchors-streak"><Emoji name="fire" size={14} style={{ verticalAlign: -2 }} /> {streakLine}</span>}
-        <button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>
       </div>
       <ul className="anchor-list">
-        {p.items.map(({ anchor, done, auto, manual }) => (
-          <li key={anchor.id}>
-            <button role="checkbox" aria-checked={done} aria-label={anchor.label} className={`arow ${done ? 'done' : ''}`} disabled={auto && !manual}
-              title={auto && !manual ? 'Done automatically: you did it in the app' : undefined} onClick={e => tick(e, anchor.id, manual)}>
-              <span className="ablob"><Emoji name={anchor.emoji} size={30} /></span>
-              <span className="alabel">{anchor.label}</span>
-              {auto && !manual && <em className="auto">auto</em>}
-              <span className="acoin"><Emoji name="star" size={14} />1</span>
-              <span className="acheck" aria-hidden="true"><Check size={24} strokeWidth={3.6} /></span>
-            </button>
-          </li>
-        ))}
+        {p.items.map(item => <AnchorTile key={item.anchor.id} item={item} onTick={e => tick(e, item.anchor.id, item.manual)} onSkip={() => skipAnchor(item.anchor.id)} onEdit={onEdit} />)}
       </ul>
     </section>
   )
