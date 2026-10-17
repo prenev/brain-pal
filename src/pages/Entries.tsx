@@ -40,7 +40,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       </div>
 
       <MoodCard onPick={onCompose} />
-      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
+      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} onReflect={() => onTool('journal')} />
       <div className="home-top">
         <FocusCard onOpen={() => onTool('focus')} />
         <JournalCard onOpen={() => onTool('journal')} />

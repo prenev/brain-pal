@@ -1,6 +1,7 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
-import { ArrowDown, ArrowUp, Check, Pencil, Plus, SkipForward, Undo2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Pencil, PenLine, Plus, SkipForward, Undo2, X } from 'lucide-react'
 import CuteIcon from './CuteIcon'
+import Pal from './Pal'
 import { sfx } from '../lib/sound'
 import { hapticSuccess } from '../lib/haptics'
 import { burstAt } from '../lib/confetti'
@@ -53,7 +54,8 @@ function AnchorTile({ item, leaving = false, onTick, onSkip, onEdit }: { item: D
   )
 }
 
-export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
+/** `onReflect`: the call to action once every anchor is done (opens the journal). */
+export function AnchorCard({ onEdit, onAllDone, onReflect }: { onEdit: () => void; onAllDone: () => void; onReflect?: () => void }) {
   const { anchorsToday: p, anchorStreak: st, toggleAnchor, skipAnchor } = useStore()
   const [leaving, setLeaving] = useState<Set<string>>(new Set())   // ticked tiles sliding away
 
@@ -76,6 +78,14 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
   const shown = p.items.filter(i => (!i.done && !i.skipped) || leaving.has(i.anchor.id))
   const left = p.total - p.done
   const streakLine = st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : null
+  if (shown.length === 0) return (
+    <section className="anchors anchors-done" aria-label="Daily anchors: all done">
+      <span className="ad-art"><Pal pose="chill" size={96} motion="still" /></span>
+      <b>Woohoo! Anchors done for today!</b>
+      {streakLine && <span className="ad-streak"><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {streakLine}</span>}
+      {onReflect && <button className="ad-cta" onClick={onReflect}><PenLine size={20} strokeWidth={2.6} /> Write about your day</button>}
+    </section>
+  )
   return (
     <section className="anchors" aria-label="Daily anchors">
       <div className="anchors-head">
