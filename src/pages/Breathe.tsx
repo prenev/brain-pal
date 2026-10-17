@@ -15,7 +15,7 @@ function Wave({ p, on }: { p: BreathPattern; on: boolean }) {
   return <svg className={`wave ${on ? 'on' : ''}`} viewBox="0 0 96 40" width="96" height="40" aria-hidden="true"><path d={wavePath(p)} /></svg>
 }
 /** Each rhythm has its own colour, so the list and the set-up screen feel like places, not forms. */
-const TECH_COLOR: Record<string, string> = { calm: '#35d07f', coherent: '#4aa8ff', box: '#a78bfa', relax: '#7c8cff', custom: '#ff8fb1' }
+const TECH_COLOR: Record<string, string> = { calm: '#35d07f', coherent: '#35d07f', box: '#35d07f', relax: '#35d07f', custom: '#35d07f' }   // one green everywhere, calmer
 
 /** A soft orb that breathes in the rhythm itself (in · hold · out · rest), so you can feel the pace before starting. */
 function Orb({ p, color }: { p: BreathPattern; color: string }) {
@@ -24,8 +24,9 @@ function Orb({ p, color }: { p: BreathPattern; color: string }) {
   const name = `orb-${[p.inhale, p.hold1, p.exhale, p.hold2].join('-').replace(/\./g, '_')}`
   return (
     <div className="b-orb" style={{ ['--tc' as string]: color }} aria-hidden="true">
-      <style>{`@keyframes ${name}{0%{transform:scale(.6)}${pc(a)}%{transform:scale(1)}${pc(b)}%{transform:scale(1)}${pc(c)}%{transform:scale(.6)}100%{transform:scale(.6)}}`}</style>
-      <i className="ring" /><i className="core" style={{ animation: `${name} ${total}s ease-in-out infinite` }} />
+      <style>{`@keyframes ${name}{0%{transform:scale(.72)}${pc(a)}%{transform:scale(1)}${pc(b)}%{transform:scale(1)}${pc(c)}%{transform:scale(.72)}100%{transform:scale(.72)}}`}</style>
+      <i className="b-orb-line" style={{ animation: `${name} ${total}s ease-in-out infinite` }} />
+      <span className="b-orb-pal"><Pal pose="breatheIn" size={96} motion="still" /></span>
     </div>
   )
 }

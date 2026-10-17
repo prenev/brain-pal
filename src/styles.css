@@ -1125,3 +1125,11 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .b-start:active { transform: translateY(3px); border-bottom-width: 2px; }
 .b-note { text-align: center; color: var(--muted); font-size: 12.5px; font-weight: 700; margin: 10px 0 0; }
 @media (prefers-reduced-motion: reduce) { .b-orb .core { animation: none !important; transform: scale(.85); } }
+/* Breathe, calmer: plain tiles, one green, no glow; the orb is an outline breathing around Wobbi */
+.techs .tech { background: var(--card); border-color: var(--edge); }
+.techs .tech .wave { background: var(--card2); }
+.b-stage { background: var(--card); border-color: var(--edge); }
+.b-orb { width: 190px; height: 190px; }
+.b-orb-line { position: absolute; inset: 0; border-radius: 50%; border: 4px solid var(--accent); transform: scale(.72); }
+.b-orb-pal { position: relative; z-index: 1; }
+.b-orb .ring, .b-orb .core { display: none; }
