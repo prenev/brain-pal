@@ -83,7 +83,7 @@ export default function Breathe({ onSos }: { onSos: () => void }) {
         : step === 'pick'
           ? <>
             {done && <div className="card" style={{ textAlign: 'center' }}><Emoji name="lotus" size={64} /><div style={{ fontWeight: 900, fontSize: 20, marginTop: 6 }}>Nice work!</div><div className="muted">{done.cycles} rounds · {Math.floor(done.sec / 60)}m {done.sec % 60}s logged</div></div>}
-            <button className="jwobbi" onClick={() => { setTechId('calm'); setDone(null); setStep('setup') }} aria-label="Start calm breathing">
+            <button className="jwobbi bwob" onClick={() => { setTechId('calm'); setDone(null); setStep('setup') }} aria-label="Start calm breathing">
               <span className="jw-pal"><Pal pose="breatheIn" size={74} motion="still" /></span>
               <span className="jw-bubble">
                 <small>{weekMin > 0 ? `${weekMin} ${weekMin === 1 ? 'minute' : 'minutes'} breathed this week` : 'One minute is enough to start'}</small>
