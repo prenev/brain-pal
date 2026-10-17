@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
-import { ArrowDown, ArrowUp, Check, Pencil, PenLine, Plus, SkipForward, Undo2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Pencil, Plus, SkipForward, SlidersHorizontal, Undo2, X } from 'lucide-react'
 import CuteIcon from './CuteIcon'
 import { sfx } from '../lib/sound'
 import { hapticSuccess } from '../lib/haptics'
@@ -53,8 +53,7 @@ function AnchorTile({ item, leaving = false, onTick, onSkip, onEdit }: { item: D
   )
 }
 
-/** `onReflect`: the call to action once every anchor is done (opens the journal). */
-export function AnchorCard({ onEdit, onAllDone, onReflect }: { onEdit: () => void; onAllDone: () => void; onReflect?: () => void }) {
+export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
   const { anchorsToday: p, anchorStreak: st, toggleAnchor, skipAnchor } = useStore()
   const [leaving, setLeaving] = useState<Set<string>>(new Set())   // ticked tiles sliding away
 
@@ -81,7 +80,7 @@ export function AnchorCard({ onEdit, onAllDone, onReflect }: { onEdit: () => voi
     <section className="anchors anchors-done" aria-label="Daily anchors: all done">
       <span className="ad-art"><Emoji name="sunglasses" size={52} /></span>
       <b>Woohoo! Anchors done for today!</b>
-      {onReflect && <button className="ad-cta" onClick={onReflect}><PenLine size={20} strokeWidth={2.6} /> Write about your day</button>}
+      <button className="ad-cta" onClick={onEdit}><SlidersHorizontal size={17} strokeWidth={2.8} /> Edit anchors</button>
     </section>
   )
   return (

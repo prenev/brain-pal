@@ -44,7 +44,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
         <FocusCard onOpen={() => onTool('focus')} />
         <JournalCard onOpen={() => onTool('journal')} />
       </div>
-      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} onReflect={() => onTool('journal')} />
+      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
       <div className="tools-row" role="group" aria-label="Tools">
         <WorryTool onWorry={onWorry} onPark={onPark} />
         <button className="card tool" onClick={() => onTool('sleep')}>

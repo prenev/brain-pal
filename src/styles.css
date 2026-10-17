@@ -981,5 +981,5 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .ad-art { grid-row: span 2; display: grid; place-items: center; }
 .anchors-done b { font-size: 17px; color: var(--text); letter-spacing: -.01em; line-height: 1.2; }
 .ad-streak { color: var(--muted); font-weight: 800; font-size: 13px; }
-.ad-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; margin-top: 2px; padding: 0; background: none; color: var(--accent); font-weight: 900; font-size: 15px; }
-.ad-cta:active { opacity: .7; }
+.ad-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; margin-top: 4px; padding: 7px 14px 8px; border-radius: 999px; background: rgba(53,208,127,.14); border: 2px solid rgba(53,208,127,.35); border-bottom-width: 3px; color: var(--accent); font-weight: 900; font-size: 14.5px; }
+.ad-cta:active { transform: translateY(1px); border-bottom-width: 2px; }
