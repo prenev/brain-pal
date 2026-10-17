@@ -1,7 +1,7 @@
 import { Keyboard } from '@capacitor/keyboard'
 import { isNative } from '../lib/native'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bold, ChevronLeft, Heading1, Italic, List, ListOrdered, Mic, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
+import { Bold, ChevronLeft, Heading1, Italic, List, ListOrdered, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
 import Support from './Support'
 import VoiceRecorder from './VoiceRecorder'
@@ -48,9 +48,9 @@ function useActiveFormats(): Set<FormatKind> {
       const sel = window.getSelection(), node = sel?.anchorNode ?? null
       const el = node ? (node.nodeType === 1 ? node as Element : node.parentElement) : null
       if (!el?.closest('.notes-body')) { setOn(new Set()); return }
-      const q = (c: string) => { try { return document.queryCommandState(c) } catch { return false } }
+      // read the real tags around the cursor (the browser calls a heading "bold", which lit up two buttons at once)
       const next = new Set<FormatKind>()
-      if (q('bold')) next.add('bold'); if (q('italic')) next.add('italic'); if (q('strikeThrough')) next.add('strike')
+      if (el.closest('b,strong')) next.add('bold'); if (el.closest('i,em')) next.add('italic'); if (el.closest('s,strike,del')) next.add('strike')
       if (el.closest('ul')) next.add('bullet'); if (el.closest('ol')) next.add('number')
       if (el.closest('h1,h2,h3')) next.add('heading'); if (el.closest('blockquote')) next.add('quote')
       setOn(cur => (cur.size === next.size && [...next].every(k => cur.has(k)) ? cur : next))
@@ -172,7 +172,6 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
         <button aria-label="Tags" aria-expanded={panel === 'tags'} className={panel === 'tags' ? 'on' : ''} onClick={() => setPanel(panel === 'tags' ? null : 'tags')}>
           <Tag size={21} />{tags.length > 0 && <span className="small">{tags.length}</span>}
         </button>
-        <button aria-label="Voice note" aria-expanded={voiceOpen} className={voiceOpen || clip ? 'on' : ''} onClick={() => setVoiceOpen(!voiceOpen)}><Mic size={21} /></button>
       </div>
       </div>
     </div></div>

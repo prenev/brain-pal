@@ -1089,3 +1089,6 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .notes-row button.on { color: var(--accent-ink); background: var(--accent); box-shadow: 0 2px 0 var(--accent-dark); }
 .notes-row button[aria-expanded=true]:not(.on) { color: var(--accent); background: rgba(53,208,127,.16); }
 .notes-panel, .notes-voicepanel { border-bottom: 1px solid rgba(255,255,255,.1); }
+/* active format: subtle, just the icon in green with a small dot under it (no filled button) */
+.notes-row button.on { color: var(--accent); background: none; box-shadow: none; position: relative; }
+.notes-row .fmt-bar button.on::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
