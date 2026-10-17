@@ -1,8 +1,7 @@
 import { Keyboard } from '@capacitor/keyboard'
 import { isNative } from '../lib/native'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bold, ChevronLeft, Heading1, Italic, List, ListOrdered, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
-import Face from './Face'
+import { Bold, ChevronLeft, Heading1, Italic, List, ListOrdered, Quote, Shuffle, Strikethrough, Tag, Trash2 } from 'lucide-react'
 import Support from './Support'
 import VoiceRecorder from './VoiceRecorder'
 import AudioPlayer from './AudioPlayer'
@@ -10,7 +9,6 @@ import RichBody, { type RichHandle } from './RichBody'
 import { parseMd, stripMd, type FormatKind, type Inline } from '../lib/mdlite.ts'
 import { blobUrl, deleteBlob, putBlob } from '../lib/blobstore'
 import type { AudioClip } from '../lib/types'
-import { MOODS } from '../lib/mood'
 import { useStore } from '../lib/store'
 import { looksLikeCrisis } from '../lib/gemini'
 import { allJournalTags, cleanText, isBlank, MAX_BODY, MAX_TITLE, pickTopics, wordCount, type JournalEntry } from '../lib/journal.ts'
@@ -86,7 +84,7 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
   const hasDraft = !!draft && !isBlank(draft.title, draft.body)
   const [title, setTitle] = useState(entry?.title ?? (hasDraft ? draft!.title : ''))
   const [body, setBody] = useState(entry?.body ?? [hasDraft ? draft!.body : '', initial?.body ?? ''].filter(b => b.trim()).join('\n\n'))
-  const [mood, setMood] = useState<number | null>(entry?.mood ?? (hasDraft ? draft!.mood : null))
+  const [mood] = useState<number | null>(entry?.mood ?? (hasDraft ? draft!.mood : null))   // kept as it was; the mood is picked in the mood flow, not here
   const [tags, setTags] = useState<string[]>(entry?.tags ?? (hasDraft ? draft!.tags : []))
   const [prompt, setPrompt] = useState<string | null>(entry ? null : hasDraft ? draft!.prompt : null)
   const [topics, setTopics] = useState(() => pickTopics(4))
@@ -157,12 +155,8 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
         <button className="linkbtn" onClick={() => setDropAudio(true)}>Remove voice note</button></div>}
 
       <div className={`notes-dock ${kb > 0 ? 'kb' : ''}`} style={{ ['--kb' as string]: `${kb}px` }}>
-      {panel && <div className="notes-panel" role="group" aria-label={panel === 'mood' ? 'Choose a mood' : 'Choose tags'}>
-        {panel === 'mood'
-          ? <div className="row" style={{ justifyContent: 'space-between' }}>
-              {MOODS.map(m => <button key={m.v} type="button" aria-pressed={mood === m.v} aria-label={`Mood: ${m.name}`} onClick={() => setMood(mood === m.v ? null : m.v)} style={{ opacity: mood === null || mood === m.v ? 1 : .35 }}><Face mood={m.v} size={44} /></button>)}
-            </div>
-          : <div className="chips">
+      {panel && <div className="notes-panel" role="group" aria-label="Choose tags">
+        {<div className="chips">
               {tagChoices.map(t => <button key={t} type="button" className={`chip ${tags.includes(t) ? 'on' : ''}`} aria-pressed={tags.includes(t)} onClick={() => setTags(tags.includes(t) ? tags.filter(x => x !== t) : [...tags, t])}>{t}</button>)}
             </div>}
       </div>}
@@ -172,9 +166,6 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
           {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} aria-pressed={activeFmt.has(kind)} className={activeFmt.has(kind) ? 'on' : ''} onPointerDown={e => e.preventDefault()} onClick={() => { fmt(kind); document.dispatchEvent(new Event(FMT_EVENT)) }}><Icon size={20} /></button>)}
           <i className="vsep" />
         </span>
-        <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
-          {mood ? <Face mood={mood} size={26} /> : <Smile size={22} />}
-        </button>
         <button aria-label="Tags" aria-expanded={panel === 'tags'} className={panel === 'tags' ? 'on' : ''} onClick={() => setPanel(panel === 'tags' ? null : 'tags')}>
           <Tag size={21} />{tags.length > 0 && <span className="small">{tags.length}</span>}
         </button>
