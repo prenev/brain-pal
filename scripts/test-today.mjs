@@ -25,3 +25,16 @@ const ranked = ['a', 'b', 'c', 'd']
 assert.deepEqual(shortList(ranked, [], 2), ['a', 'b'])
 assert.deepEqual(shortList(ranked, ['d', 'a', 'zzz'], 2), ['a', 'b', 'd'])
 console.log('today: all tests passed')
+
+// feelings follow the mood
+{
+  const { emotionsForMood } = await import('../src/lib/today.ts')
+  const { EMOTIONS } = await import('../src/lib/constants.ts')
+  const good = emotionsForMood(EMOTIONS, 5, []).slice(0, 6), bad = emotionsForMood(EMOTIONS, 1, []).slice(0, 6)
+  for (const n of ['happy', 'grateful']) assert.ok(good.includes(n), 'a rad day suggests ' + n)
+  for (const n of ['anxious', 'sad']) assert.ok(!good.includes(n), 'a rad day does not suggest ' + n)
+  for (const n of ['sad', 'overwhelmed']) assert.ok(bad.includes(n)); assert.ok(!bad.includes('happy'), 'an awful day does not suggest happy')
+  const past = [{ mood: 2, emotions: [{ name: 'lonely' }] }, { mood: 2, emotions: [{ name: 'lonely' }] }, { mood: 5, emotions: [{ name: 'excited' }] }]
+  assert.equal(emotionsForMood(EMOTIONS, 2, past)[0], 'lonely', 'your own feelings on similar days come first'); assert.notEqual(emotionsForMood(EMOTIONS, 2, past)[0], 'excited')
+  console.log('mood feelings ok')
+}

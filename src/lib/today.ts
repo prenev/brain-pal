@@ -21,6 +21,21 @@ export function nextAction(s: TodayState): NextAction {
 /** Default short list for someone with no history yet. */
 export const STARTER_EMOTIONS = ['anxious', 'stressed', 'sad', 'tired', 'happy', 'grateful']
 
+/** The feelings that fit a mood (1 awful … 5 rad): a good day suggests good feelings, a hard day the hard ones. */
+export const EMOTIONS_FOR_MOOD: Record<number, string[]> = {
+  5: ['happy', 'excited', 'grateful', 'hopeful', 'content', 'relaxed'],
+  4: ['happy', 'content', 'grateful', 'relaxed', 'hopeful', 'excited'],
+  3: ['tired', 'content', 'unsure', 'bored', 'relaxed', 'stressed'],
+  2: ['anxious', 'stressed', 'sad', 'tired', 'overwhelmed', 'lonely'],
+  1: ['overwhelmed', 'sad', 'anxious', 'afraid', 'angry', 'desperate'],
+}
+/** Ranking for the feelings grid: your own past entries *with a similar mood* first, then the ones that fit this mood. */
+export function emotionsForMood(all: string[], mood: number, past: { mood: number; emotions: { name: string }[] }[]): string[] {
+  const fit = EMOTIONS_FOR_MOOD[Math.min(5, Math.max(1, Math.round(mood)))] ?? STARTER_EMOTIONS
+  const near = past.filter(t => Math.abs(t.mood - mood) <= 1).map(t => t.emotions.map(e => e.name).filter(n => fit.includes(n) || mood === 3))
+  return rankByUse(all, near, { starters: fit })
+}
+
 /**
  * Options ordered by how often *you* used them recently (last `window` entries), ties/unused keep their original order.
  * `starters` fill the front for new users so the list is never empty of sensible choices.

@@ -1020,3 +1020,19 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .aman-grip i { width: 4px; height: 4px; border-radius: 50%; background: #3f5578; }
 .aman-tile { position: relative; touch-action: manipulation; }
 .aman-tile.dragging { z-index: 5; box-shadow: 0 14px 30px rgba(0,0,0,.45); border-color: var(--accent); cursor: grabbing; }
+/* ---- inline voice memo (entry flow): same engine + waveform as the journal ---- */
+.vn-start { display: flex; align-items: center; gap: 8px; width: 100%; padding: 14px 16px; border-radius: 20px; background: var(--card); border: 2px dashed #3a5280; color: var(--text); font-weight: 900; font-size: 15.5px; }
+.vn-start small { margin-left: auto; color: var(--muted); font-weight: 700; font-size: 12.5px; }
+.vn-start svg { color: #ffb3d9; }
+.vnote-box { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 22px; background: linear-gradient(150deg, #2a2346, #16162a); border: 2px solid rgba(255,255,255,.08); border-bottom: 4px solid #0f0e22; }
+.vnote-box.live { background: linear-gradient(150deg, #4a2550, #1e1638); }
+.vn-wave { flex: 1; min-width: 0; }
+.vn-time { font-variant-numeric: tabular-nums; font-weight: 900; font-size: 14px; color: rgba(232,238,252,.8); min-width: 38px; text-align: right; }
+.vn-round { width: 42px; height: 42px; border-radius: 50%; flex: none; display: grid; place-items: center; }
+.vn-round.play { background: #ffb3d9; color: #3d2a63; border-bottom: 3px solid #d97fae; }
+.vn-round.stop { background: #ff5d73; color: #fff; border-bottom: 3px solid #c8344b; }
+.vn-round.ghost { background: rgba(255,255,255,.08); color: rgba(232,238,252,.8); }
+.vn-round:active { transform: translateY(1px); }
+.wiz-help { display: grid; gap: 8px; }
+.wiz-help .qrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.wiz-help .qbtn { display: inline-block; width: auto; margin: 0; padding: 8px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 800; }
