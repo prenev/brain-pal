@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { dayKey, lastNDays } from '../lib/dates'
 import { MOODS } from '../lib/mood'
@@ -91,7 +91,7 @@ function Insights() {
           {week.map((d, i) => (
             <div className="d" key={d}>
               <div className={`c ${active.has(d) ? 'done' : i === week.length - 1 ? 'today' : ''}`}>
-                {active.has(d) ? <Check size={22} /> : i === week.length - 1 ? '?' : <Plus size={20} />}
+                {active.has(d) ? <Emoji name="fire" size={26} /> : i === week.length - 1 ? '?' : <Plus size={20} />}
               </div>
               {i === week.length - 1 ? 'Today' : new Date(d + 'T12:00').toLocaleDateString(undefined, { weekday: 'short' })}
             </div>

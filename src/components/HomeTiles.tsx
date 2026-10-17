@@ -39,12 +39,12 @@ export function JournalCard({ onOpen }: { onOpen: () => void }) {
   const today = dayKey(new Date())
   const days = new Set(journal.map(e => dayKey(e.createdAt)))
   const wrote = days.has(today)
-  let run = 0; for (let d = wrote ? today : shift(today, -1); days.has(d); d = shift(d, -1)) run++   // days in a row with an entry (today still open)
+  const week = shift(today, -6), n = [...days].filter(d => d >= week).length   // days written this week, like the focus card's blocks
   return (
     <button className="big-card journal-card" onClick={onOpen} aria-label="Journal">
       <span className="big-kicker">Journal</span>
       <b className="big-title">{wrote ? <>Add to<br />today’s page</> : <>Write or<br />talk it out</>}</b>
-      <span className="big-sub">{run > 0 ? <><Emoji name="fire" size={15} style={{ verticalAlign: -2 }} /> {run} {run === 1 ? 'day' : 'days'} in a row</> : 'One line is enough'}</span>
+      <span className="big-sub">{n ? `${n}/7 days this week` : 'One line is enough'}</span>
       <span className="big-cta"><PenLine size={14} strokeWidth={3} /> Write</span>
       <span className="big-art" aria-hidden="true"><Pal pose="read" size={118} motion="still" /></span>
     </button>
