@@ -9,6 +9,8 @@ export interface Repo {
   mode: 'local' | 'cloud'
   listThoughts(): Promise<Thought[]>
   addThought(t: NewThought): Promise<Thought>
+  /** Edit the words and ratings of an entry (photos and voice stay as they are). */
+  updateThought(id: string, patch: ThoughtPatch): Promise<void>
   deleteThought(id: string): Promise<void>
   listSessions(): Promise<BreathSession[]>
   addSession(s: NewSession): Promise<BreathSession>
@@ -18,6 +20,8 @@ export interface Repo {
   updateWorry(id: string, patch: Partial<Pick<Worry, 'status' | 'action' | 'reviewedAt' | 'text'>>): Promise<Worry>
   deleteWorry(id: string): Promise<void>
 }
+
+export type ThoughtPatch = Partial<Pick<Thought, 'mood' | 'situation' | 'thought' | 'emotions' | 'alternateThought' | 'outcomeIntensity' | 'tags' | 'distortions'>>
 
 const uid = () => crypto.randomUUID()
 
@@ -70,6 +74,9 @@ export const localRepo: Repo = {
   },
   async setTranscript(id, transcript) {
     write(K_T, read<StoredThought>(K_T).map(t => (t.id === id && t.audio ? { ...t, audio: { ...t.audio, transcript } } : t)))
+  },
+  async updateThought(id, patch) {
+    write(K_T, read<StoredThought>(K_T).map(t => (t.id === id ? { ...t, ...patch } : t)))
   },
   async listSessions() { return read<BreathSession>(K_S).map(x => ({ ...x, kind: x.kind ?? 'breathing', anxietyBefore: x.anxietyBefore ?? null, anxietyAfter: x.anxietyAfter ?? null })) },
   async addSession(s) {
@@ -171,6 +178,19 @@ export const cloudRepo: Repo = {
   },
   async setTranscript(id, transcript) {
     const { error } = await sb().from('thoughts').update({ transcript }).eq('id', id)
+    if (error) throw error
+  },
+  async updateThought(id, p) {
+    const row: Record<string, unknown> = {}
+    if (p.mood !== undefined) row.mood = p.mood
+    if (p.situation !== undefined) row.situation = p.situation
+    if (p.thought !== undefined) row.thought = p.thought
+    if (p.emotions !== undefined) row.emotions = p.emotions
+    if (p.alternateThought !== undefined) row.alternate_thought = p.alternateThought
+    if (p.outcomeIntensity !== undefined) row.outcome_intensity = p.outcomeIntensity
+    if (p.tags !== undefined) row.tags = p.tags
+    if (p.distortions !== undefined) row.distortions = p.distortions
+    const { error } = await sb().from('thoughts').update(row).eq('id', id)
     if (error) throw error
   },
   async listWorries() {

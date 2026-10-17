@@ -50,22 +50,27 @@ export function activityFrom(d: {
 }
 
 export const checkKey = (anchorId: string, day: string) => `${anchorId}|${day}`
+/** "Skip today" (swipe on the tile): stored with the checks, so it syncs the same way. A skipped anchor leaves that day's total. */
+export const skipKey = (anchorId: string, day: string) => `skip:${checkKey(anchorId, day)}`
 
 /** Anchors that existed on `day` (so editing your list today never rewrites history). */
 export const anchorsOnDay = (all: Anchor[], day: string): Anchor[] =>
   all.filter(a => dayKey(a.createdAt) <= day && (!a.archivedAt || day < dayKey(a.archivedAt))).sort((a, b) => a.order - b.order)
 
-export interface DayItem { anchor: Anchor; done: boolean; auto: boolean; manual: boolean }
+export interface DayItem { anchor: Anchor; done: boolean; auto: boolean; manual: boolean; skipped: boolean }
 export interface DayProgress { done: number; total: number; complete: boolean; items: DayItem[] }
 
 export function dayProgress(all: Anchor[], day: string, checks: Set<string>, act: Activity): DayProgress {
   const items = anchorsOnDay(all, day).map(anchor => {
     const manual = checks.has(checkKey(anchor.id, day))
     const auto = !!anchor.link && act[anchor.link].has(day)
-    return { anchor, manual, auto, done: manual || auto }
+    const done = manual || auto
+    return { anchor, manual, auto, done, skipped: !done && checks.has(skipKey(anchor.id, day)) }
   })
-  const done = items.filter(i => i.done).length
-  return { done, total: items.length, complete: items.length > 0 && done === items.length, items }
+  const counted = items.filter(i => !i.skipped)
+  const done = counted.filter(i => i.done).length
+  // a day where you skipped the rest still counts once the others are done (and a day of only skips is a rest day, not a miss)
+  return { done, total: counted.length, complete: items.length > 0 && done === counted.length, items }
 }
 
 export interface AnchorStreak { current: number; longest: number; completeToday: boolean }

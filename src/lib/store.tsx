@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { cloudRepo, localRepo, type Repo } from './repo'
+import { cloudRepo, localRepo, type Repo, type ThoughtPatch } from './repo'
 import { supabase } from './supabase'
 import { computeStreak, dayKey, type Streak } from './dates'
 import { DEFAULT_TAGS } from './constants'
@@ -9,7 +9,7 @@ import { isNative } from './native'
 import { scheduleNativeRituals } from './nativeReminders'
 import { planRituals, type Ritual } from './rituals.ts'
 import { deleteBlob, getBlob } from './blobstore'
-import { activityFrom, anchorStreak, canAdd, checkKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
+import { activityFrom, anchorStreak, canAdd, checkKey, skipKey, cleanLabel, dayProgress, reorder, type Anchor, type AnchorLink, type AnchorStreak, type DayProgress } from './anchors.ts'
 import { skillLevels, type Level, type SkillId } from './levels.ts'
 import { shift } from './dates.ts'
 import { loadAnchors, loadChecks, loadCoinHighWater, loadFocus, loadHealthNights, loadJournal, loadManualNights, loadEquip, loadPurchases, loadRituals, loadTheme, saveEquip, saveAnchors, saveChecks, saveFocus, saveHealthNights, saveJournal, saveManualNights, savePurchases, saveRituals, saveTheme, saveCoinHighWater } from './extras'
@@ -50,6 +50,7 @@ interface Ctx {
   updateWorry(id: string, patch: Parameters<Repo['updateWorry']>[1]): Promise<void>
   deleteWorry(id: string): Promise<void>
   addThought(t: NewThought): Promise<Thought>
+  updateThought(id: string, patch: ThoughtPatch): Promise<void>
   deleteThought(id: string): Promise<void>
   addSession(s: NewSession): Promise<void>
   sync: { status: 'idle' | 'syncing' | 'ok' | 'error'; at: number | null; pending: number }
@@ -91,6 +92,8 @@ interface Ctx {
   removeAnchor(id: string): void
   moveAnchor(id: string, dir: -1 | 1): void
   toggleAnchor(id: string): void
+  /** Skip (or un-skip) an anchor for today: it leaves today's total, the streak doesn't break. */
+  skipAnchor(id: string): void
   /** Signs out. In cloud mode it first syncs; returns how many changes could not be saved to the account (0 = clean). Pass force to sign out anyway. */
   signOut(force?: boolean): Promise<number>
 }
@@ -295,6 +298,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async updateWorry(id, patch) { const w = await repo.updateWorry(id, patch); setWorries(p => p.map(x => (x.id === id ? w : x))) },
     async deleteWorry(id) { await repo.deleteWorry(id); setWorries(p => p.filter(w => w.id !== id)) },
     async addThought(t) { const n = await repo.addThought(t); setThoughts(p => [n, ...p].sort((a, b) => b.createdAt.localeCompare(a.createdAt))); return n },
+    async updateThought(id, patch) { await repo.updateThought(id, patch); setThoughts(p => p.map(t => (t.id === id ? { ...t, ...patch } : t))) },
     async deleteThought(id) { await repo.deleteThought(id); setThoughts(p => p.filter(t => t.id !== id)) },
     async addSession(s) { const n = await repo.addSession(s); setSessions(p => [n, ...p]); void syncSession(n) },
     coins, earned, purchases, themeId, achievements: achievementList, equip,
@@ -352,7 +356,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     moveAnchor(id, dir) { updateAnchors(reorder(anchorsRef.current, id, dir)) },
     toggleAnchor(id) {
       const k = checkKey(id, today), next = new Set(checks)
-      if (next.has(k)) next.delete(k); else next.add(k)
+      if (next.has(k)) next.delete(k); else { next.add(k); next.delete(skipKey(id, today)) }
+      setChecks(next); saveChecks(next)
+    },
+    skipAnchor(id) {
+      const k = skipKey(id, today), next = new Set(checks)
+      if (next.has(k)) next.delete(k); else { next.add(k); next.delete(checkKey(id, today)) }
       setChecks(next); saveChecks(next)
     },
     sync: syncState, syncNow,

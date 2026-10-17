@@ -925,3 +925,61 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .cel-stats .stat b { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 34px; line-height: 1; color: #fff; }
 .cel-foot { width: 100%; max-width: 360px; margin: 0 auto; padding: 18px 0 calc(var(--safe-b) + 12px); border-top: 0; display: grid; gap: 10px; }
 .cel-foot .btn { margin: 0 !important; width: 100%; }
+/* ---- Mood entries: one card per day, entries on a timeline, always open; ⋯ opens a small Edit / Delete popover ---- */
+.daycard { padding: 0; overflow: visible; margin-bottom: 14px; }
+.daycard-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 20px 20px 0 0; background: color-mix(in srgb, var(--dc) 22%, var(--card)); color: color-mix(in srgb, var(--dc) 80%, #fff);
+  font-size: 13.5px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
+.daycard-head i { width: 14px; height: 14px; border-radius: 50%; border: 3px solid currentColor; flex: none; }
+.daycard-head span { margin-left: auto; font-size: 12px; opacity: .75; letter-spacing: .04em; }
+.daycard .entry { display: flex; gap: 12px; align-items: stretch; padding: 14px 14px 0; }
+.daycard .entry.last { padding-bottom: 16px; }
+.entry-rail { display: flex; flex-direction: column; align-items: center; flex: none; width: 52px; }
+.entry-line { flex: 1; width: 3px; min-height: 18px; margin: 6px 0 -14px; border-radius: 3px; background: var(--edge); }
+.entry.last .entry-line { display: none; }
+.entry-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.entry .mood-name { font-size: 26px; }
+.entry .etags { margin: 4px 0 6px; } .entry .etag { font-size: 14px; background: none; padding: 2px 8px 2px 0; color: var(--muted); }
+.entry .etext { margin: 6px 0 0; } .esit { margin: 6px 0 0; color: var(--muted); font-weight: 700; font-size: 15px; }
+.entry .alt { margin-top: 10px; } .etraps { margin-top: 8px; } .evoice { margin-top: 10px; }
+.emenu { position: relative; flex: none; }
+.emenu-btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); color: var(--muted); }
+.emenu-btn[aria-expanded=true] { color: var(--text); background: var(--card2); }
+.emenu-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 150px; padding: 6px; border-radius: 16px; background: #22304d; border: 2px solid var(--edge);
+  box-shadow: 0 12px 30px rgba(0,0,0,.45); animation: popIn .14s ease-out; transform-origin: top right; }
+.emenu-pop button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border-radius: 11px; font-weight: 800; font-size: 15.5px; color: var(--text); text-align: left; }
+.emenu-pop button:active { background: var(--card2); } .emenu-pop button.danger { color: var(--danger); }
+@keyframes popIn { from { opacity: 0; transform: scale(.92); } }
+/* ---- Today's anchors: one full-width list tile each (an older rule made this a multi-column grid: reset it); swipe left for Skip / Edit ---- */
+.anchors .anchor-list { grid-template-columns: 1fr; gap: 10px; margin-top: 0; }
+.aswipe { position: relative; border-radius: 26px; overflow: hidden; isolation: isolate; }
+.aactions { position: absolute; inset: 0; z-index: 0; display: flex; justify-content: flex-end; align-items: stretch; gap: 6px; padding: 3px 3px 8px; }
+.aactions button { width: 72px; display: grid; place-items: center; align-content: center; gap: 4px; border-radius: 20px; font-weight: 900; font-size: 13px; }
+.aactions .askip { background: #2a7fd0; color: #fff; } .aactions .aedit { background: var(--card2); color: var(--text); }
+.anchors .arow { position: relative; z-index: 1; min-height: 74px; padding: 10px 10px 10px 6px; gap: 10px; border-radius: 26px; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  transition: transform .3s cubic-bezier(.2,.9,.3,1), border-width .08s; }
+.anchors .arow.drag { transition: none; }
+.agrip { display: grid; gap: 3px; flex: none; } .agrip i { width: 4px; height: 4px; border-radius: 50%; background: #3a4f72; }
+.anchors .ablob { width: 54px; height: 54px; border-radius: 19px 22px 18px 23px; }
+.anchors .alabel { font-size: 17.5px; } .anchors .alabel small { display: block; margin-top: 2px; font-size: 12px; font-weight: 800; color: var(--muted); text-decoration: none; }
+.anchors .acoin { gap: 4px; font-size: 16px; }
+.anchors .acheck { width: 58px; height: 50px; border-radius: 17px; border-bottom-width: 4px; }
+.anchors .arow.skipped { opacity: .55; } .anchors .arow.skipped .alabel { text-decoration: none; }
+.anchors .arow.skipped .acheck { opacity: .5; }
+.anchors-head b { font-size: 18px; }
+/* inside a day card nothing gets its own box: the kinder thought, traps, voice and transcript sit straight on the card */
+.daycard .entry .alt { padding: 0; background: none; border: 0; border-radius: 0; color: var(--accent); font-weight: 700; }
+.daycard .entry .etraps { gap: 4px 12px; } .daycard .entry .etraps .chip { padding: 0; background: none; border: 0; color: var(--muted); font-size: 13.5px; }
+.daycard .entry .etraps .chip::before { content: '· '; }
+.daycard .entry .player { padding: 0; background: none; border: 0; }
+.daycard .entry .etranscript { padding: 0; margin-top: 8px; background: none; border: 0; border-radius: 0; color: var(--muted); }
+.aswipe.leaving { animation: anchorGone .42s cubic-bezier(.5,0,.75,0) forwards; pointer-events: none; }
+@keyframes anchorGone { 0% { max-height: 90px; opacity: 1; transform: none; } 45% { opacity: 1; transform: translateX(0) scale(1.02); } 100% { max-height: 0; opacity: 0; transform: translateX(60%) scale(.96); margin-bottom: -10px; } }
+.anchors .arow.done .alabel { text-decoration: none; }
+/* every anchor done: a small celebration card instead of the list */
+.anchors-done { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 18px 16px 20px !important; margin-bottom: 14px; border-radius: 26px;
+  background: linear-gradient(160deg, #14513e, #0c2a24) !important; border: 2px solid rgba(255,255,255,.08) !important; border-bottom: 5px solid #082019 !important; }
+.ad-art { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 4px solid rgba(255,255,255,.85); }
+.anchors-done b { font-size: 20px; color: #fff; letter-spacing: -.01em; }
+.ad-streak { color: rgba(255,255,255,.75); font-weight: 800; font-size: 14px; }
+.ad-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; padding: 12px 22px; border-radius: 18px; background: rgba(255,255,255,.14); color: #fff; font-weight: 900; font-size: 16.5px; }
+.ad-cta:active { transform: translateY(2px); }

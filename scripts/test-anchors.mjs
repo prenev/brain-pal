@@ -62,3 +62,20 @@ console.log('anchors: all tests passed')
   assert.equal(canAdd(many), false)
   console.log('anchor cap ok')
 }
+
+// skipping an anchor for a day
+{
+  const { dayProgress, skipKey, checkKey } = await import('../src/lib/anchors.ts')
+  const A = (id, order) => ({ id, label: id, emoji: 'sun', link: null, order, createdAt: '2026-10-01T09:00:00Z', archivedAt: null })
+  const all = [A('a', 0), A('b', 1), A('c', 2)], day = '2026-10-17'
+  const none = { checkin: new Set(), breathing: new Set(), journal: new Set(), worry: new Set(), focus: new Set() }
+  let p = dayProgress(all, day, new Set([skipKey('b', day)]), none)
+  assert.equal(p.total, 2, 'a skipped anchor leaves the total'); assert.equal(p.items.find(i => i.anchor.id === 'b').skipped, true); assert.equal(p.complete, false)
+  p = dayProgress(all, day, new Set([skipKey('b', day), checkKey('a', day), checkKey('c', day)]), none)
+  assert.equal(p.complete, true, 'the others done + one skipped = a complete day'); assert.equal(p.done, 2)
+  p = dayProgress(all, day, new Set([skipKey('a', day), skipKey('b', day), skipKey('c', day)]), none)
+  assert.equal(p.complete, true, 'all skipped is a rest day, not a miss')
+  p = dayProgress(all, day, new Set([skipKey('a', day), checkKey('a', day)]), none)
+  assert.equal(p.items[0].skipped, false, 'done wins over skipped'); assert.equal(p.total, 3)
+  console.log('anchors skip ok')
+}

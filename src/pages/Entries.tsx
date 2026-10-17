@@ -10,10 +10,9 @@ import { Screen, Sheet } from '../components/ui'
 import { useStore } from '../lib/store'
 import { dayKey } from '../lib/dates'
 import { monthLabel } from '../components/ui'
-import EntryCard from '../components/EntryCard'
+import DayCards from '../components/EntryCard'
 import { PalEmpty, PalTip } from '../components/Pal'
 
-const dayNum = (iso: string) => { const d = new Date(iso); return Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5) }
 
 const HOME_ENTRIES = 3
 
@@ -21,7 +20,7 @@ export type HomeTool = 'thoughts' | 'journal' | 'worry' | 'ground' | 'sleep' | '
 
 /** Home, top to bottom: how you feel, today's anchors, the big Focus + Journal cards, then Worries / Sleep / Ground, then everything logged today. */
 export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorry, onPark, onStep }: { onTool: (t: HomeTool) => void; onSos: () => void; onAllAnchors: () => void; onCompose: (mood: number) => void; onWorry: () => void; onPark: () => void; onStep: () => void }) {
-  const { thoughts, deleteThought, streak, coins, sleepNights } = useStore()
+  const { thoughts, streak, coins, sleepNights } = useStore()
   const [editAnchors, setEditAnchors] = useState(false)
   const todayKey = dayKey(new Date())
   const today = useMemo(() => thoughts.filter(t => dayKey(t.createdAt) === todayKey), [thoughts, todayKey])
@@ -41,7 +40,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       </div>
 
       <MoodCard onPick={onCompose} />
-      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} />
+      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} onReflect={() => onTool('journal')} />
       <div className="home-top">
         <FocusCard onOpen={() => onTool('focus')} />
         <JournalCard onOpen={() => onTool('journal')} />
@@ -55,7 +54,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
       </div>
       <StepNudge onStep={onStep} />
       {!today.length && latest.length > 0 && <div className="home-label">Latest entries</div>}
-      {latest.map(t => <EntryCard key={t.id} t={t} onDelete={deleteThought} />)}
+      <DayCards list={latest} />
       {thoughts.length > 0 && <button className="linkbtn more-today" onClick={() => onTool('thoughts')}>All entries{thoughts.length > latest.length ? ` (${thoughts.length})` : ''}</button>}
 
       {editAnchors && <Sheet onClose={() => setEditAnchors(false)}><div className="sheet-scroll"><div className="row spread"><b style={{ fontSize: 20 }}>Daily anchors</b><button className="linkbtn" onClick={() => setEditAnchors(false)}>Done</button></div><AnchorsManager /></div></Sheet>}
@@ -65,7 +64,7 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
 
 /** Every thought entry, month by month, with search. */
 export function AllEntries({ search = false, onClose }: { search?: boolean; onClose: () => void }) {
-  const { thoughts, deleteThought } = useStore()
+  const { thoughts } = useStore()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [q, setQ] = useState('')
   const [searching, setSearching] = useState(search)
@@ -87,15 +86,7 @@ export function AllEntries({ search = false, onClose }: { search?: boolean; onCl
       </div>
       {searching && <div className="searchbar"><Search size={20} /><input autoFocus placeholder="Search entries, emotions, tags" value={q} onChange={e => setQ(e.target.value)} /></div>}
       {list.length === 0 && <PalEmpty pose={q ? 'think' : 'sleepy'}>{q ? 'No entries match.' : 'No entries this month. Tap a face on Home to log how you feel.'}</PalEmpty>}
-      {list.map((t, i) => {
-        const gap = i > 0 ? dayNum(list[i - 1].createdAt) - dayNum(t.createdAt) - 1 : 0
-        return (
-          <div key={t.id}>
-            {!q && gap > 0 && <div className="gap">{gap} {gap === 1 ? 'Day' : 'Days'} Missing</div>}
-            <EntryCard t={t} onDelete={deleteThought} />
-          </div>
-        )
-      })}
+      <DayCards list={list} gaps={!q} />
     </Screen>
   )
 }
