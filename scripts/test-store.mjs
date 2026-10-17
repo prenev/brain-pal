@@ -88,7 +88,7 @@ assert.match(pbx, /PRODUCT_BUNDLE_IDENTIFIER = com\.brainpal\.app/); assert.equa
 const plist = text('ios/App/App/Info.plist'), man = text('ios-native/PrivacyInfo.xcprivacy')
 assert.match(plist, /ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/); assert.doesNotMatch(plist, /NSAllowsArbitraryLoads/); assert.doesNotMatch(plist, /armv7/)
 assert.match(man, /NSPrivacyTracking<\/key>\s*<false\/>/)
-const MAP = { EmailAddress: 'EMAIL_ADDRESS', OtherUserContent: 'OTHER_USER_CONTENT', PhotosorVideos: 'PHOTOS_OR_VIDEOS', AudioData: 'AUDIO_DATA' }
+const MAP = { EmailAddress: 'EMAIL_ADDRESS', OtherUserContent: 'OTHER_USER_CONTENT', PhotosorVideos: 'PHOTOS_OR_VIDEOS', AudioData: 'AUDIO_DATA', Health: 'HEALTH' }
 const declared = [...man.matchAll(/NSPrivacyCollectedDataType(?!Purpose)(\w+)<\/string>/g)].map(m => m[1])
 for (const d of declared) assert.ok(PRIVACY_LABEL.some(l => l.category === MAP[d]), `manifest declares ${d} but the label (store-metadata.mjs) does not`)
 for (const l of PRIVACY_LABEL.filter(l => l.category !== 'NAME')) assert.ok(Object.values(MAP).includes(l.category) && declared.some(d => MAP[d] === l.category), `label has ${l.category} but the manifest does not`)

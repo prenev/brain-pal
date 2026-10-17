@@ -33,6 +33,12 @@
 			<key>NSPrivacyCollectedDataTypeTracking</key><false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key><array><string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string></array>
 		</dict>
+		<dict><!-- mood entries and hand-logged sleep, synced only with an account (Apple Health data never leaves the phone) -->
+			<key>NSPrivacyCollectedDataType</key><string>NSPrivacyCollectedDataTypeHealth</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key><true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key><false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key><array><string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string></array>
+		</dict>
 	</array>
 	<!-- Required-reason APIs our own code uses (scripts/test-store.mjs fails if another appears without a declaration):
 	     UserDefaults, only to remember the Focus guard's app selection and unlock time on this device (reason CA92.1: the app's own data). Capacitor ships its own manifests for what it uses. -->
