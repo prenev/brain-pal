@@ -31,20 +31,20 @@ export default function Entries({ onTool, onSos, onAllAnchors, onCompose, onWorr
   return (
     <>
       <div className="topbar">
-        <div className={`glass streak-pill ${streak.current === 0 ? 'cold' : ''}`} title="Day streak" aria-label={`${streak.current} day streak`}>
+        <button className={`glass streak-pill ${streak.current === 0 ? 'cold' : ''}`} title="Day streak" aria-label={`${streak.current} day streak. See your progress`} onClick={() => onTool('progress')}>
           <Emoji name="fire" size={28} />{streak.current}
-        </div>
+        </button>
         <span style={{ flex: 1 }} />
         <button className="glass coin-pill" aria-label={`${coins} coins`} title="Coins" onClick={() => onTool('coins')}><Emoji name="star" size={26} />{coins}</button>
         <button className="glass round sos" aria-label="Anxious right now? Get help" title="Anxious right now?" onClick={onSos}><Siren size={24} /></button>
       </div>
 
       <MoodCard onPick={onCompose} />
-      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} onReflect={() => onTool('journal')} />
       <div className="home-top">
         <FocusCard onOpen={() => onTool('focus')} />
         <JournalCard onOpen={() => onTool('journal')} />
       </div>
+      <AnchorCard onEdit={() => setEditAnchors(true)} onAllDone={onAllAnchors} onReflect={() => onTool('journal')} />
       <div className="tools-row" role="group" aria-label="Tools">
         <WorryTool onWorry={onWorry} onPark={onPark} />
         <button className="card tool" onClick={() => onTool('sleep')}>

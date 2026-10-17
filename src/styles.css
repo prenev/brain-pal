@@ -975,11 +975,12 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .aswipe.leaving { animation: anchorGone .42s cubic-bezier(.5,0,.75,0) forwards; pointer-events: none; }
 @keyframes anchorGone { 0% { max-height: 90px; opacity: 1; transform: none; } 45% { opacity: 1; transform: translateX(0) scale(1.02); } 100% { max-height: 0; opacity: 0; transform: translateX(60%) scale(.96); margin-bottom: -10px; } }
 .anchors .arow.done .alabel { text-decoration: none; }
-/* every anchor done: a small celebration card instead of the list */
-.anchors-done { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 18px 16px 20px !important; margin-bottom: 14px; border-radius: 26px;
-  background: linear-gradient(160deg, #14513e, #0c2a24) !important; border: 2px solid rgba(255,255,255,.08) !important; border-bottom: 5px solid #082019 !important; }
-.ad-art { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); border: 4px solid rgba(255,255,255,.85); }
-.anchors-done b { font-size: 20px; color: #fff; letter-spacing: -.01em; }
-.ad-streak { color: rgba(255,255,255,.75); font-weight: 800; font-size: 14px; }
-.ad-cta { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; padding: 12px 22px; border-radius: 18px; background: rgba(255,255,255,.14); color: #fff; font-weight: 900; font-size: 16.5px; }
-.ad-cta:active { transform: translateY(2px); }
+/* every anchor done: a compact celebration card, same surface as the mood card */
+.anchors-done { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; text-align: left; padding: 12px 14px !important; margin-bottom: 14px; border-radius: 26px;
+  background: var(--card) !important; border: 2px solid var(--edge) !important; border-bottom-width: 4px !important; }
+.ad-art { grid-row: span 3; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 3px solid rgba(255,255,255,.85); }
+.ad-art .pal { width: 58px !important; height: 58px !important; }
+.anchors-done b { font-size: 17px; color: var(--text); letter-spacing: -.01em; line-height: 1.2; }
+.ad-streak { color: var(--muted); font-weight: 800; font-size: 13px; }
+.ad-cta { justify-self: start; display: inline-flex; align-items: center; gap: 7px; margin-top: 2px; padding: 0; background: none; color: var(--accent); font-weight: 900; font-size: 15px; }
+.ad-cta:active { opacity: .7; }
