@@ -90,12 +90,29 @@ Safety: text that looks like self-harm is never sent to an AI and the app shows 
 }
 
 /** Age-rating answers in the format `fastlane deliver` accepts (0 = none, 1 = infrequent/mild, 2 = frequent/intense). The web form asks the same questions: see docs/APPSTORE.md. Answer honestly; Apple computes the rating. */
-export const AGE_RATING = {
-  CARTOON_FANTASY_VIOLENCE: 0, REALISTIC_VIOLENCE: 0, PROLONGED_GRAPHIC_SADISTIC_REALISTIC_VIOLENCE: 0,
-  PROFANITY_CRUDE_HUMOR: 0, MATURE_SUGGESTIVE: 0, HORROR: 0, ALCOHOL_TOBACCO_DRUGS: 0,
-  SEXUAL_CONTENT_NUDITY: 0, GRAPHIC_SEXUAL_CONTENT_NUDITY: 0, GAMBLING: 0, GAMBLING_CONTESTS: 0,
-  MEDICAL_TREATMENT_INFO: 1,     // wellness / mental-health self-help content (not treatment advice): the honest, conservative answer
-  UNRESTRICTED_WEB_ACCESS: 0,
+export const AGE_RATING = {   // Apple's current age-rating questions (2025+ format)
+  violenceCartoonOrFantasy: 'NONE',
+  violenceRealistic: 'NONE',
+  violenceRealisticProlongedGraphicOrSadistic: 'NONE',
+  profanityOrCrudeHumor: 'NONE',
+  matureOrSuggestiveThemes: 'NONE',
+  horrorOrFearThemes: 'NONE',
+  alcoholTobaccoOrDrugUseOrReferences: 'NONE',
+  sexualContentOrNudity: 'NONE',
+  sexualContentGraphicAndNudity: 'NONE',
+  gunsOrOtherWeapons: 'NONE',
+  contests: 'NONE',
+  medicalOrTreatmentInformation: 'INFREQUENT_OR_MILD',
+  gambling: false,
+  gamblingSimulated: 'NONE',
+  unrestrictedWebAccess: false,
+  lootBox: false,
+  healthOrWellnessTopics: true,
+  messagingAndChat: false,
+  parentalControls: false,
+  ageAssurance: false,
+  userGeneratedContent: false,
+  advertising: false,
 }
 
 /** Privacy "nutrition label" (App Store Connect → App Privacy). Mirrors ios-native/PrivacyInfo.xcprivacy. */

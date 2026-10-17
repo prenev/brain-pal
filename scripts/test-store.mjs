@@ -36,7 +36,7 @@ assert.match(REVIEW.notes, /Restore purchases/); assert.match(REVIEW.notes, /com
 assert.match(REVIEW.notes, /no account is needed/i); assert.match(REVIEW.notes, /Delete account/)
 
 /* 3. generated fastlane files equal their source (run `npm run store:meta` after editing scripts/store-metadata.mjs) */
-for (const [k, v] of Object.entries(LISTING)) assert.equal(text(`fastlane/metadata/en-US/${k}.txt`).trim(), v.trim(), `fastlane/metadata/en-US/${k}.txt is stale`)
+for (const [k, v] of Object.entries(LISTING)) assert.equal(text(`fastlane/metadata/en-AU/${k}.txt`).trim(), v.trim(), `fastlane/metadata/en-AU/${k}.txt is stale`)
 assert.deepEqual(JSON.parse(text('fastlane/age_rating.json')), AGE_RATING, 'age_rating.json stale'); assert.deepEqual(JSON.parse(text('fastlane/app_privacy_details.json')), PRIVACY_LABEL, 'app_privacy_details.json stale')
 assert.equal(text('fastlane/metadata/review_information/notes.txt').trim(), REVIEW.notes.trim())
 
