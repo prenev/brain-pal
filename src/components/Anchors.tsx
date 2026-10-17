@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
-import { ArrowDown, ArrowUp, Check, Pencil, Plus, SkipForward, SlidersHorizontal, Trash2, Undo2 } from 'lucide-react'
+import { Check, Pencil, Plus, SkipForward, SlidersHorizontal, Trash2, Undo2 } from 'lucide-react'
 import CuteIcon from './CuteIcon'
 import { PalSays } from './Pal'
 import { sfx } from '../lib/sound'
@@ -109,6 +109,23 @@ export function AnchorsManager() {
   const full = !canAdd(anchors)
   const left = STARTERS.filter(s => !list.some(a => a.label.toLowerCase() === s.label.toLowerCase()))
   const add = () => { if (addAnchor(label, emoji, link || null)) { setLabel(''); setLink(''); setPicking(false) } }
+  // drag to reorder: the tile follows the finger; crossing half a neighbour swaps them (each swap is one moveAnchor step)
+  const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
+  const grab = useRef<{ id: string; y: number; h: number } | null>(null)
+  const onGrab = (e: PointerEvent<HTMLSpanElement>, id: string) => {
+    const li = e.currentTarget.closest('li') as HTMLElement
+    grab.current = { id, y: e.clientY, h: li.offsetHeight + 10 }
+    e.currentTarget.setPointerCapture(e.pointerId); setDrag({ id, dy: 0 })
+  }
+  const onMove = (e: PointerEvent<HTMLSpanElement>) => {
+    const g = grab.current; if (!g) return
+    let dy = e.clientY - g.y
+    const i = list.findIndex(a => a.id === g.id)
+    if (dy > g.h / 2 && i < list.length - 1) { moveAnchor(g.id, 1); g.y += g.h; dy -= g.h }
+    else if (dy < -g.h / 2 && i > 0) { moveAnchor(g.id, -1); g.y -= g.h; dy += g.h }
+    setDrag({ id: g.id, dy })
+  }
+  const onDrop = () => { grab.current = null; setDrag(null) }
 
   return (
     <div className="aman">
@@ -124,14 +141,11 @@ export function AnchorsManager() {
       {list.length > 0 && <section>
         <h3 className="aman-h">Your anchors</h3>
         <ul className="aman-list">
-          {list.map((a, i) => (
-            <li key={a.id} className="aman-tile">
+          {list.map(a => (
+            <li key={a.id} className={`aman-tile ${drag?.id === a.id ? 'dragging' : ''}`} style={drag?.id === a.id ? { transform: `translateY(${drag.dy}px) scale(1.02)` } : undefined}>
+              <span className="aman-grip" role="button" aria-label={`Drag to reorder ${a.label}`} onPointerDown={e => onGrab(e, a.id)} onPointerMove={onMove} onPointerUp={onDrop} onPointerCancel={onDrop}><i /><i /><i /><i /><i /><i /></span>
               <span className="ablob"><Emoji name={a.emoji} size={30} /></span>
               <span className="aman-text"><b>{a.label}</b>{a.link && <small>Ticks itself after {LINK_LABEL[a.link]}</small>}</span>
-              <span className="aman-move">
-                <button aria-label={`Move ${a.label} up`} disabled={i === 0} onClick={() => moveAnchor(a.id, -1)}><ArrowUp size={16} strokeWidth={2.8} /></button>
-                <button aria-label={`Move ${a.label} down`} disabled={i === list.length - 1} onClick={() => moveAnchor(a.id, 1)}><ArrowDown size={16} strokeWidth={2.8} /></button>
-              </span>
               <button className="aman-del" aria-label={`Remove ${a.label}`} onClick={() => removeAnchor(a.id)}><Trash2 size={18} /></button>
             </li>
           ))}
