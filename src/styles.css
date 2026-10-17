@@ -1093,3 +1093,12 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .notes-row button.on { color: var(--accent); background: none; box-shadow: none; position: relative; }
 .notes-row .fmt-bar button.on::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
 .jday-mark.wob { border-radius: 50%; background: rgba(183,156,255,.14); overflow: visible; } .jday-mark.wob .pal { transform: scale(1.12) translateY(1px); }
+/* journal: Wobbi with today's prompt in a speech bubble (like the anchors page) */
+.jwobbi { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 14px; text-align: left; }
+.jw-pal { flex: none; width: 78px; height: 78px; border-radius: 26px; display: grid; place-items: center; background: rgba(183,156,255,.14); }
+.jw-bubble { position: relative; flex: 1; min-width: 0; display: grid; gap: 4px; padding: 12px 14px; border-radius: 20px; background: var(--card); border: 2px solid var(--edge); border-bottom-width: 4px; }
+.jw-bubble::before { content: ''; position: absolute; left: -9px; top: 50%; width: 14px; height: 14px; background: var(--card); border-left: 2px solid var(--edge); border-bottom: 2px solid var(--edge); transform: translateY(-50%) rotate(45deg); }
+.jw-bubble small { color: var(--muted); font-weight: 800; font-size: 12.5px; }
+.jw-bubble b { font-size: 16px; line-height: 1.3; }
+.jw-bubble em { font-style: normal; display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-weight: 900; font-size: 14px; }
+.jwobbi:active .jw-bubble { transform: translateY(1px); border-bottom-width: 3px; }
