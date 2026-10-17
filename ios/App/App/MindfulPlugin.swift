@@ -59,7 +59,9 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "voiceStop", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "voicePlay", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "voicePause", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "voiceDiscard", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "voiceDiscard", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voiceLoad", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voiceSeek", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -311,6 +313,9 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
     private var speechRecognizer: SFSpeechRecognizer?
     private var speechActive = false
     private var speechLast = ""
+    /// Voice journal: phrases from recognition tasks that already ended (a task can end after a pause or a hiccup; its words must not be lost).
+    private var speechCommitted = ""
+    private var voiceMode = false
 
     private func makeRecognizer(_ locale: String?) -> SFSpeechRecognizer? {
         let l = locale.map { Locale(identifier: $0) } ?? Locale.current
@@ -356,22 +361,33 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// One recognition task per phrase run; when it finishes while we are still listening, a new one takes over without dropping audio.
+    /// In voice-journal mode the words of every finished task are kept (`speechCommitted`) and the whole transcript is sent each time.
     private func startSpeechTask() {
         guard speechActive, let recognizer = speechRecognizer else { return }
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.requiresOnDeviceRecognition = true
+        if #available(iOS 16.0, *) { request.addsPunctuation = true }
         speechRequest = request
+        var current = ""
         speechTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self = self else { return }
             if let result = result {
-                self.speechLast = result.bestTranscription.formattedString
-                self.notifyListeners("speechResult", data: ["text": self.speechLast, "isFinal": result.isFinal])
+                current = result.bestTranscription.formattedString
+                self.speechLast = current
+                if self.voiceMode { self.notifyListeners("voiceTranscript", data: ["final": self.speechCommitted, "interim": current]) }
+                else { self.notifyListeners("speechResult", data: ["text": current, "isFinal": result.isFinal]) }
             }
             if (result?.isFinal ?? false) || error != nil {
                 DispatchQueue.main.async {
+                    if self.voiceMode, !current.isEmpty {
+                        self.speechCommitted = self.speechCommitted.isEmpty ? current : self.speechCommitted + " " + current
+                        current = ""
+                        self.notifyListeners("voiceTranscript", data: ["final": self.speechCommitted, "interim": ""])
+                    }
                     self.speechTask = nil
-                    if self.speechActive { self.startSpeechTask() }
+                    // a task that failed straight away would spin: give the recogniser a breath before the next one
+                    if self.speechActive { DispatchQueue.main.asyncAfter(deadline: .now() + (error != nil ? 0.3 : 0)) { if self.speechActive && self.speechTask == nil { self.startSpeechTask() } } }
                 }
             }
         }
@@ -428,7 +444,7 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         let settings: [String: Any] = [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: format.sampleRate, AVNumberOfChannelsKey: format.channelCount, AVEncoderBitRateKey: 64000]
         voiceFile = try AVAudioFile(forWriting: url, settings: settings, commonFormat: format.commonFormat, interleaved: format.isInterleaved)
         voiceURL = url; voiceStarted = Date()
-        speechRecognizer = recognizer; speechActive = recognizer != nil; speechLast = ""
+        speechRecognizer = recognizer; speechActive = recognizer != nil; speechLast = ""; speechCommitted = ""; voiceMode = true
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             guard let self = self else { return }
@@ -452,13 +468,16 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
     /// Stops, closes the file and hands it to JS (base64, so it can be kept with the entry). The session goes back to playback through the speaker.
     @objc func voiceStop(_ call: CAPPluginCall) {
         let elapsed = voiceStarted.map { Date().timeIntervalSince($0) } ?? 0
+        let open = speechTask != nil ? speechLast : ""
+        let transcript = [speechCommitted, open].filter { !$0.isEmpty }.joined(separator: " ")
+        voiceMode = false
         endSpeech()
         voiceFile = nil
         voiceStarted = nil
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         guard let url = voiceURL, let data = try? Data(contentsOf: url) else { call.reject("Couldn’t save that recording.", "FAILED"); return }
         let duration = (try? AVAudioPlayer(contentsOf: url).duration) ?? elapsed
-        call.resolve(["path": url.path, "durationSec": duration, "mime": "audio/mp4", "base64": data.base64EncodedString()])
+        call.resolve(["path": url.path, "durationSec": duration, "mime": "audio/mp4", "base64": data.base64EncodedString(), "transcript": transcript])
     }
 
     @objc func voicePlay(_ call: CAPPluginCall) {
@@ -468,6 +487,7 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
                 if self.voicePlayer?.url?.path != path {
                     self.stopVoicePlayer()
                     self.voicePlayer = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
+                    self.voicePlayer?.isMeteringEnabled = true
                     self.voicePlayer?.prepareToPlay()
                 }
                 let session = AVAudioSession.sharedInstance()
@@ -476,7 +496,7 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
                 if let p = self.voicePlayer, p.currentTime >= p.duration - 0.05 { p.currentTime = 0 }
                 self.voicePlayer?.play()
                 self.voiceTimer?.invalidate()
-                self.voiceTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.reportPlayback() }
+                self.voiceTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in self?.reportPlayback() }
                 self.reportPlayback()
                 call.resolve()
             } catch { call.reject("Couldn’t play that recording.", "FAILED") }
@@ -485,6 +505,18 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func voicePause(_ call: CAPPluginCall) {
         DispatchQueue.main.async { self.voicePlayer?.pause(); self.voiceTimer?.invalidate(); self.reportPlayback(); call.resolve() }
+    }
+
+    /// A saved clip (kept by the app as base64) written to a temporary file so AVAudioPlayer can play it.
+    @objc func voiceLoad(_ call: CAPPluginCall) {
+        guard let b64 = call.getString("base64"), let data = Data(base64Encoded: b64) else { call.reject("No audio."); return }
+        let ext = (call.getString("mime") ?? "").contains("mp4") || (call.getString("mime") ?? "").contains("m4a") ? "m4a" : (call.getString("mime") ?? "").contains("webm") ? "webm" : "caf"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("wobbi-play-\(UUID().uuidString).\(ext)")
+        do { try data.write(to: url); call.resolve(["path": url.path]) } catch { call.reject("Couldn’t open that recording.") }
+    }
+
+    @objc func voiceSeek(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { if let p = self.voicePlayer { p.currentTime = max(0, min(p.duration, call.getDouble("at") ?? 0)) }; self.reportPlayback(); call.resolve() }
     }
 
     @objc func voiceDiscard(_ call: CAPPluginCall) {
@@ -497,9 +529,13 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func reportPlayback() {
         guard let p = voicePlayer else { return }
+        if p.isPlaying {
+            p.updateMeters()
+            notifyListeners("voiceLevel", data: ["level": min(1, max(0, (p.averagePower(forChannel: 0) + 50) / 42)), "path": p.url?.path ?? ""])
+        }
         let ended = !p.isPlaying && p.currentTime == 0 && voiceTimer?.isValid == true
         if ended { voiceTimer?.invalidate() }
-        notifyListeners("voicePlayback", data: ["state": p.isPlaying ? "playing" : (ended ? "ended" : "paused"), "at": p.currentTime, "duration": p.duration])
+        notifyListeners("voicePlayback", data: ["state": p.isPlaying ? "playing" : (ended ? "ended" : "paused"), "at": p.currentTime, "duration": p.duration, "path": p.url?.path ?? ""])
     }
 
     private func stopVoicePlayer() {

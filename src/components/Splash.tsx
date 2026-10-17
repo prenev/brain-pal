@@ -6,7 +6,6 @@ export default function Splash() {
     <div className="splash" role="status" aria-label="Wobbi is loading">
       <Pal pose="wave" motion="wave" size={170} />
       <h1>Wobbi</h1>
-      <p>Getting things ready…</p>
     </div>
   )
 }

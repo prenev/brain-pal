@@ -31,7 +31,7 @@ export default function EntryCard({ t, onDelete }: { t: Thought; onDelete?: (id:
   const date = new Date(t.createdAt).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
   return (
     <div className="card entry" onClick={() => setOpen(!open)}>
-      <Face mood={t.mood} size={64} />
+      <Face mood={t.mood} size={56} bare />
       <div className="body">
         <div className="row spread" style={{ alignItems: 'flex-start' }}>
           <div>
