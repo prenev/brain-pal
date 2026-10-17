@@ -54,7 +54,12 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "liveActivityEnd", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "speechAvailable", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "speechStart", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "speechStop", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "speechStop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voiceStart", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voiceStop", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voicePlay", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voicePause", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "voiceDiscard", returnType: CAPPluginReturnPromise)
     ]
 
     // Strong references: both sessions are deallocated (and silently cancel) if nothing holds them.
@@ -385,6 +390,121 @@ public class MindfulPlugin: CAPPlugin, CAPBridgedPlugin {
         let text = speechLast
         endSpeech()
         call.resolve(["text": text])
+    }
+
+    // MARK: Voice journal recorder (native): ONE microphone tap writes an .m4a and feeds the on-device captions, so the two never
+    // fight over the mic. Levels are sent ~12×/s for the animation. Playback is AVAudioPlayer, through the speaker.
+    private var voiceFile: AVAudioFile?
+    private var voiceURL: URL?
+    private var voiceStarted: Date?
+    private var voiceLevelAt: CFTimeInterval = 0
+    private var voicePlayer: AVAudioPlayer?
+    private var voiceTimer: Timer?
+
+    @objc func voiceStart(_ call: CAPPluginCall) {
+        AVAudioSession.sharedInstance().requestRecordPermission { granted in
+            DispatchQueue.main.async {
+                guard granted else { call.reject("The microphone is turned off for Wobbi. You can allow it in Settings.", "DENIED"); return }
+                let r = self.makeRecognizer(call.getString("locale"))
+                let canCaption = (r?.isAvailable ?? false) && (r?.supportsOnDeviceRecognition ?? false)
+                let begin = { (captions: Bool) in
+                    do { try self.beginVoice(captions ? r : nil); call.resolve(["captions": captions]) }
+                    catch { self.endSpeech(); self.voiceFile = nil; call.reject("Couldn’t start recording.", "FAILED") }
+                }
+                if canCaption { SFSpeechRecognizer.requestAuthorization { st in DispatchQueue.main.async { begin(st == .authorized) } } }
+                else { begin(false) }
+            }
+        }
+    }
+
+    private func beginVoice(_ recognizer: SFSpeechRecognizer?) throws {
+        endSpeech(); stopVoicePlayer()
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+        try session.setActive(true)
+        let input = speechEngine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("wobbi-voice-\(UUID().uuidString).m4a")
+        let settings: [String: Any] = [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: format.sampleRate, AVNumberOfChannelsKey: format.channelCount, AVEncoderBitRateKey: 64000]
+        voiceFile = try AVAudioFile(forWriting: url, settings: settings, commonFormat: format.commonFormat, interleaved: format.isInterleaved)
+        voiceURL = url; voiceStarted = Date()
+        speechRecognizer = recognizer; speechActive = recognizer != nil; speechLast = ""
+        input.removeTap(onBus: 0)
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+            guard let self = self else { return }
+            try? self.voiceFile?.write(from: buffer)
+            self.speechRequest?.append(buffer)
+            let now = CACurrentMediaTime()
+            if now - self.voiceLevelAt > 0.08, let ch = buffer.floatChannelData?[0] {
+                self.voiceLevelAt = now
+                let n = Int(buffer.frameLength); var sum: Float = 0; var count = 0
+                var i = 0; while i < n { sum += ch[i] * ch[i]; count += 1; i += 4 }
+                let rms = sqrt(sum / Float(max(1, count)))
+                let level = min(1, max(0, (20 * log10(max(rms, 0.000_001)) + 52) / 40))   // about -52 dB → 0, -12 dB → 1
+                self.notifyListeners("voiceLevel", data: ["level": level])
+            }
+        }
+        speechEngine.prepare()
+        try speechEngine.start()
+        if recognizer != nil { startSpeechTask() }
+    }
+
+    /// Stops, closes the file and hands it to JS (base64, so it can be kept with the entry). The session goes back to playback through the speaker.
+    @objc func voiceStop(_ call: CAPPluginCall) {
+        let elapsed = voiceStarted.map { Date().timeIntervalSince($0) } ?? 0
+        endSpeech()
+        voiceFile = nil
+        voiceStarted = nil
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        guard let url = voiceURL, let data = try? Data(contentsOf: url) else { call.reject("Couldn’t save that recording.", "FAILED"); return }
+        let duration = (try? AVAudioPlayer(contentsOf: url).duration) ?? elapsed
+        call.resolve(["path": url.path, "durationSec": duration, "mime": "audio/mp4", "base64": data.base64EncodedString()])
+    }
+
+    @objc func voicePlay(_ call: CAPPluginCall) {
+        guard let path = call.getString("path") else { call.reject("No recording."); return }
+        DispatchQueue.main.async {
+            do {
+                if self.voicePlayer?.url?.path != path {
+                    self.stopVoicePlayer()
+                    self.voicePlayer = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
+                    self.voicePlayer?.prepareToPlay()
+                }
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(.playback, mode: .default)
+                try session.setActive(true)
+                if let p = self.voicePlayer, p.currentTime >= p.duration - 0.05 { p.currentTime = 0 }
+                self.voicePlayer?.play()
+                self.voiceTimer?.invalidate()
+                self.voiceTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.reportPlayback() }
+                self.reportPlayback()
+                call.resolve()
+            } catch { call.reject("Couldn’t play that recording.", "FAILED") }
+        }
+    }
+
+    @objc func voicePause(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { self.voicePlayer?.pause(); self.voiceTimer?.invalidate(); self.reportPlayback(); call.resolve() }
+    }
+
+    @objc func voiceDiscard(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.stopVoicePlayer()
+            if let path = call.getString("path") { try? FileManager.default.removeItem(atPath: path) }
+            call.resolve()
+        }
+    }
+
+    private func reportPlayback() {
+        guard let p = voicePlayer else { return }
+        let ended = !p.isPlaying && p.currentTime == 0 && voiceTimer?.isValid == true
+        if ended { voiceTimer?.invalidate() }
+        notifyListeners("voicePlayback", data: ["state": p.isPlaying ? "playing" : (ended ? "ended" : "paused"), "at": p.currentTime, "duration": p.duration])
+    }
+
+    private func stopVoicePlayer() {
+        voiceTimer?.invalidate(); voiceTimer = nil
+        voicePlayer?.stop(); voicePlayer = nil
     }
 
     // MARK: Wobbi Pro (StoreKit 2, auto-renewing monthly subscription)

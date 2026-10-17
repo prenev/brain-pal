@@ -223,7 +223,7 @@ function Shell() {
       {screen === 'summary' && <Screen title="Summary" onClose={() => setScreen(null)}><Summary /></Screen>}
       {(screen === 'coins' || screen === 'achievements') && <Screen title="Rewards" onClose={() => setScreen(null)}><Wallet initial={screen === 'achievements' ? 'achievements' : 'shop'} /></Screen>}
       {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
-      {journalOpen?.voice && <VoiceJournal onClose={() => setJournalOpen(null)} onDone={r => setJournalOpen({ initial: { body: r.transcript, clip: r.clip } })} />}
+      {journalOpen?.voice && <VoiceJournal onClose={() => setJournalOpen(null)} onSaved={() => { setJournalOpen(null); setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Saying it out loud counts. Thank you for taking the time.' }) }} />}
       {journalOpen && !journalOpen.voice && <JournalEditor entry={journalOpen.entry} initial={journalOpen.initial} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
