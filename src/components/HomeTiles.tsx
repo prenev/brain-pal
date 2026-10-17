@@ -1,11 +1,11 @@
-import { Check, Lock, Pause, PenLine, Play } from 'lucide-react'
+import { Lock, Pause, PenLine, Play } from 'lucide-react'
 import Pal from './Pal'
 import { Footprints, Jar } from '@phosphor-icons/react'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { usePomo } from '../lib/pomoStore'
 import { guardSupported } from '../lib/guardNative'
-import { dayKey } from '../lib/dates'
+import { dayKey, shift } from '../lib/dates'
 import { fmtClock, stepChoices } from '../lib/focus.ts'
 import { PHASE_LABEL, phaseMinutes, shouldBlock } from '../lib/pomodoro.ts'
 import type { PoseName } from '../lib/pal.ts'
@@ -36,14 +36,15 @@ export function FocusCard({ onOpen }: { onOpen: () => void }) {
 /** Big Journal card: today's prompt and how often you wrote this week, with Wobbi reading. */
 export function JournalCard({ onOpen }: { onOpen: () => void }) {
   const { journal } = useStore()
-  const today = dayKey(new Date()), week = new Date(Date.now() - 6 * 864e5).toISOString()
-  const n = new Set(journal.filter(e => e.createdAt >= week).map(e => dayKey(e.createdAt))).size   // days written, like the focus card's blocks
-  const wrote = journal.some(e => dayKey(e.createdAt) === today)
+  const today = dayKey(new Date())
+  const days = new Set(journal.map(e => dayKey(e.createdAt)))
+  const wrote = days.has(today)
+  let run = 0; for (let d = wrote ? today : shift(today, -1); days.has(d); d = shift(d, -1)) run++   // days in a row with an entry (today still open)
   return (
     <button className="big-card journal-card" onClick={onOpen} aria-label="Journal">
-      <span className="big-kicker">{wrote ? <><Check size={13} strokeWidth={3.4} /> Journal · today’s done</> : 'Journal'}</span>
+      <span className="big-kicker">Journal</span>
       <b className="big-title">{wrote ? <>Add to<br />today’s page</> : <>Write or<br />talk it out</>}</b>
-      <span className="big-sub">{n ? `${n}/7 days this week` : 'One line is enough'}</span>
+      <span className="big-sub">{run > 0 ? <><Emoji name="fire" size={15} style={{ verticalAlign: -2 }} /> {run} {run === 1 ? 'day' : 'days'} in a row</> : 'One line is enough'}</span>
       <span className="big-cta"><PenLine size={14} strokeWidth={3} /> Write</span>
       <span className="big-art" aria-hidden="true"><Pal pose="read" size={118} motion="still" /></span>
     </button>
