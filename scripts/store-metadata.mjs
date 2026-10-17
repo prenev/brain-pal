@@ -122,4 +122,5 @@ export const PRIVACY_LABEL = [
   { category: 'OTHER_USER_CONTENT', purposes: ['APP_FUNCTIONALITY'], data_protections: ['DATA_LINKED_TO_YOU'] },
   { category: 'PHOTOS_OR_VIDEOS', purposes: ['APP_FUNCTIONALITY'], data_protections: ['DATA_LINKED_TO_YOU'] },
   { category: 'AUDIO_DATA', purposes: ['APP_FUNCTIONALITY'], data_protections: ['DATA_LINKED_TO_YOU'] },
+  { category: 'HEALTH', purposes: ['APP_FUNCTIONALITY'], data_protections: ['DATA_LINKED_TO_YOU'] },   // mood entries + hand-logged sleep, synced only with an account (Apple Health data stays on the phone)
 ]

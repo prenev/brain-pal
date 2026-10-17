@@ -43,5 +43,14 @@
     "data_protections": [
       "DATA_LINKED_TO_YOU"
     ]
+  },
+  {
+    "category": "HEALTH",
+    "purposes": [
+      "APP_FUNCTIONALITY"
+    ],
+    "data_protections": [
+      "DATA_LINKED_TO_YOU"
+    ]
   }
 ]
