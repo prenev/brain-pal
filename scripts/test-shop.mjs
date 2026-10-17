@@ -16,7 +16,7 @@ for (const r of RARITIES) assert.ok(COLLECTIBLES.some(i => i.rarity === r), `som
 for (const id of ['theme-ocean', 'theme-sunset', 'theme-berry', 'theme-lavender', 'restday', 'treat']) assert.ok(itemById(id), id)
 assert.ok(itemById('theme-ocean').color.startsWith('#'))
 // every outfit item has art and a slot that matches it
-for (const i of SHOP.filter(x => x.kind === 'outfit')) { const a = accessoryById(i.id.replace('outfit-', '')); assert.ok(a && a.slot === i.slot && a.art.includes('<'), i.id) }
+for (const i of SHOP.filter(x => x.kind === 'outfit')) { const a = accessoryById(i.id.replace('outfit-', '')); assert.ok(a && a.slot === i.slot && (a.front || a.back || '').includes('<'), i.id) }
 for (const a of ACCESSORIES) assert.ok(SHOP.some(i => i.id === `outfit-${a.id}`), a.id + ' is for sale')
 for (const i of SHOP.filter(x => x.kind === 'card')) assert.equal(i.stops.length, 3)
 
@@ -54,6 +54,12 @@ assert.ok(palBody('party', worn).includes('acc-crown') === false, 'the Party pos
 assert.ok(palBody('idle', worn).includes('acc-crown') && palBody('idle', worn).includes('acc-glasses'))
 const back = outfitLayers({ back: 'wings', head: 'halo' }); assert.ok(back.back.includes('acc-wings') && !back.back.includes('acc-halo') && back.front.includes('acc-halo'))
 assert.equal(outfitLayers(undefined).back + outfitLayers(undefined).front, '')
+// the space helmet covers the face and neck pieces; the 3D glasses show without it
+const astro = outfitLayers({ head: 'astronaut', face: '3d', neck: 'bowtie' }); assert.ok(astro.front.includes('acc-astronaut') && !astro.front.includes('acc-3d') && !astro.front.includes('acc-bowtie'))
+assert.ok(outfitLayers({ face: '3d' }).front.includes('acc-3d'))
+// every piece renders, has its own gradient ids only (no clashes between worn pieces) and is balanced SVG
+assert.ok(ACCESSORIES.length >= 39)
+for (const a of ACCESSORIES) { const l = outfitLayers({ [a.slot]: a.id }); const svg = l.back + l.front; assert.ok(svg.includes('acc-' + a.id), a.id); assert.equal((svg.match(/<g[ >]/g) || []).length, (svg.match(/<\/g>/g) || []).length, a.id + ' balanced groups'); for (const m of svg.matchAll(/url\(#(wa-[\w-]+)\)/g)) assert.ok(svg.includes('id="' + m[1] + '"'), a.id + ' defines ' + m[1]) }
 // the cape is drawn behind the body
 assert.ok(palBody('idle', { back: 'cape' }).indexOf('acc-cape') < palBody('idle', { back: 'cape' }).indexOf('class="leg"') || palBody('idle', { back: 'cape' }).indexOf('acc-cape') < palBody('idle', { back: 'cape' }).indexOf('<g class="arm'))
 assert.ok(palSvg('idle', { outfit: worn }).startsWith('<svg')); for (const s of SLOTS) assert.ok(ACCESSORIES.some(a => a.slot === s), s)

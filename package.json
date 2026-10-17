@@ -21,7 +21,8 @@
     "site": "node scripts/make-site.mjs",
     "store:screens": "node scripts/make-appstore-screenshots.mjs",
     "store:check": "node scripts/check-store.mjs",
-    "sprites": "node scripts/make-pal-sprites.mjs"
+    "sprites": "node scripts/make-pal-sprites.mjs",
+    "wardrobe": "node scripts/make-wardrobe.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

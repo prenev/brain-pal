@@ -28,11 +28,15 @@ const rarityOf: Record<string, Rarity> = {
   beanie: 'common', cap: 'common', bow: 'common', glasses: 'common', scarf: 'common', bowtie: 'common', backpack: 'common',
   flowers: 'rare', headphones: 'rare', heartshades: 'rare', starshades: 'rare', medal: 'rare',
   wizard: 'epic', crown: 'epic', cape: 'epic', halo: 'legendary', wings: 'legendary',
+  bandana: 'common', necktie: 'common', balloons: 'common', catears: 'common', monocle: 'rare', eyepatch: 'rare', '3d': 'rare', mustache: 'rare', pearls: 'rare', lei: 'rare', chef: 'rare', vr: 'rare', guitar: 'rare',
+  pirate: 'epic', knight: 'epic', viking: 'epic', tophat: 'epic', unicorn: 'epic', ruff: 'epic', butterfly: 'epic', astronaut: 'epic', jetpack: 'legendary',
 }
 const blurbOf: Record<string, string> = {
   beanie: 'Warm and a little bit silly.', cap: 'For brisk walks and focus blocks.', bow: 'A tiny bow for a big heart.', glasses: 'Looks very thoughtful.', scarf: 'Cosy in every season.', bowtie: 'Smart enough for a celebration.', backpack: 'Ready for whatever the day holds.',
   flowers: 'A crown of little flowers.', headphones: 'Lo-fi on, worries off.', heartshades: 'Seeing things on the bright side.', starshades: 'You are a star.', medal: 'For showing up again and again.',
   wizard: 'Turns hard days into a bit of magic.', crown: 'For the one who keeps going.', cape: 'Every small step is a superpower.', halo: 'A soft glow for the calmest of days.', wings: 'Light, free and ready to lift off.',
+  bandana: 'Polka dots, zero worries.', necktie: 'Dressed for a good day.', balloons: 'A little lift for your day.', catears: 'Soft, curious and a bit mischievous.', monocle: 'Very distinguished. Very Wobbi.', eyepatch: 'Ready for a gentle adventure.', '3d': 'Everything pops when you look closely.', mustache: 'A magnificent handlebar.', pearls: 'A sweet little heart on a string.', lei: 'A breezy flower garland.', chef: 'Cooking up something calm.', vr: 'Step into a quieter world.', guitar: 'Strum out the stress.',
+  pirate: 'Sails the sea of small wins.', knight: 'Brave, one step at a time.', viking: 'Sturdy horns for sturdy days.', tophat: 'Tip it to a good day.', unicorn: 'A touch of rainbow magic.', ruff: 'Fit for a very dignified fluff.', butterfly: 'Shimmering wings for gentle flights.', astronaut: 'Floating above the noise.', jetpack: 'Rocket-powered self-care.',
 }
 const OUTFITS: ShopItem[] = ACCESSORIES.map(a => ({ id: `outfit-${a.id}`, kind: 'outfit', name: a.name, cost: RARITY_PRICE[rarityOf[a.id]], blurb: blurbOf[a.id], repeatable: false, rarity: rarityOf[a.id], slot: a.slot }))
 

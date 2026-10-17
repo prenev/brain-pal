@@ -1,0 +1,482 @@
+{
+  "cell": 256,
+  "columns": 6,
+  "image": "wobbi-wardrobe.png",
+  "pieces": {
+    "beanie": {
+      "name": "Cosy beanie",
+      "slot": "head",
+      "rarity": "common",
+      "x": 0,
+      "y": 0,
+      "w": 256,
+      "h": 256
+    },
+    "cap": {
+      "name": "Sporty cap",
+      "slot": "head",
+      "rarity": "common",
+      "x": 256,
+      "y": 0,
+      "w": 256,
+      "h": 256
+    },
+    "bow": {
+      "name": "Pink bow",
+      "slot": "head",
+      "rarity": "common",
+      "x": 512,
+      "y": 0,
+      "w": 256,
+      "h": 256
+    },
+    "flowers": {
+      "name": "Flower crown",
+      "slot": "head",
+      "rarity": "rare",
+      "x": 768,
+      "y": 0,
+      "w": 256,
+      "h": 256
+    },
+    "headphones": {
+      "name": "Headphones",
+      "slot": "head",
+      "rarity": "rare",
+      "x": 1024,
+      "y": 0,
+      "w": 256,
+      "h": 256
+    },
+    "wizard": {
+      "name": "Wizard hat",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 1280,
+      "y": 0,
+      "w": 256,
+      "h": 256
+    },
+    "crown": {
+      "name": "Golden crown",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 0,
+      "y": 256,
+      "w": 256,
+      "h": 256
+    },
+    "halo": {
+      "name": "Halo",
+      "slot": "head",
+      "rarity": "legendary",
+      "x": 256,
+      "y": 256,
+      "w": 256,
+      "h": 256
+    },
+    "chef": {
+      "name": "Chef’s toque",
+      "slot": "head",
+      "rarity": "rare",
+      "x": 512,
+      "y": 256,
+      "w": 256,
+      "h": 256
+    },
+    "pirate": {
+      "name": "Pirate hat",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 768,
+      "y": 256,
+      "w": 256,
+      "h": 256
+    },
+    "knight": {
+      "name": "Knight’s helm",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 1024,
+      "y": 256,
+      "w": 256,
+      "h": 256
+    },
+    "astronaut": {
+      "name": "Space helmet",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 1280,
+      "y": 256,
+      "w": 256,
+      "h": 256
+    },
+    "viking": {
+      "name": "Viking helm",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 0,
+      "y": 512,
+      "w": 256,
+      "h": 256
+    },
+    "tophat": {
+      "name": "Top hat",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 256,
+      "y": 512,
+      "w": 256,
+      "h": 256
+    },
+    "unicorn": {
+      "name": "Unicorn horn",
+      "slot": "head",
+      "rarity": "epic",
+      "x": 512,
+      "y": 512,
+      "w": 256,
+      "h": 256
+    },
+    "catears": {
+      "name": "Cat ears",
+      "slot": "head",
+      "rarity": "common",
+      "x": 768,
+      "y": 512,
+      "w": 256,
+      "h": 256
+    },
+    "glasses": {
+      "name": "Round glasses",
+      "slot": "face",
+      "rarity": "common",
+      "x": 1024,
+      "y": 512,
+      "w": 256,
+      "h": 256
+    },
+    "heartshades": {
+      "name": "Heart shades",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 1280,
+      "y": 512,
+      "w": 256,
+      "h": 256
+    },
+    "starshades": {
+      "name": "Star shades",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 0,
+      "y": 768,
+      "w": 256,
+      "h": 256
+    },
+    "monocle": {
+      "name": "Monocle",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 256,
+      "y": 768,
+      "w": 256,
+      "h": 256
+    },
+    "eyepatch": {
+      "name": "Eye patch",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 512,
+      "y": 768,
+      "w": 256,
+      "h": 256
+    },
+    "vr": {
+      "name": "VR headset",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 768,
+      "y": 768,
+      "w": 256,
+      "h": 256
+    },
+    "3d": {
+      "name": "3D glasses",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 1024,
+      "y": 768,
+      "w": 256,
+      "h": 256
+    },
+    "mustache": {
+      "name": "Handlebar tache",
+      "slot": "face",
+      "rarity": "rare",
+      "x": 1280,
+      "y": 768,
+      "w": 256,
+      "h": 256
+    },
+    "scarf": {
+      "name": "Cosy scarf",
+      "slot": "neck",
+      "rarity": "common",
+      "x": 0,
+      "y": 1024,
+      "w": 256,
+      "h": 256
+    },
+    "bowtie": {
+      "name": "Bow tie",
+      "slot": "neck",
+      "rarity": "common",
+      "x": 256,
+      "y": 1024,
+      "w": 256,
+      "h": 256
+    },
+    "medal": {
+      "name": "Gold medal",
+      "slot": "neck",
+      "rarity": "rare",
+      "x": 512,
+      "y": 1024,
+      "w": 256,
+      "h": 256
+    },
+    "necktie": {
+      "name": "Necktie",
+      "slot": "neck",
+      "rarity": "common",
+      "x": 768,
+      "y": 1024,
+      "w": 256,
+      "h": 256
+    },
+    "bandana": {
+      "name": "Bandana",
+      "slot": "neck",
+      "rarity": "common",
+      "x": 1024,
+      "y": 1024,
+      "w": 256,
+      "h": 256
+    },
+    "pearls": {
+      "name": "Pearl necklace",
+      "slot": "neck",
+      "rarity": "rare",
+      "x": 1280,
+      "y": 1024,
+      "w": 256,
+      "h": 256
+    },
+    "ruff": {
+      "name": "Royal ruff",
+      "slot": "neck",
+      "rarity": "epic",
+      "x": 0,
+      "y": 1280,
+      "w": 256,
+      "h": 256
+    },
+    "lei": {
+      "name": "Flower lei",
+      "slot": "neck",
+      "rarity": "rare",
+      "x": 256,
+      "y": 1280,
+      "w": 256,
+      "h": 256
+    },
+    "backpack": {
+      "name": "Little backpack",
+      "slot": "back",
+      "rarity": "common",
+      "x": 512,
+      "y": 1280,
+      "w": 256,
+      "h": 256
+    },
+    "cape": {
+      "name": "Hero cape",
+      "slot": "back",
+      "rarity": "epic",
+      "x": 768,
+      "y": 1280,
+      "w": 256,
+      "h": 256
+    },
+    "wings": {
+      "name": "Angel wings",
+      "slot": "back",
+      "rarity": "legendary",
+      "x": 1024,
+      "y": 1280,
+      "w": 256,
+      "h": 256
+    },
+    "jetpack": {
+      "name": "Jetpack",
+      "slot": "back",
+      "rarity": "legendary",
+      "x": 1280,
+      "y": 1280,
+      "w": 256,
+      "h": 256
+    },
+    "butterfly": {
+      "name": "Butterfly wings",
+      "slot": "back",
+      "rarity": "epic",
+      "x": 0,
+      "y": 1536,
+      "w": 256,
+      "h": 256
+    },
+    "balloons": {
+      "name": "Balloons",
+      "slot": "back",
+      "rarity": "common",
+      "x": 256,
+      "y": 1536,
+      "w": 256,
+      "h": 256
+    },
+    "guitar": {
+      "name": "Guitar",
+      "slot": "back",
+      "rarity": "rare",
+      "x": 512,
+      "y": 1536,
+      "w": 256,
+      "h": 256
+    }
+  },
+  "looks": [
+    {
+      "id": "cosy",
+      "name": "Cosy day",
+      "pose": "idle",
+      "outfit": {
+        "head": "beanie",
+        "neck": "scarf",
+        "back": "backpack"
+      }
+    },
+    {
+      "id": "royal",
+      "name": "Royal",
+      "pose": "cheer",
+      "outfit": {
+        "head": "crown",
+        "neck": "ruff",
+        "back": "cape"
+      }
+    },
+    {
+      "id": "wizard",
+      "name": "Wizard",
+      "pose": "think",
+      "outfit": {
+        "head": "wizard",
+        "face": "glasses",
+        "neck": "bowtie"
+      }
+    },
+    {
+      "id": "angel",
+      "name": "Angel",
+      "pose": "love",
+      "outfit": {
+        "head": "halo",
+        "face": "heartshades",
+        "back": "wings"
+      }
+    },
+    {
+      "id": "astronaut",
+      "name": "Astronaut",
+      "pose": "cheer",
+      "outfit": {
+        "head": "astronaut",
+        "back": "jetpack"
+      }
+    },
+    {
+      "id": "pirate",
+      "name": "Pirate",
+      "pose": "flex",
+      "outfit": {
+        "head": "pirate",
+        "face": "eyepatch",
+        "neck": "bandana",
+        "back": "cape"
+      }
+    },
+    {
+      "id": "knight",
+      "name": "Knight",
+      "pose": "champ",
+      "outfit": {
+        "head": "knight",
+        "neck": "medal",
+        "back": "cape"
+      }
+    },
+    {
+      "id": "chef",
+      "name": "Chef",
+      "pose": "coffee",
+      "outfit": {
+        "head": "chef",
+        "face": "mustache",
+        "neck": "necktie"
+      }
+    },
+    {
+      "id": "fairy",
+      "name": "Fairy",
+      "pose": "wave",
+      "outfit": {
+        "head": "unicorn",
+        "neck": "pearls",
+        "back": "butterfly"
+      }
+    },
+    {
+      "id": "rocker",
+      "name": "Rock star",
+      "pose": "hype",
+      "outfit": {
+        "head": "headphones",
+        "face": "3d",
+        "neck": "bandana",
+        "back": "guitar"
+      }
+    },
+    {
+      "id": "party",
+      "name": "Party",
+      "pose": "cheer",
+      "outfit": {
+        "head": "tophat",
+        "face": "monocle",
+        "neck": "bowtie",
+        "back": "balloons"
+      }
+    },
+    {
+      "id": "viking",
+      "name": "Viking",
+      "pose": "flex",
+      "outfit": {
+        "head": "viking",
+        "neck": "lei",
+        "back": "backpack"
+      }
+    }
+  ]
+}
