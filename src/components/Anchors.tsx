@@ -14,7 +14,7 @@ const LINK_LABEL: Record<AnchorLink, string> = { breathing: 'a breathing session
 const OPEN = -156   // how far a swiped tile slides to show its actions
 
 /** One anchor as a list tile. Swipe it left for Skip today / Edit; tap (or the check) to tick it off. */
-function AnchorTile({ item, onTick, onSkip, onEdit }: { item: DayItem; onTick: (e: MouseEvent<HTMLButtonElement>) => void; onSkip: () => void; onEdit: () => void }) {
+function AnchorTile({ item, leaving = false, onTick, onSkip, onEdit }: { item: DayItem; leaving?: boolean; onTick: (e: MouseEvent<HTMLButtonElement>) => void; onSkip: () => void; onEdit: () => void }) {
   const { anchor, done, auto, manual, skipped } = item
   const [x, setX] = useState(0)
   const [drag, setDrag] = useState(false)
@@ -35,12 +35,12 @@ function AnchorTile({ item, onTick, onSkip, onEdit }: { item: DayItem; onTick: (
     if (!locked) onTick(e)
   }
   return (
-    <li className={`aswipe ${x !== 0 ? 'open' : ''}`}>
+    <li className={`aswipe ${x !== 0 ? 'open' : ''} ${leaving ? 'leaving' : ''}`}>
       <div className="aactions" aria-hidden={x === 0}>
         <button className="askip" tabIndex={x === 0 ? -1 : 0} onClick={() => { setX(0); onSkip() }}>{skipped ? <Undo2 size={22} /> : <SkipForward size={22} />}<span>{skipped ? 'Unskip' : 'Skip'}</span></button>
         <button className="aedit" tabIndex={x === 0 ? -1 : 0} onClick={() => { setX(0); onEdit() }}><Pencil size={20} /><span>Edit</span></button>
       </div>
-      <button role="checkbox" aria-checked={done} aria-label={anchor.label} className={`arow ${done ? 'done' : ''} ${skipped ? 'skipped' : ''} ${drag ? 'drag' : ''}`}
+      <button role="checkbox" aria-checked={done} aria-label={anchor.label} className={`arow ${done || leaving ? 'done' : ''} ${skipped ? 'skipped' : ''} ${drag ? 'drag' : ''}`}
         style={{ transform: `translateX(${x}px)` }} title={locked ? 'Done automatically: you did it in the app' : undefined}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onClick={click}>
         <span className="agrip" aria-hidden="true"><i /><i /><i /></span>
@@ -55,6 +55,8 @@ function AnchorTile({ item, onTick, onSkip, onEdit }: { item: DayItem; onTick: (
 
 export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
   const { anchorsToday: p, anchorStreak: st, toggleAnchor, skipAnchor } = useStore()
+  const [leaving, setLeaving] = useState<Set<string>>(new Set())   // ticked tiles sliding away
+  const [showDone, setShowDone] = useState(false)
 
   if (p.items.length === 0) return (
     <button className="arow add" onClick={onEdit}>
@@ -63,25 +65,30 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
     </button>
   )
 
+  // a ticked anchor celebrates, slides away, and is gone from the list (Show done brings them back to untick)
   const tick = (e: MouseEvent<HTMLButtonElement>, id: string, done: boolean) => {
-    toggleAnchor(id)
-    if (done) return
+    if (done) { toggleAnchor(id); return }
     const r = e.currentTarget.getBoundingClientRect()
     sfx('success'); hapticSuccess(); burstAt(r.left + r.width / 2, r.top + r.height / 2)
-    if (p.done + 1 === p.total) onAllDone()
+    setLeaving(l => new Set(l).add(id))
+    setTimeout(() => { toggleAnchor(id); setLeaving(l => { const n = new Set(l); n.delete(id); return n }) }, 420)
+    if (p.done + 1 === p.total) setTimeout(onAllDone, 450)
   }
+  const shown = p.items.filter(i => showDone || (!i.done && !i.skipped) || leaving.has(i.anchor.id))
+  const hidden = p.items.length - p.items.filter(i => (!i.done && !i.skipped) || leaving.has(i.anchor.id)).length
   const left = p.total - p.done
   const streakLine = st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : null
   return (
     <section className="anchors" aria-label="Daily anchors">
       <div className="anchors-head">
         <b role="img" aria-label={`${p.done} of ${p.total} done`}>{left > 0 ? `${left} ${left === 1 ? 'anchor' : 'anchors'} left for today` : 'All anchors done today!'}</b>
+        {hidden > 0 && <button className="linkbtn anchors-edit" onClick={() => setShowDone(!showDone)}>{showDone ? 'Hide done' : `Show done (${hidden})`}</button>}
         <button className="linkbtn anchors-edit" onClick={onEdit}>Edit</button>
         {streakLine && <span className="muted small anchors-streak"><Emoji name="fire" size={14} style={{ verticalAlign: -2 }} /> {streakLine}</span>}
       </div>
-      <ul className="anchor-list">
-        {p.items.map(item => <AnchorTile key={item.anchor.id} item={item} onTick={e => tick(e, item.anchor.id, item.manual)} onSkip={() => skipAnchor(item.anchor.id)} onEdit={onEdit} />)}
-      </ul>
+      {shown.length > 0 && <ul className="anchor-list">
+        {shown.map(item => <AnchorTile key={item.anchor.id} leaving={leaving.has(item.anchor.id)} item={item} onTick={e => tick(e, item.anchor.id, item.manual)} onSkip={() => skipAnchor(item.anchor.id)} onEdit={onEdit} />)}
+      </ul>}
     </section>
   )
 }

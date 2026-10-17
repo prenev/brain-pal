@@ -963,3 +963,6 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .daycard .entry .etraps .chip::before { content: '· '; }
 .daycard .entry .player { padding: 0; background: none; border: 0; }
 .daycard .entry .etranscript { padding: 0; margin-top: 8px; background: none; border: 0; border-radius: 0; color: var(--muted); }
+.aswipe.leaving { animation: anchorGone .42s cubic-bezier(.5,0,.75,0) forwards; pointer-events: none; }
+@keyframes anchorGone { 0% { max-height: 90px; opacity: 1; transform: none; } 45% { opacity: 1; transform: translateX(0) scale(1.02); } 100% { max-height: 0; opacity: 0; transform: translateX(60%) scale(.96); margin-bottom: -10px; } }
+.anchors .arow.done .alabel { text-decoration: none; }
