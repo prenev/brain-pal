@@ -58,9 +58,21 @@ export interface MindfulPlugin {
   /** Asks for speech permission if needed, then streams `speechResult` events until speechStop. */
   speechStart(opts: { locale?: string }): Promise<void>
   speechStop(): Promise<{ text: string }>
+  /** Voice journal (native): one mic tap records an .m4a and, when the phone can do it offline, streams `speechResult` captions + `voiceLevel`. */
+  voiceStart(opts: { locale?: string }): Promise<{ captions: boolean }>
+  /** Stops and returns the recording (base64 m4a) plus its file path for native playback. */
+  voiceStop(): Promise<{ path: string; durationSec: number; mime: string; base64: string }>
+  /** Plays the file through the speaker; progress arrives as `voicePlayback` events. */
+  voicePlay(opts: { path: string }): Promise<void>
+  voicePause(): Promise<void>
+  /** Stops playback and deletes the temporary file. */
+  voiceDiscard(opts: { path?: string }): Promise<void>
   /** Fired when a native tab is tapped. */
   addListener(eventName: 'tabSelected', cb: (e: { id: string }) => void): Promise<PluginListenerHandle>
   /** Live captions: the whole phrase heard so far (it grows and is replaced); isFinal closes the phrase. */
   addListener(eventName: 'speechResult', cb: (e: { text: string; isFinal: boolean }) => void): Promise<PluginListenerHandle>
+  /** Voice journal: microphone level 0–1, about 12 times a second. */
+  addListener(eventName: 'voiceLevel', cb: (e: { level: number }) => void): Promise<PluginListenerHandle>
+  addListener(eventName: 'voicePlayback', cb: (e: { state: 'playing' | 'paused' | 'ended'; at: number; duration: number }) => void): Promise<PluginListenerHandle>
 }
 export const Mindful = registerPlugin<MindfulPlugin>('Mindful')

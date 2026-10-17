@@ -16,7 +16,7 @@ const monthTitle = (key: string) => new Date(+key.slice(0, 4), +key.slice(5, 7) 
 /** One day's marker: a mood face when the day has entries, a dot for entries without a mood, a dim ghost when nothing was written. */
 function Marker({ info, size = 40 }: { info?: { count: number; mood: number | null }; size?: number }) {
   if (!info) return <span className="jday-ghost" style={{ width: size, height: size }} aria-hidden="true" />
-  return <span className="jday-mark" style={{ width: size, height: size }} aria-hidden="true">{info.mood ? <Face mood={info.mood} size={size} /> : <i className="jday-dot"><PenLine size={size * 0.45} /></i>}{info.count > 1 && <b>{info.count}</b>}</span>
+  return <span className="jday-mark" style={{ width: size, height: size }} aria-hidden="true">{info.mood ? <Face mood={info.mood} size={size} /> : <i className="jday-dot" />}{info.count > 1 && <b>{info.count}</b>}</span>
 }
 
 /** The + button fans out into two choices: write, or talk it out. */
@@ -104,7 +104,7 @@ export default function JournalHome({ onClose, onOpen, onWrite, onVoice }: { onC
               <button key={e.id} className={`card jentry jcal ${isToday ? 'today' : ''}`} onClick={() => onOpen(e)} aria-label={`Journal entry: ${e.title || previewOf(e, 40) || 'untitled'}`}>
                 <span className="jc-date" aria-hidden="true">
                   <b>{d.getDate()}</b><span>{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
-                  {e.mood ? <Face mood={e.mood} size={34} /> : <i className="jc-dot"><PenLine size={15} /></i>}
+                  {e.mood ? <Face mood={e.mood} size={30} /> : null}
                 </span>
                 <span className="jc-body">
                   <span className="jc-meta muted small">{d.toLocaleDateString(undefined, { month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })} · {d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}{e.audio && <Mic size={14} aria-label="Has a voice note" />}</span>
