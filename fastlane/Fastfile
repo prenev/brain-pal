@@ -45,7 +45,7 @@ platform :ios do
     dir = File.expand_path("screenshots/en-AU", Dir.pwd)
     FileUtils.rm_rf(File.expand_path("screenshots", Dir.pwd)); FileUtils.mkdir_p(dir)
     Dir.glob(File.expand_path("../store/screenshots/*/*.png", Dir.pwd)).sort.each { |f| FileUtils.cp(f, File.join(dir, "#{File.basename(File.dirname(f)).sub('-inch', '')}_#{File.basename(f)}")) }
-    deliver(api_key: asc_key, skip_binary_upload: true, skip_metadata: true, force: true, submit_for_review: false, overwrite_screenshots: true, screenshots_path: "fastlane/screenshots")
+    deliver(api_key: asc_key, skip_binary_upload: true, skip_metadata: true, force: true, submit_for_review: false, overwrite_screenshots: true, screenshots_path: "fastlane/screenshots", precheck_include_in_app_purchases: false)
     FileUtils.rm_rf(File.expand_path("screenshots", Dir.pwd))
   end
 end
