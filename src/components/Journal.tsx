@@ -1,3 +1,5 @@
+import { Keyboard } from '@capacitor/keyboard'
+import { isNative } from '../lib/native'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bold, ChevronLeft, Heading1, Italic, List, ListOrdered, Mic, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
@@ -20,16 +22,43 @@ const FORMATS: { kind: FormatKind; label: string; icon: typeof Bold }[] = [
   { kind: 'heading', label: 'Heading', icon: Heading1 }, { kind: 'bullet', label: 'Bulleted list', icon: List }, { kind: 'number', label: 'Numbered list', icon: ListOrdered }, { kind: 'quote', label: 'Quote', icon: Quote },
 ]
 
-/** How far the on-screen keyboard covers the page, so the tool bar can ride just above it (iOS Safari does not move fixed bars by itself). */
+/** How far the on-screen keyboard covers the page, so the tool pill can float just above it (the keyboard slides over the app). */
 function useKeyboardInset() {
   const [inset, setInset] = useState(0)
   useEffect(() => {
+    if (isNative()) {
+      const subs: { remove: () => Promise<void> }[] = []
+      void Keyboard.addListener('keyboardWillShow', i => setInset(Math.round(i.keyboardHeight))).then(h => subs.push(h)).catch(() => {})
+      void Keyboard.addListener('keyboardWillHide', () => setInset(0)).then(h => subs.push(h)).catch(() => {})
+      return () => { for (const h of subs) void h.remove() }
+    }
     const vv = window.visualViewport; if (!vv) return
     const f = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)))
     f(); vv.addEventListener('resize', f); vv.addEventListener('scroll', f)
     return () => { vv.removeEventListener('resize', f); vv.removeEventListener('scroll', f) }
   }, [])
   return inset
+}
+
+/** Which formats are on where the cursor is, so their buttons light up (and tapping again visibly turns them off). */
+function useActiveFormats(): Set<FormatKind> {
+  const [on, setOn] = useState<Set<FormatKind>>(new Set())
+  useEffect(() => {
+    const read = () => {
+      const sel = window.getSelection(), node = sel?.anchorNode ?? null
+      const el = node ? (node.nodeType === 1 ? node as Element : node.parentElement) : null
+      if (!el?.closest('.notes-body')) { setOn(new Set()); return }
+      const q = (c: string) => { try { return document.queryCommandState(c) } catch { return false } }
+      const next = new Set<FormatKind>()
+      if (q('bold')) next.add('bold'); if (q('italic')) next.add('italic'); if (q('strikeThrough')) next.add('strike')
+      if (el.closest('ul')) next.add('bullet'); if (el.closest('ol')) next.add('number')
+      if (el.closest('h1,h2,h3')) next.add('heading'); if (el.closest('blockquote')) next.add('quote')
+      setOn(cur => (cur.size === next.size && [...next].every(k => cur.has(k)) ? cur : next))
+    }
+    document.addEventListener('selectionchange', read); document.addEventListener('input', read)
+    return () => { document.removeEventListener('selectionchange', read); document.removeEventListener('input', read) }
+  }, [])
+  return on
 }
 
 const inline = (c: Inline[]): React.ReactNode[] => c.map((n, i) => n.t === 'text' ? n.v : n.t === 'b' ? <strong key={i}>{inline(n.c)}</strong> : n.t === 'i' ? <em key={i}>{inline(n.c)}</em> : <s key={i}>{inline(n.c)}</s>)
@@ -60,6 +89,7 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
   const [dropAudio, setDropAudio] = useState(false)
   const [oldAudioUrl, setOldAudioUrl] = useState<string | null>(null)
   const kb = useKeyboardInset()
+  const activeFmt = useActiveFormats()
   const [restored] = useState(hasDraft)
   const [err, setErr] = useState('')
   const [panel, setPanel] = useState<'mood' | 'tags' | null>(null)
@@ -120,7 +150,7 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
       {(entry?.audio && !dropAudio && !clip) && <div className="notes-voice">{oldAudioUrl ? <AudioPlayer src={oldAudioUrl} durationSec={entry.audio.durationSec} label="Voice note" /> : <p className="muted small">This voice note was recorded on another device.</p>}
         <button className="linkbtn" onClick={() => setDropAudio(true)}>Remove voice note</button></div>}
 
-      <div className="notes-dock" style={{ ['--kb' as string]: `${kb}px` }}>
+      <div className={`notes-dock ${kb > 0 ? 'kb' : ''}`} style={{ ['--kb' as string]: `${kb}px` }}>
       {panel && <div className="notes-panel" role="group" aria-label={panel === 'mood' ? 'Choose a mood' : 'Choose tags'}>
         {panel === 'mood'
           ? <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -133,7 +163,7 @@ export function JournalEditor({ entry, initial, onClose, onSaved }: { entry?: Jo
       {voiceOpen && <div className="notes-voicepanel"><VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setVoiceOpen(false) }} onFill={() => {}} /></div>}
       <div className="notes-row" role="toolbar" aria-label="Formatting and extras">
         <span className="fmt-bar">
-          {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} onPointerDown={e => e.preventDefault()} onClick={() => fmt(kind)}><Icon size={20} /></button>)}
+          {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} aria-pressed={activeFmt.has(kind)} className={activeFmt.has(kind) ? 'on' : ''} onPointerDown={e => e.preventDefault()} onClick={() => { fmt(kind); document.dispatchEvent(new Event('selectionchange')) }}><Icon size={20} /></button>)}
           <i className="vsep" />
         </span>
         <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
