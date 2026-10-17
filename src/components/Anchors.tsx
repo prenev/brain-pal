@@ -56,7 +56,6 @@ function AnchorTile({ item, leaving = false, onTick, onSkip, onEdit }: { item: D
 export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
   const { anchorsToday: p, anchorStreak: st, toggleAnchor, skipAnchor } = useStore()
   const [leaving, setLeaving] = useState<Set<string>>(new Set())   // ticked tiles sliding away
-  const [showDone, setShowDone] = useState(false)
 
   if (p.items.length === 0) return (
     <button className="arow add" onClick={onEdit}>
@@ -65,7 +64,7 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
     </button>
   )
 
-  // a ticked anchor celebrates, slides away, and is gone from the list (Show done brings them back to untick)
+  // a ticked anchor celebrates, slides away, and is gone from the list
   const tick = (e: MouseEvent<HTMLButtonElement>, id: string, done: boolean) => {
     if (done) { toggleAnchor(id); return }
     const r = e.currentTarget.getBoundingClientRect()
@@ -74,15 +73,13 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
     setTimeout(() => { toggleAnchor(id); setLeaving(l => { const n = new Set(l); n.delete(id); return n }) }, 420)
     if (p.done + 1 === p.total) setTimeout(onAllDone, 450)
   }
-  const shown = p.items.filter(i => showDone || (!i.done && !i.skipped) || leaving.has(i.anchor.id))
-  const hidden = p.items.length - p.items.filter(i => (!i.done && !i.skipped) || leaving.has(i.anchor.id)).length
+  const shown = p.items.filter(i => (!i.done && !i.skipped) || leaving.has(i.anchor.id))
   const left = p.total - p.done
   const streakLine = st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : null
   return (
     <section className="anchors" aria-label="Daily anchors">
       <div className="anchors-head">
         <b role="img" aria-label={`${p.done} of ${p.total} done`}>{left > 0 ? `${left} ${left === 1 ? 'anchor' : 'anchors'} left for today` : 'All anchors done today!'}</b>
-        {hidden > 0 && <button className="linkbtn anchors-edit" onClick={() => setShowDone(!showDone)}>{showDone ? 'Hide done' : `Show done (${hidden})`}</button>}
         <button className="linkbtn anchors-edit" onClick={onEdit}>Edit</button>
         {streakLine && <span className="muted small anchors-streak"><Emoji name="fire" size={14} style={{ verticalAlign: -2 }} /> {streakLine}</span>}
       </div>
