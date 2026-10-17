@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, Images, Plus, X } from 'lucide-react'
+import { Camera, ChevronRight, Plus, X } from 'lucide-react'
+import { NameIcon } from '../lib/icons'
 import { IconGrid } from '../components/ui'
 import { PalSays } from '../components/Pal'
 import VoiceNote from '../components/VoiceNote'
@@ -96,7 +97,6 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
   useKeyboardInset()
   const steps: StepId[] = ['feel', 'thought', 'next']
   const at = steps.indexOf(step)
-  const back = () => { if (at === 0) setMood(null); else setStep(steps[at - 1]) }
 
   if (mood === null) return (
     <div className="overlay"><div className="inner mood-stage">
@@ -126,7 +126,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
       <div className="wiz-head">
         <button className="glass round" aria-label="Close" onClick={onClose}><X size={24} /></button>
         <div className="wiz-prog" role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={at + 1}>
-          {steps.map((s, i) => <i key={s} className={i <= at ? 'on' : ''} />)}
+          {steps.map((s, i) => <button key={s} type="button" className={i <= at ? 'on' : ''} aria-label={`Step ${i + 1}`} disabled={i >= at} onClick={() => setStep(steps[i])} />)}   {/* tap an earlier step to go back */}
         </div>
         <button className="wiz-face" aria-label="Change mood" onClick={() => setMood(null)}><Face mood={mood} size={42} /></button>
       </div>
@@ -147,7 +147,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
             {emotions.map(e => (
               <div key={e.name} style={{ marginBottom: 8 }}>
                 <div className="row spread"><span>{e.name}</span><b>{e.intensity}%</b></div>
-                <input type="range" min={0} max={100} value={e.intensity} aria-label={`${e.name} intensity`}
+                <input className="slider" type="range" min={0} max={100} value={e.intensity} aria-label={`${e.name} intensity`} style={{ ['--p' as string]: `${e.intensity}%` }}
                   onChange={ev => setEmotions(emotions.map(x => x.name === e.name ? { ...x, intensity: +ev.target.value } : x))} />
               </div>
             ))}
@@ -157,19 +157,17 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
         {step === 'thought' && <>
           <NoteField big autoFocus label={good ? 'What’s on your mind?' : 'The thought that came'} value={thought} onChange={setThought} max={LIMITS.thought}
             placeholder={good ? 'e.g. Finally finished the project and it felt great' : 'e.g. Everyone will notice I messed up the demo'} />
-          {!edit && <VoiceNote clip={clip} onChange={setClip} onWords={w => setThought(t => t || w.slice(0, LIMITS.thought))} />}
-          <details className="wiz-extras">
-            <summary>{edit ? 'Tags' : 'Tags and a photo'} <span className="muted">(optional{tags.length + files.length ? ` · ${tags.length + files.length} added` : ''})</span></summary>
-            <IconGrid options={[...shortList(rankedTags, tags, 8), ...tags.filter(n => !allTags.includes(n))]} value={tags} onChange={setTags} />
-            <button className="linkbtn" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={16} style={{ display: 'inline', verticalAlign: -3 }} /> New tag</button>
-            {!edit && <div className="photos-edit">
-              <label><Camera size={22} />Take photo<input hidden type="file" accept="image/*" capture="environment" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-              <label><Images size={22} />From gallery<input hidden type="file" accept="image/*" multiple onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
-            </div>}
-            {files.length > 0 && <div className="photos">{files.map((f, i) => (
-              <div key={i} style={{ position: 'relative' }}><img src={URL.createObjectURL(f)} alt="" style={{ height: 96, borderRadius: 14 }} />
-                <button className="icon-btn" aria-label="Remove photo" style={{ position: 'absolute', top: 4, right: 4, width: 28, height: 28, background: '#000a' }} onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={16} /></button></div>))}</div>}
-          </details>
+          {!edit && <div className={`wiz-media ${clip ? 'has-voice' : ''}`}>
+            <VoiceNote clip={clip} onChange={setClip} onWords={w => setThought(t => t || w.slice(0, LIMITS.thought))} />
+            <label className="vn-start photo"><Camera size={18} /> Photo<input hidden type="file" accept="image/*" onChange={e => setFiles([...files, ...Array.from(e.target.files ?? [])])} /></label>
+          </div>}
+          {files.length > 0 && <div className="wiz-photos">{files.map((f, i) => (
+            <div key={i}><img src={URL.createObjectURL(f)} alt="" />
+              <button aria-label="Remove photo" onClick={() => setFiles(files.filter((_, j) => j !== i))}><X size={14} /></button></div>))}</div>}
+          <div className="wiz-tags" role="group" aria-label="Tags">
+            {[...new Set([...tags, ...rankedTags.slice(0, 10)])].map(t => <button key={t} type="button" className={`chip ${tags.includes(t) ? 'on' : ''}`} aria-pressed={tags.includes(t)} onClick={() => setTags(tags.includes(t) ? tags.filter(x => x !== t) : [...tags, t])}><NameIcon name={t} size={16} /> {t}</button>)}
+            <button type="button" className="chip add" aria-label="Add tag" onClick={() => addCustom('tag')}><Plus size={14} strokeWidth={3} /> Tag</button>
+          </div>
         </>}
 
         {step === 'next' && <>
@@ -187,19 +185,18 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
           </div>}
           {!good && emotions.length > 0 && alt.trim() && <div className="wiz-card">
             <div className="row spread"><span className="muted small">How strong does it feel now? (was {peak}%)</span><b>{outcome ?? peak}%</b></div>
-            <input type="range" min={0} max={100} value={outcome ?? peak} aria-label="Intensity after reframe" onChange={e => setOutcome(+e.target.value)} />
+            <input className="slider" type="range" min={0} max={100} value={outcome ?? peak} aria-label="Intensity after reframe" style={{ ['--p' as string]: `${outcome ?? peak}%` }} onChange={e => setOutcome(+e.target.value)} />
           </div>}
         </>}
         {error && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
       </div>
 
       <div className="wiz-foot">
-        <button className="btn" aria-label="Back" onClick={back}><ChevronLeft size={22} style={{ display: 'block' }} /></button>
         {step === 'next'
           ? <button className="btn primary" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
           : <>
             <button className="btn" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : step === 'feel' ? 'Save mood' : 'Save'}</button>
-            <button className="btn primary" style={{ flex: 1.3 }} onClick={() => setStep(steps[at + 1])}>{step === 'feel' ? 'Add a thought' : good ? 'What helped' : 'Kinder thought'} <ChevronRight size={18} style={{ display: 'inline', verticalAlign: -4 }} /></button>
+            <button className="btn primary" style={{ flex: 1.2 }} onClick={() => setStep(steps[at + 1])}>{step === 'feel' ? 'Add a thought' : good ? 'What helped' : 'Kinder thought'}<ChevronRight size={18} style={{ display: 'inline', verticalAlign: -4, marginLeft: 2 }} /></button>
           </>}
       </div>
     </div></div>
