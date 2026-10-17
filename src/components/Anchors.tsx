@@ -1,69 +1,56 @@
-import { useState } from 'react'
-import { ArrowDown, ArrowUp, Check, ChevronDown, X } from 'lucide-react'
+import { useState, type MouseEvent } from 'react'
+import { ArrowDown, ArrowUp, Check, Plus, X } from 'lucide-react'
+import { sfx } from '../lib/sound'
+import { hapticSuccess } from '../lib/haptics'
+import { burstAt } from '../lib/confetti'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
 import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type AnchorLink } from '../lib/anchors.ts'
 
 const LINK_LABEL: Record<AnchorLink, string> = { breathing: 'a breathing session', checkin: 'a mood entry', journal: 'a journal entry', worry: 'reviewing a worry', focus: 'a small step' }
 
-/** Today's anchors on the home screen: big round checks, a progress bar, and a gentle all-done moment. */
+/** Today's anchors on the home screen: one chunky tile each. Ticking one plays a chime, pops a little confetti and earns a coin. */
 export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDone: () => void }) {
   const { anchorsToday: p, anchorStreak: st, toggleAnchor } = useStore()
-  const [expanded, setExpanded] = useState(false)
 
   if (p.total === 0) return (
-    <button className="card row anchor-empty" onClick={onEdit}>
-      <Emoji name="target" size={34} />
-      <span style={{ flex: 1, textAlign: 'left' }}><b>Choose your daily anchors</b>
-        <span className="sub">Up to {MAX_ANCHORS} small things that make a day count</span></span>
+    <button className="arow add" onClick={onEdit}>
+      <span className="ablob"><Plus size={22} aria-hidden="true" /></span>
+      <span className="alabel">Choose your daily anchors</span>
     </button>
   )
 
-  const tick = (id: string, done: boolean) => {
+  const tick = (e: MouseEvent<HTMLButtonElement>, id: string, done: boolean) => {
     toggleAnchor(id)
-    if (!done && p.done + 1 === p.total) onAllDone()
+    if (done) return
+    const r = e.currentTarget.getBoundingClientRect()
+    sfx('success'); hapticSuccess(); burstAt(r.left + r.width / 2, r.top + r.height / 2)
+    if (p.done + 1 === p.total) onAllDone()
   }
-  const all = p.done === p.total
-  const R = 15, C = 2 * Math.PI * R
   const streakLine = st.current > 0 ? `${st.current} ${st.current === 1 ? 'day' : 'days'} with every anchor done` : null
-  // everything ticked: shrink to one slim line (tap to open the list again)
-  if (all && !expanded) return (
-    <button className="card anchors-mini" aria-label="Daily anchors, all done. Show the list" aria-expanded="false" onClick={() => setExpanded(true)}>
-      <span className="ring" role="img" aria-label={`${p.done} of ${p.total} done`}>
-        <svg viewBox="0 0 38 38" width="34" height="34"><circle cx="19" cy="19" r={R} /><circle className="fg" cx="19" cy="19" r={R} strokeDasharray={C} strokeDashoffset={0} /></svg>
-        <i>{p.done}/{p.total}</i>
-      </span>
-      <span className="mini-text"><b>Anchors done</b>{streakLine && <span className="muted small">{streakLine}</span>}</span>
-      <ChevronDown size={20} className="tile-go" aria-hidden="true" />
-    </button>
-  )
   return (
-    <div className="card anchors" aria-label="Daily anchors">
+    <section className="anchors" aria-label="Daily anchors">
       <div className="anchors-head">
-        <div>
-          <b>Today’s anchors</b>
-          <span className="muted small">{all ? 'Every one done. That counts.' : 'Small things that make a day count'}</span>
-        </div>
-        <span className="ring" role="img" aria-label={`${p.done} of ${p.total} done`}>
-          <svg viewBox="0 0 38 38" width="46" height="46"><circle cx="19" cy="19" r={R} /><circle className="fg" cx="19" cy="19" r={R} strokeDasharray={C} strokeDashoffset={C * (1 - p.done / p.total)} /></svg>
-          <i>{p.done}/{p.total}</i>
-        </span>
+        <b>Today’s anchors</b>
+        <span className="anchors-count" role="img" aria-label={`${p.done} of ${p.total} done`}>{p.done}/{p.total}</span>
+        {streakLine && <span className="muted small anchors-streak"><Emoji name="fire" size={14} style={{ verticalAlign: -2 }} /> {streakLine}</span>}
+        <button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>
       </div>
-      <ul className="anchor-rows">
+      <ul className="anchor-list">
         {p.items.map(({ anchor, done, auto, manual }) => (
           <li key={anchor.id}>
             <button role="checkbox" aria-checked={done} aria-label={anchor.label} className={`arow ${done ? 'done' : ''}`} disabled={auto && !manual}
-              title={auto && !manual ? 'Done automatically: you did it in the app' : undefined} onClick={() => tick(anchor.id, manual)}>
-              <span className="tickbox">{done && <Check size={18} strokeWidth={3.4} />}</span>
-              <Emoji name={anchor.emoji} size={24} /><span className="alabel">{anchor.label}</span>
+              title={auto && !manual ? 'Done automatically: you did it in the app' : undefined} onClick={e => tick(e, anchor.id, manual)}>
+              <span className="ablob"><Emoji name={anchor.emoji} size={30} /></span>
+              <span className="alabel">{anchor.label}</span>
               {auto && !manual && <em className="auto">auto</em>}
+              <span className="acoin"><Emoji name="star" size={14} />1</span>
+              <span className="acheck" aria-hidden="true"><Check size={24} strokeWidth={3.6} /></span>
             </button>
           </li>
         ))}
       </ul>
-      {streakLine && <p className="muted small anchors-streak"><Emoji name="fire" size={16} style={{ verticalAlign: -3 }} /> {streakLine}</p>}
-      <div className="anchors-actions"><button className="linkbtn anchors-edit" onClick={onEdit}>Edit anchors</button>{all && <button className="linkbtn anchors-edit" onClick={() => setExpanded(false)}>Collapse</button>}</div>
-    </div>
+    </section>
   )
 }
 

@@ -20,7 +20,7 @@ export function PalSays({ pose = 'idle', size = 84, motion = 'bob', children }: 
 
 /** Empty state: Wobbi and one kind sentence instead of a grey box. */
 export function PalEmpty({ pose = 'think', children }: { pose?: PoseName; children: ReactNode }) {
-  return <div className="card pal-empty"><Pal pose={pose} size={88} /><p>{children}</p></div>
+  return <div className="pal-empty"><Pal pose={pose} size={64} /><p>{children}</p></div>
 }
 
 const TIPS_KEY = 'bp.tips.off'

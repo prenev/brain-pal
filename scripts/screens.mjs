@@ -247,7 +247,7 @@ await session('http://localhost:4173', false, async (p, snap) => {   // every an
   const anchors = ['walk', 'water'].map((id, order) => ({ id, label: id === 'walk' ? 'Walk' : 'Water', emoji: id, link: null, order, createdAt: '2026-10-01T09:00:00.000Z', archivedAt: null }))
   await p.evaluate(a => localStorage.setItem('bp.anchors', JSON.stringify(a)), anchors); await p.reload()
   await p.click('[role=checkbox][aria-label=Walk]'); await snap('home-anchors-one')
-  await p.click('[role=checkbox][aria-label=Water]'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.anchors-mini'); await snap('home-anchors-done')
+  await p.click('[role=checkbox][aria-label=Water]'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.arow.done'); await snap('home-anchors-done')
 })
 
 await session('http://localhost:4173', false, async (p, snap) => {   // Journal home (ribbon, month, fan), voice journal, live-preview editor
