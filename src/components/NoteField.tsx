@@ -1,3 +1,5 @@
+import { Keyboard } from '@capacitor/keyboard'
+import { isNative } from '../lib/native'
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 
 /** A calm writing field: grows with the text (no box-in-a-box scrolling), shows how much room is left, and keeps the
@@ -23,12 +25,33 @@ export default function NoteField({ label, value, onChange, max, placeholder, au
   )
 }
 
-/** iOS draws the keyboard over the page: expose its height as --kb so the sticky footer (Save) rides above it. */
+/** iOS draws the keyboard over the page: expose its height as --kb (room to scroll to the buttons), and close it when you drag the page, like Notes or Messages do. */
 export function useKeyboardInset() {
   useEffect(() => {
-    const vv = window.visualViewport; if (!vv) return
-    const set = () => document.documentElement.style.setProperty('--kb', `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`)
-    set(); vv.addEventListener('resize', set); vv.addEventListener('scroll', set)
-    return () => { vv.removeEventListener('resize', set); vv.removeEventListener('scroll', set); document.documentElement.style.removeProperty('--kb') }
+    const root = document.documentElement
+    const setKb = (px: number) => root.style.setProperty('--kb', `${Math.max(0, Math.round(px))}px`)
+    const subs: { remove: () => Promise<void> }[] = []
+    if (isNative()) {
+      void Keyboard.addListener('keyboardWillShow', i => setKb(i.keyboardHeight)).then(h => subs.push(h)).catch(() => {})
+      void Keyboard.addListener('keyboardWillHide', () => setKb(0)).then(h => subs.push(h)).catch(() => {})
+    }
+    const vv = window.visualViewport
+    const fromViewport = () => { if (vv && !isNative()) setKb(window.innerHeight - vv.height - vv.offsetTop) }
+    vv?.addEventListener('resize', fromViewport)
+    // a drag on the page (not inside the text) puts the keyboard away so the rest of the page can be reached
+    let y0 = 0
+    const down = (e: TouchEvent) => { y0 = e.touches[0]?.clientY ?? 0 }
+    const move = (e: TouchEvent) => {
+      const a = document.activeElement as HTMLElement | null
+      if (!a || !/^(TEXTAREA|INPUT)$/.test(a.tagName) || a.contains(e.target as Node)) return
+      if (Math.abs((e.touches[0]?.clientY ?? 0) - y0) > 12) a.blur()
+    }
+    document.addEventListener('touchstart', down, { passive: true }); document.addEventListener('touchmove', move, { passive: true })
+    return () => {
+      for (const h of subs) void h.remove()
+      vv?.removeEventListener('resize', fromViewport)
+      document.removeEventListener('touchstart', down); document.removeEventListener('touchmove', move)
+      root.style.removeProperty('--kb')
+    }
   }, [])
 }
