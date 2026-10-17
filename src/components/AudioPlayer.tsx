@@ -1,41 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
-import { audioMode } from '../lib/audioRoute'
+import { voicePlayer, type PlayState, type VoicePlayer } from '../lib/voice'
 
 const clock = (s: number) => { const t = Math.max(0, Math.round(s)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` }
 
-/** Our own voice-memo player (the browser's grey bar doesn't fit the app). The real <audio> element stays in the page, hidden, so playback is native. */
+/** Compact voice-memo player. Plays through lib/voice, like every other recording in the app (native AVAudioPlayer in the iPhone app). */
 export default function AudioPlayer({ src, durationSec, label = 'Voice memo' }: { src: string; durationSec?: number; label?: string }) {
-  const el = useRef<HTMLAudioElement>(null)
-  const [playing, setPlaying] = useState(false)
-  const [t, setT] = useState(0)
-  const [dur, setDur] = useState(durationSec ?? 0)
+  const [st, setSt] = useState<PlayState>({ playing: false, at: 0, duration: durationSec ?? 0 })
+  const [err, setErr] = useState(false)
+  const p = useRef<VoicePlayer | null>(null)
+  const loading = useRef<Promise<VoicePlayer> | null>(null)
 
-  useEffect(() => { setT(0); setPlaying(false); if (durationSec) setDur(durationSec) }, [src, durationSec])
-  const total = Number.isFinite(el.current?.duration) && (el.current?.duration ?? 0) > 0 ? el.current!.duration : dur
-
-  // First play after a recording was silent on iPhone (the audio session was still in "record" mode) and the second play fixed itself.
-  // So: switch the session to playback first, and if the clock hasn't moved shortly after play(), restart once, like the second tap would.
-  const toggle = async () => {
-    const a = el.current; if (!a) return
-    if (!a.paused) { a.pause(); return }
-    audioMode('playback'); a.muted = false; a.volume = 1
-    try { await a.play() } catch { setPlaying(false); return }
-    const at = a.currentTime
-    setTimeout(() => { if (!a.paused && a.currentTime <= at + 0.05) { a.pause(); a.currentTime = at; void a.play().catch(() => setPlaying(false)) } }, 700)
-  }
-  const seek = (v: number) => { const a = el.current; if (!a || !total) return; a.currentTime = (v / 100) * total; setT(a.currentTime) }
+  useEffect(() => { setSt({ playing: false, at: 0, duration: durationSec ?? 0 }); return () => { p.current?.destroy(); p.current = null; loading.current = null } }, [src, durationSec])
+  const get = () => (loading.current ??= fetch(src).then(r => r.blob()).then(blob => voicePlayer({ blob, mime: blob.type || 'audio/mp4', durationSec: durationSec ?? 0 }, { state: setSt })).then(x => (p.current = x)))
+  const toggle = async () => { try { const x = await get(); if (st.playing) await x.pause(); else await x.play() } catch { setErr(true) } }
+  const total = st.duration || durationSec || 0
+  const pct = total ? Math.min(100, (st.at / total) * 100) : 0
 
   return (
     <div className="player" role="group" aria-label={label}>
-      <audio ref={el} src={src} preload="metadata" hidden
-        onPlay={() => setPlaying(true)} onPause={() => { setPlaying(false); audioMode('ambient') }} onEnded={() => { setPlaying(false); setT(0); audioMode('ambient') }}
-        onTimeUpdate={e => setT(e.currentTarget.currentTime)}
-        onLoadedMetadata={e => { if (Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) setDur(e.currentTarget.duration) }} />
-      <button type="button" className="player-btn" aria-label={playing ? 'Pause' : 'Play'} onClick={() => void toggle()}>{playing ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}</button>
-      <input className="player-bar" type="range" min={0} max={100} step={0.5} aria-label="Position" value={total ? Math.min(100, (t / total) * 100) : 0}
-        style={{ ['--p' as string]: `${total ? Math.min(100, (t / total) * 100) : 0}%` }} onChange={e => seek(+e.target.value)} />
-      <span className="player-time">{clock(playing || t > 0 ? t : total)}</span>
+      <button type="button" className="player-btn" aria-label={st.playing ? 'Pause' : 'Play'} onClick={() => void toggle()}>{st.playing ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}</button>
+      <input className="player-bar" type="range" min={0} max={100} step={0.5} aria-label="Position" value={pct}
+        style={{ ['--p' as string]: `${pct}%` }} onChange={e => { const v = +e.target.value; void get().then(x => x.seek((v / 100) * total)) }} />
+      <span className="player-time">{err ? '—' : clock(st.playing || st.at > 0 ? st.at : total)}</span>
     </div>
   )
 }

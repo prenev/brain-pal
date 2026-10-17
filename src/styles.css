@@ -865,15 +865,20 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .jcal.today .jc-date b, .jcal.today .jc-date > span { color: var(--accent); }
 .jc-body { display: grid; gap: 3px; min-width: 0; } .jc-meta { display: flex; align-items: center; gap: 8px; font-weight: 800; } .jc-meta svg { color: var(--accent); }
 .jc-title { font-size: 18px; letter-spacing: -.01em; } .jc-text { color: #d3dcf2; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-/* voice journal: smooth rings (CSS eases between the ~12 level readings a second), and the review step on the same screen */
-.vj-ringl, .vj-glow, .vj-pal { transition: transform .16s linear, opacity .16s linear; }
+/* voice journal + voice notes: the waveform scene, words straight on the background (no box), a slim scrub bar */
+.vj-wave { width: 100%; max-width: 560px; padding: 18px 8px 4px; flex: none; }
 .voicej[data-state=review] .vj-bg-idle { opacity: 1; }
-.voicej[data-state=review] .vj-core { height: 190px; } .voicej[data-state=review] .vj-ringl { opacity: .25; }
-.vj-edit { flex: 1; min-height: 0; width: calc(100% - 32px); max-width: 560px; margin: 4px 16px 10px; padding: 14px 16px; border-radius: 20px; resize: none;
-  background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.12); color: #e8eefc; outline: none; font: 800 20px/1.45 var(--font); caret-color: #ffb3d9; }
-.vj-edit:focus { border-color: rgba(255,179,217,.55); }
-.vj-player { width: calc(100% - 48px); max-width: 420px; display: flex; align-items: center; gap: 12px; margin: 0 0 8px; color: rgba(232,238,252,.75); font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
-.vj-track { flex: 1; height: 6px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; } .vj-track i { display: block; height: 100%; background: #ffb3d9; border-radius: 99px; transition: width .2s linear; }
-.vj-act { background: none; border: 0; } .vj-act small { font-size: 12.5px; font-weight: 900; }
-.vj-act.save { color: #35d07f; } .vj-act:disabled { opacity: .5; }
-.vj-btn.play { background: #ffb3d9; color: #3d2a63; border-bottom-color: #d97fae; }
+.vj-caps:has(.vj-edit) { padding-top: 6px; }
+.vj-edit { display: block; width: 100%; padding: 0; margin: 0; border: 0; outline: none; background: none; resize: none; overflow: hidden; text-align: center;
+  color: #f2f5ff; font: 800 25px/1.42 var(--font); letter-spacing: -.01em; caret-color: #ffb3d9; }
+.vj-edit::placeholder { color: rgba(232,238,252,.45); font-size: 18px; font-weight: 700; }
+.vj-player { width: calc(100% - 48px); max-width: 440px; display: flex; align-items: center; gap: 12px; margin: 4px 0 8px; color: rgba(232,238,252,.75); font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; }
+.vj-scrub { flex: 1; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #ffb3d9 var(--p, 0%), rgba(255,255,255,.16) var(--p, 0%)); outline: none; }
+.vj-scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.vj-act { background: none; border: 0; } .vj-act small { font-size: 12.5px; font-weight: 900; } .vj-act:disabled { opacity: .4; }
+.vj-act.save { color: #35d07f; }
+.vj-btn.play { background: #ffb3d9; color: #3d2a63; border-bottom-color: #d97fae; } .vj-btn:disabled { opacity: .45; }
+.vn-when { display: grid; justify-items: center; line-height: 1.15; } .vn-when small { font-size: 12.5px; font-weight: 800; color: rgba(232,238,252,.6); }
+.vn-mood { margin-top: 6px; } .vn-title { margin: 8px 24px 0; text-align: center; font-size: 22px; font-weight: 900; color: #f2f5ff; }
+.vn-words { padding-top: 4px; } .vn-text { white-space: pre-wrap; font-size: 23px !important; line-height: 1.45 !important; color: #f2f5ff; }
+.rec-wave { width: 100%; } .rec-words { margin: 4px 2px 10px; font-weight: 700; color: var(--text); line-height: 1.4; text-align: center; }

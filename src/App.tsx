@@ -22,6 +22,7 @@ import { JournalEditor } from './components/Journal'
 import JournalHome from './components/JournalHome'
 import type { AudioClip } from './lib/types'
 import VoiceJournal from './components/VoiceJournal'
+import VoiceNoteView from './components/VoiceNoteView'
 import FocusFlow from './components/FocusFlow'
 import Onboarding from './components/Onboarding'
 import Splash from './components/Splash'
@@ -90,7 +91,7 @@ function Shell() {
   const [composeMood, setComposeMood] = useState<number | null>(null)
   const [cel, setCel] = useState<Celebration | null>(null)
   const [focusOpen, setFocusOpen] = useState(false)
-  const [journalOpen, setJournalOpen] = useState<{ entry?: JournalEntry; voice?: boolean; initial?: { body: string; clip: AudioClip } } | null>(null)
+  const [journalOpen, setJournalOpen] = useState<{ entry?: JournalEntry; voice?: boolean; listen?: JournalEntry; initial?: { body: string; clip: AudioClip } } | null>(null)
 
   // A tapped reminder (iPhone app) opens the matching tool.
   useEffect(() => {
@@ -214,7 +215,7 @@ function Shell() {
       )}
       {sos && <Sos onStep={() => setFocusOpen(true)} onClose={() => setSos(false)} onLog={() => { setSos(false); setComposeMood(null); setComposeAt(new Date()) }} />}
       {composeAt && <NewEntry date={composeAt} initialMood={composeMood} onSaved={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')); setCel({ emoji: 'party', title: 'Entry saved!', sub: 'Checking in with yourself is a skill — you just practised it.' }) }} onClose={() => { setComposeAt(null); setTab(t => (t === 'calendar' ? t : 'entries')) }} />}
-      {screen === 'journal' && <JournalHome onClose={() => setScreen(null)} onOpen={e => setJournalOpen({ entry: e })} onWrite={() => setJournalOpen({})} onVoice={() => setJournalOpen({ voice: true })} />}
+      {screen === 'journal' && <JournalHome onClose={() => setScreen(null)} onOpen={e => setJournalOpen(e.audio ? { listen: e } : { entry: e })} onWrite={() => setJournalOpen({})} onVoice={() => setJournalOpen({ voice: true })} />}
       {(screen === 'thoughts' || screen === 'search') && <AllEntries search={screen === 'search'} onClose={() => setScreen(null)} />}
       {screen === 'focus' && <FocusHub onClose={() => setScreen(null)} />}
       {ground && <GroundNow onClose={() => setGround(false)} onDone={() => { setGround(false); setCel({ emoji: 'herb', title: 'Back in the room', sub: 'You noticed what is here, right now. That is grounding.' }) }} />}
@@ -223,8 +224,9 @@ function Shell() {
       {screen === 'summary' && <Screen title="Summary" onClose={() => setScreen(null)}><Summary /></Screen>}
       {(screen === 'coins' || screen === 'achievements') && <Screen title="Rewards" onClose={() => setScreen(null)}><Wallet initial={screen === 'achievements' ? 'achievements' : 'shop'} /></Screen>}
       {focusOpen && <FocusFlow onClose={() => setFocusOpen(false)} />}
+      {journalOpen?.listen && <VoiceNoteView entry={journalOpen.listen} onClose={() => setJournalOpen(null)} onEdit={() => setJournalOpen({ entry: journalOpen.listen })} />}
       {journalOpen?.voice && <VoiceJournal onClose={() => setJournalOpen(null)} onSaved={() => { setJournalOpen(null); setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Saying it out loud counts. Thank you for taking the time.' }) }} />}
-      {journalOpen && !journalOpen.voice && <JournalEditor entry={journalOpen.entry} initial={journalOpen.initial} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
+      {journalOpen && !journalOpen.voice && !journalOpen.listen && <JournalEditor entry={journalOpen.entry} initial={journalOpen.initial} onClose={() => setJournalOpen(null)} onSaved={() => { const edited = !!journalOpen.entry; setJournalOpen(null); if (!edited) setCel({ emoji: 'notebook', title: 'Saved to your journal', sub: 'Writing it down counts — thank you for taking the time.' }) }} />}
       {park && <ParkWorry onClose={() => setPark(false)} onOpenWorryTime={() => { setPark(false); setWorryTime(true) }} />}
       {worryTime && <WorryTime onClose={() => setWorryTime(false)} />}
       {news.length > 0 && onboarded && <WhatsNew releases={news} onClose={() => { markSeen(APP_VERSION); setNews([]) }} />}

@@ -60,6 +60,8 @@ async function open(seed, { native = false, time = null, onboarding = false, rep
   if (native && pro) await ctx.addInitScript(() => { window.__reply = { ...(window.__reply ?? {}), 'Mindful.proStatus': { active: true, until: 4102444800000 } } })
   if (native && reply) await ctx.addInitScript(r => { window.__reply = { ...(window.__reply ?? {}), ...r } }, reply)
   if (seed) await ctx.addInitScript(([k, v]) => { if (!localStorage.getItem('__seeded')) { localStorage.setItem('__seeded', '1'); for (const [a, b] of Object.entries(v)) localStorage.setItem(a, JSON.stringify(b)) } }, ['seed', seed])
+  // headless Chrome's real on-device speech recogniser crashes the tab; tests that need captions install mockSpeech instead
+  await ctx.addInitScript(() => { delete window.SpeechRecognition; delete window.webkitSpeechRecognition })
   const page = await ctx.newPage()
   const errors = []
   page.on('pageerror', e => errors.push('pageerror: ' + e.message))
@@ -96,8 +98,9 @@ async function connectAi(p) {
 }
 async function record(p, secs = 1.6) {
   if (await p.locator('button:has-text("Voice memo")').count()) await p.click('button:has-text("Voice memo")')
-  await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('audio', { state: 'attached' })
+  await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.waitForTimeout(secs * 1000); await p.click('button:has-text("Stop")'); await p.waitForSelector('.voice .player')
 }
+const idbBlobSize = (p, prefix) => p.evaluate(pre => new Promise(res => { const r = indexedDB.open('brainpal-media'); r.onsuccess = () => { const st = r.result.transaction('blobs').objectStore('blobs'); const q = st.openCursor(); let size = 0; q.onsuccess = () => { const c = q.result; if (!c) return res(size); if (String(c.key).startsWith(pre)) size += c.value.size; c.continue() } } }), prefix)
 
 const opened = []
 const tests = []
@@ -180,14 +183,14 @@ test('crisis wording shows support options and blocks AI suggestions', async () 
 test('voice memo: record, play, transcribe by hand, persist across reload, free storage on delete', async () => {
   const s = await open(); const p = s.page
   await newEntry(p, { mood: 3 }); await toStep(p, 1); await record(p)
-  assert.ok(await p.evaluate(() => document.querySelector('audio').src.startsWith('blob:')))
+  assert.equal(await p.locator('.voice .player [aria-label=Play]').count(), 1, 'the take can be played back straight away')
   await p.fill('textarea[placeholder^="Type it yourself"]', 'typed transcript')
   await save(p)
   await p.waitForSelector('.entry >> text=Voice memo')
   assert.equal((await idbKeys(p)).filter(k => String(k).startsWith('audio-')).length, 1)
   await reload(p); await p.click('.entry')
-  await p.waitForSelector('.entry audio', { state: 'attached' }); await p.waitForSelector('.etranscript >> text=typed transcript')
-  const size = await p.evaluate(async () => (await (await fetch(document.querySelector('.entry audio').src)).blob()).size)
+  await p.waitForSelector('.entry .player'); await p.waitForSelector('.etranscript >> text=typed transcript')
+  const size = await idbBlobSize(p, 'audio-')
   assert.ok(size > 500, `audio blob should survive reload (got ${size} bytes)`)
   p.once('dialog', d => d.accept()); await p.click('text=Delete entry'); await p.waitForTimeout(400)
   assert.equal((await idbKeys(p)).filter(k => String(k).startsWith('audio-')).length, 0)
@@ -198,7 +201,7 @@ test('voice memo: cancel discards, and AI controls stay hidden until enabled', a
   const s = await open(); const p = s.page
   await newEntry(p, { mood: 3 }); await toStep(p, 1); await p.click('button:has-text("Voice memo")')
   await p.click('text=● Record'); await p.waitForSelector('.rec-live'); await p.click('button:has-text("Cancel")')
-  await p.waitForSelector('text=● Record'); assert.equal(await p.locator('audio').count(), 0)
+  await p.waitForSelector('text=● Record'); assert.equal(await p.locator('.voice .player').count(), 0)
   await record(p); assert.equal(await p.locator('button:has-text("Transcribe")').count(), 0)
   await done(s)
 })
@@ -451,7 +454,8 @@ test('journal editor: topic chips change each time; text is formatted as you typ
   await p.click('[aria-label="Voice note"]'); await p.waitForSelector('button:has-text("● Record")'); await record(p, 1.2)
   await saveJournalEntry(p)
   await p.click('.journal-card'); await p.waitForSelector('.jentry [aria-label="Has a voice note"]'); assert.match(await p.locator('.jentry').innerText(), /Big some soft words one two/, 'list preview shows words, not markers')
-  await p.click('.jentry'); await p.waitForSelector('.notes-voice .player'); assert.equal(await p.locator('.notes-voice audio').count(), 1)
+  await p.click('.jentry'); await p.waitForSelector('.vnote'); assert.match(await p.locator('.vnote').innerText(), /Big[\s\S]*soft words/, 'a voice entry opens full screen with its words'); assert.equal(await p.locator('.vnote .vj-btn[aria-label=Play]').count(), 1)
+  await p.click('[aria-label="Edit entry"]'); await p.waitForSelector('.notes-voice .player')
   assert.equal((await idbKeys(p)).filter(k => String(k).startsWith('jaudio-')).length, 1, 'the audio is stored on the device')
   p.once('dialog', d => d.accept()); await p.click('[aria-label="Delete entry"]'); await p.waitForTimeout(400)
   assert.equal((await idbKeys(p)).filter(k => String(k).startsWith('jaudio-')).length, 0, 'deleting the entry frees its audio')
@@ -478,14 +482,15 @@ test('breathe: step 1 only lists the rhythms; tapping one opens step 2 (box leng
   await done(s)
 })
 
-test('voice memo playback: the first play switches the iPhone audio session to playback (loudspeaker) and a stalled first play restarts itself', async () => {
+test('voice memo playback (iPhone app): plays through the native player, loading the saved clip into a file first; the journal view uses the same player', async () => {
   const s = await open(null, { native: true }); const p = s.page
   await newEntry(p, { mood: 3 }); await toStep(p, 1); await record(p, 1.2); await save(p)
   await p.click('.more-today'); await p.click('.overlay .entry'); await p.waitForSelector('.overlay .player')
-  await p.evaluate(() => { const a = document.querySelector('.overlay audio'); window.__plays = 0; a.play = function () { window.__plays++; if (window.__plays === 1) { Object.defineProperty(a, 'paused', { get: () => false, configurable: true }); return Promise.resolve() } delete a.paused; return Promise.resolve() }; a.pause = () => {} })
-  await p.click('.overlay [aria-label=Play]')
-  await p.waitForFunction(() => window.__native.some(c => c.method === 'audioSession' && c.options.mode === 'playback'))
-  await p.waitForFunction(() => window.__plays >= 2, null, { timeout: 4000 })               // nothing played within 0.7 s: it retried, like the second tap does
+  await p.click('.overlay .player [aria-label=Play]')
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'voiceLoad' && c.options.base64.length > 0 && /audio/.test(c.options.mime)))
+  await p.waitForFunction(() => window.__native.some(c => c.method === 'voicePlay' && c.options.path === '/tmp/p.m4a'))
+  await p.evaluate(() => window.__fire('Mindful', 'voicePlayback', { state: 'playing', at: 0.4, duration: 1.2, path: '/tmp/p.m4a' })); await p.waitForSelector('.overlay .player [aria-label=Pause]')
+  await p.evaluate(() => window.__fire('Mindful', 'voicePlayback', { state: 'playing', at: 0.2, duration: 9, path: '/tmp/someone-else.m4a' })); assert.equal(await p.locator('.overlay .player [aria-label=Pause]').count(), 1, 'another player’s events are ignored')
   await done(s)
 })
 
@@ -564,9 +569,10 @@ test('voice journal (iPhone app): native recording + on-device captions in one; 
   const s = await open(null, { native: true, reply: { 'Mindful.speechAvailable': { available: true, onDevice: true } } }); const p = s.page
   await openVoice(p); await p.click('[aria-label="Start recording"]'); await p.waitForSelector('.vj-btn.stop'); await p.waitForFunction(() => window.__native.some(c => c.method === 'voiceStart'))
   assert.equal((await nativeCalls(p, 'voiceStart'))[0].locale.length > 1, true, 'asked in the phone’s language'); assert.equal((await nativeCalls(p, 'speechStart')).length, 0, 'one native recorder, not a second mic stream')
-  await p.evaluate(() => window.__fire('Mindful', 'speechResult', { text: 'hello', isFinal: false })); await p.waitForSelector('.vj-caps .interim >> text=hello')
-  await p.evaluate(() => window.__fire('Mindful', 'speechResult', { text: 'hello there my friend', isFinal: true })); await p.waitForSelector('.vj-caps >> text=hello there my friend'); assert.equal(await p.locator('.vj-caps .interim').count(), 0, 'a finished phrase is no longer dimmed')
-  await p.evaluate(() => window.__fire('Mindful', 'speechResult', { text: 'sometimes i want to kill myself', isFinal: false })); await p.waitForSelector('text=You don’t have to do this alone')
+  await p.evaluate(() => window.__fire('Mindful', 'voiceTranscript', { final: '', interim: 'hello' })); await p.waitForSelector('.vj-caps .interim >> text=hello')
+  await p.evaluate(() => window.__fire('Mindful', 'voiceTranscript', { final: 'hello there my friend', interim: '' })); await p.waitForSelector('.vj-caps >> text=hello there my friend'); assert.equal(await p.locator('.vj-caps .interim').count(), 0, 'a finished phrase is no longer dimmed')
+  await p.evaluate(() => window.__fire('Mindful', 'voiceTranscript', { final: 'hello there my friend', interim: 'sometimes i want to kill myself' })); await p.waitForSelector('text=You don’t have to do this alone')
+  assert.equal(await p.locator('.vj-caps .w').count(), 10, 'every word is kept, not just the latest phrase')
   await p.click('[aria-label="Stop"]'); await p.waitForFunction(() => window.__native.some(c => c.method === 'voiceStop'))
   await p.waitForSelector('.voicej[data-state=review]'); assert.match(await p.inputValue('.vj-edit'), /^Hello there my friend sometimes i want to kill myself/); await p.waitForSelector('text=You don’t have to do this alone')
   await p.click('[aria-label="Play"]'); await p.waitForFunction(() => window.__native.some(c => c.method === 'voicePlay' && c.options.path === '/tmp/v.m4a'))

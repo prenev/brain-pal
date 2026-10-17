@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Emoji } from '../lib/emoji'
 import { fmtDuration, MAX_RECORD_SEC } from '../lib/audio'
-import { MicError, startRecording, type Recording } from '../lib/recorder'
+import { MicError } from '../lib/recorder'
+import { startVoice, type VoiceSession } from '../lib/voice'
+import Waveform from './Waveform'
 import { AiError, aiEnabled, structureEntry, transcribe, type Structured } from '../lib/gemini'
 import AudioPlayer from './AudioPlayer'
 import type { AudioClip } from '../lib/types'
@@ -19,38 +21,30 @@ export default function VoiceRecorder({ clip, onChange, onFill }: {
   const [sec, setSec] = useState(0)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState<'' | 'transcribe' | 'fill'>('')
-  const rec = useRef<Recording | null>(null)
-  const meter = useRef<HTMLDivElement>(null)
+  const rec = useRef<VoiceSession | null>(null)
+  const level = useRef(0)
+  const [live, setLive] = useState('')
   const url = useMemo(() => (clip ? URL.createObjectURL(clip.blob) : null), [clip?.blob]) // eslint-disable-line react-hooks/exhaustive-deps
   const ai = aiEnabled()
 
   useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
-  useEffect(() => () => rec.current?.cancel(), [])
-  useEffect(() => {
-    if (!recording) return
-    const t0 = performance.now(); let raf = 0
-    const tick = () => {
-      setSec(Math.floor((performance.now() - t0) / 1000))
-      meter.current?.style.setProperty('--lvl', String(rec.current?.level() ?? 0))
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [recording])
+  useEffect(() => () => { void rec.current?.cancel() }, [])
+  useEffect(() => { if (!recording) return; const t0 = Date.now(); const id = setInterval(() => setSec(Math.floor((Date.now() - t0) / 1000)), 500); return () => clearInterval(id) }, [recording])
 
+  // same recording as everywhere else (lib/voice): native on iPhone, with the words worked out on the phone when it can
   async function start() {
-    setErr(''); setSec(0)
+    setErr(''); setSec(0); setLive('')
     try {
-      rec.current = await startRecording(c => { rec.current = null; setRecording(false); onChange(c) })
+      rec.current = await startVoice({ onWords: c => setLive(`${c.final} ${c.interim}`.trim()), onLevel: v => { level.current = v } })
       setRecording(true)
     } catch (e) { setErr(msg(e)) }
   }
   async function stop() {
     const r = rec.current; if (!r) return
-    rec.current = null; setRecording(false)
-    try { onChange(await r.stop()) } catch (e) { setErr(msg(e)) }
+    rec.current = null; setRecording(false); level.current = 0
+    try { onChange((await r.stop()).clip) } catch (e) { setErr(msg(e)) }
   }
-  function cancel() { rec.current?.cancel(); rec.current = null; setRecording(false) }
+  function cancel() { void rec.current?.cancel(); rec.current = null; setRecording(false); level.current = 0 }
 
   async function doTranscribe() {
     if (!clip) return
@@ -73,7 +67,8 @@ export default function VoiceRecorder({ clip, onChange, onFill }: {
       <div className="card-head"><h3 style={{ fontWeight: 500 }}>Voice memo</h3><Emoji name="mic" size={30} /></div>
 
       {recording && <div className="rec-live">
-        <div className="rec-meter" ref={meter}><span className="rec-dot" /></div>
+        <div className="rec-wave"><Waveform level={level} active height={64} /></div>
+        {live && <p className="rec-words">{live}</p>}
         <div className="rec-time">{fmtDuration(sec)} <span className="muted small">/ {fmtDuration(MAX_RECORD_SEC)}</span></div>
         <div className="row" style={{ width: '100%' }}>
           <button className="btn" onClick={cancel}>Cancel</button>
