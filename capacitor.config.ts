@@ -9,8 +9,8 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: { backgroundColor: '#0e1726', launchAutoHide: true, launchShowDuration: 0 },
     LocalNotifications: { iconColor: '#35d07f' },
-    // the web view shrinks to the space above the keyboard, so sticky/fixed bars sit right on top of it
-    Keyboard: { resize: 'native', resizeOnFullScreen: true },
+    // like any iPhone app: the keyboard slides up over the app (nothing shrinks, so nothing black shows); iOS scrolls the field into view
+    Keyboard: { resize: 'none', resizeOnFullScreen: false },
   },
 }
 export default config
