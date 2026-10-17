@@ -105,6 +105,7 @@ export const NOTICES: { name: string; license: string; by: string; url: string; 
   { name: 'Capacitor', license: 'MIT', by: 'Ionic / Drifty Co.', url: 'https://capacitorjs.com', npm: ['@capacitor/app', '@capacitor/core', '@capacitor/haptics', '@capacitor/keyboard', '@capacitor/local-notifications', '@capacitor/splash-screen', '@capacitor/status-bar'] },
   { name: 'Supabase JS', license: 'MIT', by: 'Supabase, Inc.', url: 'https://supabase.com', npm: ['@supabase/supabase-js'] },
   { name: 'Lucide icons', license: 'ISC', by: 'Lucide Contributors (portions Cole Bemis, Feather)', url: 'https://lucide.dev', npm: ['lucide-react'] },
+  { name: 'dnd kit', license: 'MIT', by: 'Claudéric Demers', url: 'https://dndkit.com', npm: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@dnd-kit/modifiers'] },
   { name: 'Phosphor Icons', license: 'MIT', by: 'Phosphor Icons (Tobias Fried, Helena Zhang)', url: 'https://phosphoricons.com', npm: ['@phosphor-icons/react'] },
   { name: 'Fluent Emoji', license: 'MIT', by: 'Microsoft Corporation', url: 'https://github.com/microsoft/fluentui-emoji' },
   { name: 'Nunito font', license: 'SIL Open Font License 1.1', by: 'The Nunito Project Authors (Vernon Adams, Jacques Le Bailly, Manvel Shmavonyan, Alexei Vanyashin)', url: 'https://github.com/googlefonts/nunito', npm: ['@fontsource-variable/nunito'] },

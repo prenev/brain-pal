@@ -7,7 +7,11 @@ import { hapticSuccess } from '../lib/haptics'
 import { burstAt } from '../lib/confetti'
 import { Emoji } from '../lib/emoji'
 import { useStore } from '../lib/store'
-import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type AnchorLink, type DayItem } from '../lib/anchors.ts'
+import { activeAnchors, ANCHOR_EMOJI, canAdd, MAX_ANCHORS, MAX_LABEL, STARTERS, type Anchor, type AnchorLink, type DayItem } from '../lib/anchors.ts'
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers'
+import { CSS } from '@dnd-kit/utilities'
 
 const LINK_LABEL: Record<AnchorLink, string> = { breathing: 'a breathing session', checkin: 'a mood entry', journal: 'a journal entry', worry: 'reviewing a worry', focus: 'a small step' }
 
@@ -99,6 +103,19 @@ export function AnchorCard({ onEdit, onAllDone }: { onEdit: () => void; onAllDon
 }
 
 /** Add / reorder / remove anchors. Capped at 5 on purpose: anchors are not a todo list. */
+/** One anchor in the editor: drag the handle to move it. */
+function SortableAnchor({ a, onRemove }: { a: Anchor; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: a.id })
+  return (
+    <li ref={setNodeRef} className={`aman-tile ${isDragging ? 'dragging' : ''}`} style={{ transform: CSS.Transform.toString(transform ? { ...transform, scaleX: isDragging ? 1.02 : 1, scaleY: isDragging ? 1.02 : 1 } : null), transition }}>
+      <span className="aman-grip" ref={setActivatorNodeRef} {...attributes} {...listeners} aria-label={`Drag to reorder ${a.label}`}><i /><i /><i /><i /><i /><i /></span>
+      <span className="ablob"><Emoji name={a.emoji} size={30} /></span>
+      <span className="aman-text"><b>{a.label}</b>{a.link && <small>Ticks itself after {LINK_LABEL[a.link]}</small>}</span>
+      <button className="aman-del" aria-label={`Remove ${a.label}`} onClick={onRemove}><Trash2 size={18} /></button>
+    </li>
+  )
+}
+
 export function AnchorsManager() {
   const { anchors, addAnchor, removeAnchor, moveAnchor } = useStore()
   const list = activeAnchors(anchors)
@@ -109,23 +126,14 @@ export function AnchorsManager() {
   const full = !canAdd(anchors)
   const left = STARTERS.filter(s => !list.some(a => a.label.toLowerCase() === s.label.toLowerCase()))
   const add = () => { if (addAnchor(label, emoji, link || null)) { setLabel(''); setLink(''); setPicking(false) } }
-  // drag to reorder: the tile follows the finger; crossing half a neighbour swaps them (each swap is one moveAnchor step)
-  const [drag, setDrag] = useState<{ id: string; dy: number } | null>(null)
-  const grab = useRef<{ id: string; y: number; h: number } | null>(null)
-  const onGrab = (e: PointerEvent<HTMLSpanElement>, id: string) => {
-    const li = e.currentTarget.closest('li') as HTMLElement
-    grab.current = { id, y: e.clientY, h: li.offsetHeight + 10 }
-    e.currentTarget.setPointerCapture(e.pointerId); setDrag({ id, dy: 0 })
+  // drag to reorder (dnd-kit): smooth sorting, neighbours glide aside; one drop = a few moveAnchor steps
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(TouchSensor, { activationConstraint: { delay: 0, tolerance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+    const from = list.findIndex(a => a.id === active.id), to = list.findIndex(a => a.id === over.id)
+    for (let k = 0; k < Math.abs(to - from); k++) moveAnchor(String(active.id), to > from ? 1 : -1)
+    hapticSuccess()
   }
-  const onMove = (e: PointerEvent<HTMLSpanElement>) => {
-    const g = grab.current; if (!g) return
-    let dy = e.clientY - g.y
-    const i = list.findIndex(a => a.id === g.id)
-    if (dy > g.h / 2 && i < list.length - 1) { moveAnchor(g.id, 1); g.y += g.h; dy -= g.h }
-    else if (dy < -g.h / 2 && i > 0) { moveAnchor(g.id, -1); g.y -= g.h; dy += g.h }
-    setDrag({ id: g.id, dy })
-  }
-  const onDrop = () => { grab.current = null; setDrag(null) }
 
   return (
     <div className="aman">
@@ -140,16 +148,11 @@ export function AnchorsManager() {
 
       {list.length > 0 && <section>
         <h3 className="aman-h">Your anchors</h3>
-        <ul className="aman-list">
-          {list.map(a => (
-            <li key={a.id} className={`aman-tile ${drag?.id === a.id ? 'dragging' : ''}`} style={drag?.id === a.id ? { transform: `translateY(${drag.dy}px) scale(1.02)` } : undefined}>
-              <span className="aman-grip" role="button" aria-label={`Drag to reorder ${a.label}`} onPointerDown={e => onGrab(e, a.id)} onPointerMove={onMove} onPointerUp={onDrop} onPointerCancel={onDrop}><i /><i /><i /><i /><i /><i /></span>
-              <span className="ablob"><Emoji name={a.emoji} size={30} /></span>
-              <span className="aman-text"><b>{a.label}</b>{a.link && <small>Ticks itself after {LINK_LABEL[a.link]}</small>}</span>
-              <button className="aman-del" aria-label={`Remove ${a.label}`} onClick={() => removeAnchor(a.id)}><Trash2 size={18} /></button>
-            </li>
-          ))}
-        </ul>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
+          <SortableContext items={list.map(a => a.id)} strategy={verticalListSortingStrategy}>
+            <ul className="aman-list">{list.map(a => <SortableAnchor key={a.id} a={a} onRemove={() => removeAnchor(a.id)} />)}</ul>
+          </SortableContext>
+        </DndContext>
       </section>}
 
       {full ? <p className="aman-full" role="status">That’s {MAX_ANCHORS}, the most on purpose. Remove one to add another.</p> : <>

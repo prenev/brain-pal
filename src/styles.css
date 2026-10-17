@@ -1018,5 +1018,5 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .aman-full { margin: 0; padding: 14px 16px; border-radius: 18px; background: var(--card); border: 2px solid var(--edge); color: var(--muted); font-weight: 700; }
 .aman-grip { flex: none; display: grid; grid-template-columns: repeat(2, 4px); gap: 4px 4px; padding: 10px 4px 10px 2px; touch-action: none; cursor: grab; }
 .aman-grip i { width: 4px; height: 4px; border-radius: 50%; background: #3f5578; }
-.aman-tile { position: relative; transition: box-shadow .2s; }
+.aman-tile { position: relative; touch-action: manipulation; }
 .aman-tile.dragging { z-index: 5; box-shadow: 0 14px 30px rgba(0,0,0,.45); border-color: var(--accent); cursor: grabbing; }
