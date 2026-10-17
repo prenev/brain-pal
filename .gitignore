@@ -15,3 +15,7 @@ build
 .bundle
 vendor/bundle
 marketing/studio/data/
+.env.release
+AuthKey*.p8
+fastlane/build
+build/

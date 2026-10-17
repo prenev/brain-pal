@@ -23,7 +23,7 @@ platform :ios do
       xcargs: "-allowProvisioningUpdates -authenticationKeyPath #{key_file} -authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')} DEVELOPMENT_TEAM=#{ENV.fetch('APPLE_TEAM_ID')} CURRENT_PROJECT_VERSION=#{build}",
       export_options: { method: "app-store", signingStyle: "automatic", teamID: ENV.fetch("APPLE_TEAM_ID") }
     )
-    upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
+    upload_to_testflight(api_key: key, skip_waiting_for_build_processing: ENV["WAIT_FOR_PROCESSING"] != "1")
     File.delete(key_file) if File.exist?(key_file)
   end
 
@@ -31,6 +31,13 @@ platform :ios do
   lane :metadata do
     deliver(api_key: asc_key, skip_binary_upload: true, skip_screenshots: true, force: true, submit_for_review: false,
             metadata_path: "fastlane/metadata", app_rating_config_path: "fastlane/age_rating.json", precheck_include_in_app_purchases: false)
+  end
+
+  desc "Submit the newest processed build for App Review (manual release after approval)"
+  lane :submit do
+    deliver(api_key: asc_key, skip_binary_upload: true, skip_metadata: true, skip_screenshots: true, force: true,
+            submit_for_review: true, automatic_release: false, precheck_include_in_app_purchases: false,
+            submission_information: { add_id_info_uses_idfa: false, export_compliance_uses_encryption: false, content_rights_contains_third_party_content: false })
   end
 
   desc "Upload App Store screenshots (6.9-inch and 6.5-inch sets from store/screenshots)"
