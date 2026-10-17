@@ -957,3 +957,9 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .anchors .arow.skipped { opacity: .55; } .anchors .arow.skipped .alabel { text-decoration: none; }
 .anchors .arow.skipped .acheck { opacity: .5; }
 .anchors-head b { font-size: 18px; }
+/* inside a day card nothing gets its own box: the kinder thought, traps, voice and transcript sit straight on the card */
+.daycard .entry .alt { padding: 0; background: none; border: 0; border-radius: 0; color: var(--accent); font-weight: 700; }
+.daycard .entry .etraps { gap: 4px 12px; } .daycard .entry .etraps .chip { padding: 0; background: none; border: 0; color: var(--muted); font-size: 13.5px; }
+.daycard .entry .etraps .chip::before { content: '· '; }
+.daycard .entry .player { padding: 0; background: none; border: 0; }
+.daycard .entry .etranscript { padding: 0; margin-top: 8px; background: none; border: 0; border-radius: 0; color: var(--muted); }
