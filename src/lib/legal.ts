@@ -4,9 +4,9 @@
 
 /** OWNER: fill these in before submitting (npm run store:check lists what is still empty). */
 export const OWNER = {
-  developerName: '',        // your legal name or company, as on your Apple Developer account
+  developerName: 'Pranav Ajay',        // your legal name or company, as on your Apple Developer account
   contactEmail: 'hello@wobbi.app',         // public support + privacy contact (App Store Connect needs one too)
-  governingLaw: '',         // e.g. "the laws of England and Wales" / "the State of California, USA"
+  governingLaw: 'the laws of New South Wales, Australia',         // e.g. "the laws of England and Wales" / "the State of California, USA"
 }
 export const SITE_URL = 'https://wobbi.app'
 /** Public legal pages live on the website (wobbi.app/privacy/ …). */

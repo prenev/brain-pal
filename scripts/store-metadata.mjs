@@ -65,13 +65,13 @@ export const APP = {
   bundle_id: 'com.brainpal.app',
   primary_category: 'HEALTH_AND_FITNESS',
   secondary_category: 'LIFESTYLE',
-  copyright: '2026 [developer name]',    // OWNER: "year + your name", e.g. "2026 Jane Doe"
+  copyright: '2026 Pranav Ajay',    // OWNER: "year + your name", e.g. "2026 Jane Doe"
   version: '1.0.0',
   price_tier: 'Free',
 }
 
 export const REVIEW = {
-  first_name: '', last_name: '', email_address: '', phone_number: '',   // OWNER (Apple may contact you during review)
+  first_name: 'Pranav', last_name: 'Ajay', email_address: 'pranavajay2002@gmail.com', phone_number: '+61 493 235 794',   // OWNER (Apple may contact you during review)
   demo_user: '', demo_password: '',                                    // none needed: the app works without an account
   notes: `Wobbi is a self-help mood diary and calming toolkit. No account is needed: everything works on the device, so there are no demo credentials.
 
