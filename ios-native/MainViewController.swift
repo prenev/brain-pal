@@ -15,4 +15,11 @@ class MainViewController: CAPBridgeViewController {
         webView?.scrollView.backgroundColor = navy
         webView?.isOpaque = false
     }
+
+    // Capacitor's view IS the web view, so when it shrinks for the keyboard the window behind it shows: paint that too.
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        view.window?.backgroundColor = UIColor(red: 14 / 255, green: 23 / 255, blue: 38 / 255, alpha: 1)
+        view.superview?.backgroundColor = view.window?.backgroundColor
+    }
 }
