@@ -10,7 +10,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png}'] },
+      injectManifest: { globPatterns: ['**/*.{js,css,html,svg,png}'], maximumFileSizeToCacheInBytes: 3 * 1024 * 1024 },   // the one JS bundle is ~2.1 MB until it is code-split (KANBAN chore)
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Wobbi',
