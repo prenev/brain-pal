@@ -41,7 +41,7 @@ export function JournalCard({ onOpen }: { onOpen: () => void }) {
   const wrote = journal.some(e => dayKey(e.createdAt) === today)
   return (
     <button className="big-card journal-card" onClick={onOpen} aria-label="Journal">
-      <span className="big-kicker">{wrote ? <><Check size={13} strokeWidth={3.4} /> Written today</> : 'Journal'}</span>
+      <span className="big-kicker">{wrote ? <><Check size={13} strokeWidth={3.4} /> Journal · today’s done</> : 'Journal'}</span>
       <b className="big-title">{wrote ? <>Add to<br />today’s page</> : <>Write or<br />talk it out</>}</b>
       <span className="big-sub">{n ? `${n}/7 days this week` : 'One line is enough'}</span>
       <span className="big-cta"><PenLine size={14} strokeWidth={3} /> Write</span>
