@@ -916,3 +916,12 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .vn-mood { margin-top: 6px; } .vn-title { margin: 8px 24px 0; text-align: center; font-size: 22px; font-weight: 900; color: #f2f5ff; }
 .vn-words { padding-top: 4px; } .vn-text { white-space: pre-wrap; font-size: 23px !important; line-height: 1.45 !important; color: #f2f5ff; }
 .rec-wave { width: 100%; } .rec-words { margin: 4px 2px 10px; font-weight: 700; color: var(--text); line-height: 1.4; text-align: center; }
+
+/* celebrate screen: centred, tinted stat cards; footer buttons line up with them */
+.cel-body { padding: 40px 4px 0; }
+.cel-stats { max-width: 360px; margin: 0 auto; gap: 12px; }
+.cel-stats .stat { flex: 1; display: grid; justify-items: center; gap: 4px; padding: 14px 8px 12px; border-radius: 22px; border-width: 2px; border-style: solid; border-bottom-width: 5px; text-align: center; background: linear-gradient(180deg, color-mix(in srgb, currentColor 24%, transparent), color-mix(in srgb, currentColor 7%, transparent)); }
+.cel-stats .stat small { font-size: 12px; font-weight: 900; letter-spacing: .14em; }
+.cel-stats .stat b { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 34px; line-height: 1; color: #fff; }
+.cel-foot { width: 100%; max-width: 360px; margin: 0 auto; padding: 18px 0 calc(var(--safe-b) + 12px); border-top: 0; display: grid; gap: 10px; }
+.cel-foot .btn { margin: 0 !important; width: 100%; }
