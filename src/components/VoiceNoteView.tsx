@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pause, PenLine, Play, RotateCcw, RotateCw, X } from 'lucide-react'
 import Waveform from './Waveform'
-import Face from './Face'
 import { fmtDuration } from '../lib/audio'
 import { getBlob } from '../lib/blobstore'
 import { voicePlayer, type PlayState, type VoicePlayer } from '../lib/voice'
@@ -41,7 +40,6 @@ export default function VoiceNoteView({ entry, onClose, onEdit }: { entry: Journ
         <span className="vj-title vn-when">{d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}<small>{d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</small></span>
         <button className="glass round" aria-label="Edit entry" onClick={onEdit}><PenLine size={20} /></button>
       </div>
-      {entry.mood ? <div className="vn-mood"><Face mood={entry.mood} size={40} /></div> : null}
       {entry.title && <h2 className="vn-title">{entry.title}</h2>}
 
       <div className="vj-wave"><Waveform level={level} active={play.playing} /></div>
