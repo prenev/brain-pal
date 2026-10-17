@@ -172,7 +172,7 @@ select.input { appearance: none; }
 .chain { display: flex; align-items: center; gap: 8px; }
 .chain .d { flex: 1; text-align: center; font-size: 14px; color: var(--muted); font-weight: 800; }
 .chain .c { width: 100%; max-width: 52px; aspect-ratio: 1; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--edge); border-bottom-width: 4px; color: var(--muted); background: var(--card2); }
-.chain .c.done { background: var(--accent); border-color: var(--accent) var(--accent) var(--accent-dark); color: var(--accent-ink); }
+.chain .c.done { background: none; border-color: transparent; }   /* just the fire emoji */
 .chain .c.today { border-color: var(--orange); color: var(--orange); }
 .chain .total { font-size: 28px; font-weight: 900; padding: 4px 18px; border: 2px solid var(--orange); color: var(--orange); border-radius: 16px; margin-bottom: 8px; }
 .badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; }

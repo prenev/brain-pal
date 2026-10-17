@@ -91,7 +91,7 @@ function Insights() {
           {week.map((d, i) => (
             <div className="d" key={d}>
               <div className={`c ${active.has(d) ? 'done' : i === week.length - 1 ? 'today' : ''}`}>
-                {active.has(d) ? <Emoji name="fire" size={26} /> : i === week.length - 1 ? '?' : <Plus size={20} />}
+                {active.has(d) ? <Emoji name="fire" size={38} /> : i === week.length - 1 ? '?' : <Plus size={20} />}
               </div>
               {i === week.length - 1 ? 'Today' : new Date(d + 'T12:00').toLocaleDateString(undefined, { weekday: 'short' })}
             </div>
