@@ -167,7 +167,7 @@ await session('http://localhost:4173', true, async (p, snap) => {   // journal
   await p.fill('[aria-label="Title"]', 'A slower morning')
   await p.fill('[aria-label="Journal entry"]', 'Woke up before the alarm. Made tea, sat by the window and just watched the street for ten minutes. Nothing special, but my shoulders dropped for the first time this week.')
   await p.click('[aria-label=Mood]'); await p.click('[aria-label="Mood: good"]'); await p.click('[aria-label=Tags]'); await p.click('.chip:has-text("health")'); await snap('journal-editor-tags'); await p.click('[aria-label=Tags]'); await snap('journal-editor')
-  await p.click('[aria-label="Voice note"]'); await snap('journal-voice-panel'); await p.click('[aria-label="Voice note"]'); await p.click('[aria-label=Preview]'); await snap('journal-preview'); await p.click('[aria-label="Back to writing"]')
+  await p.click('[aria-label="Voice note"]'); await snap('journal-voice-panel'); await p.click('[aria-label="Voice note"]');
   await p.click('button:has-text("Save")'); await p.waitForSelector('.celebrate'); await snap('journal-saved'); await p.click('.celebrate .btn.primary')
   await p.click('.tab >> text=More'); await p.click('.li >> text=Journal'); await snap('journal-list')
 })
@@ -248,6 +248,24 @@ await session('http://localhost:4173', false, async (p, snap) => {   // every an
   await p.evaluate(a => localStorage.setItem('bp.anchors', JSON.stringify(a)), anchors); await p.reload()
   await p.click('[role=checkbox][aria-label=Walk]'); await snap('home-anchors-one')
   await p.click('[role=checkbox][aria-label=Water]'); await p.waitForSelector('.celebrate'); await p.click('.celebrate .btn.primary'); await p.waitForSelector('.anchors-mini'); await snap('home-anchors-done')
+})
+
+await session('http://localhost:4173', false, async (p, snap) => {   // Journal home (ribbon, month, fan), voice journal, live-preview editor
+  const ago = n => new Date(Date.now() - n * 864e5).toISOString()
+  const work = ['My boss added another deadline and the meeting ran long', 'Stressful project meeting with the client, the deadline feels impossible', 'Email from my manager about the presentation deadline', 'Colleague dropped the project on me, deadline tomorrow', 'Boss meeting went badly, I am behind on the deadline', 'Another long meeting about the client project deadline']
+  const sleep = ['Could not sleep again, so tired, awake until four', 'Nightmare woke me and I was exhausted all day', 'Slept badly, tired and low energy, need a nap', 'Insomnia is back, awake in bed']
+  const fam = ['Dinner with mum and dad was lovely', 'My sister called, we talked about the family trip', 'Dad visited and we walked in the garden', 'Mum made soup and we watched a movie as a family']
+  const th = (id, n, thought, mood) => ({ id, createdAt: ago(n), mood, situation: '', thought, emotions: [{ name: 'anxious', intensity: 60 }], internalBehaviour: '', externalBehaviour: '', alternateThought: '', outcomeIntensity: null, tags: [], distortions: [], photos: [], audio: null })
+  const jn = (id, n, body, mood, title = '') => ({ id, createdAt: ago(n), updatedAt: ago(n), title, body, mood, tags: [], prompt: null })
+  const thoughts = [...work.slice(0, 3).map((t, i) => th('w' + i, 2 + i * 4, t, 2)), ...sleep.slice(0, 2).map((t, i) => th('s' + i, 6 + i * 9, t, 3))]
+  const journal = [jn('j0', 0, '# A quiet start\n\nWalked by the river, felt **lighter**.\n\n- coffee\n- sunshine', 4, 'Morning pages'), jn('j1', 1, 'Long day at the office, still thinking about it.', 3), ...work.slice(3).map((t, i) => jn('jw' + i, 3 + i * 5, t, 2)), ...sleep.slice(2).map((t, i) => jn('js' + i, 8 + i * 8, t, 3)), ...fam.map((t, i) => jn('jf' + i, 10 + i * 12, t, 4))]
+  await p.evaluate(([a, b]) => { localStorage.setItem('bp.thoughts', JSON.stringify(a)); localStorage.setItem('bp.journal', JSON.stringify(b)); localStorage.setItem('bp.levels.seen', JSON.stringify({ calming: 9, reframing: 9, worry: 9, consistency: 9, journaling: 9, focus: 9 })) }, [thoughts, journal]); await p.reload(); await p.waitForSelector('.topbar')
+  await p.click('.journal-card'); await p.waitForSelector('.jribbon'); await snap('journal-home')
+  await p.click('.jgrab'); await p.waitForSelector('.jmonthgrid'); await snap('journal-month'); await p.click('.jgrab')
+  await p.click('[aria-label="New journal entry"]'); await p.waitForSelector('.fab-fan.open'); await p.waitForTimeout(400); await snap('journal-fab-fan'); await p.click('[aria-label="Write an entry"]')
+  await p.waitForSelector('[aria-label="Journal entry"]'); await p.click('[aria-label="Journal entry"]'); await p.keyboard.type('# Today'); await p.keyboard.press('Enter'); await p.keyboard.type('Felt *calmer* after the walk, and **proud** of it.'); await p.keyboard.press('Enter'); await p.keyboard.type('- coffee'); await p.keyboard.press('Enter'); await p.keyboard.type('sunshine'); await snap('journal-live-editor'); await p.click('.notes-back')
+  await p.click('[aria-label="New journal entry"]'); await p.click('[aria-label="Record a voice journal"]'); await p.waitForSelector('.voicej'); await snap('voice-journal'); await p.click('[aria-label="Close voice journal"]')
+  await p.click('[aria-label=Back]')
 })
 
 await local.close(); await cloud.close(); await browser.close()
