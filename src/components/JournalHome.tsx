@@ -6,7 +6,7 @@ import Wallet from './Wallet'
 import { Screen } from './ui'
 import { PalEmpty } from './Pal'
 import { useStore } from '../lib/store'
-import { dayKey, fmtDate, shift } from '../lib/dates.ts'
+import { dayKey, shift } from '../lib/dates.ts'
 import { allJournalTags, filterByTag, groupByMonth, previewOf, searchJournal, type JournalEntry } from '../lib/journal.ts'
 import { dayHeading, filterByDay, infoByDay, monthGrid, shiftMonth, weekOf } from '../lib/journalCal.ts'
 
@@ -97,14 +97,23 @@ export default function JournalHome({ onClose, onOpen, onWrite, onVoice }: { onC
       {groups.map(g => (
         <section key={g.key}>
           {!picked && <h2 className="sec">{monthTitle(g.key)}</h2>}
-          {g.entries.map(e => (
-            <button key={e.id} className="card jentry" onClick={() => onOpen(e)} aria-label={`Journal entry: ${e.title || previewOf(e, 40) || 'untitled'}`}>
-              <div className="row spread"><span className="muted small">{fmtDate(e.createdAt)}</span><span className="row" style={{ gap: 8 }}>{e.audio && <Mic size={18} aria-label="Has a voice note" />}{e.mood && <Face mood={e.mood} size={26} />}</span></div>
-              {e.title && <b style={{ display: 'block', marginTop: 4 }}>{e.title}</b>}
-              <p style={{ margin: '4px 0 0' }}>{previewOf(e)}</p>
-              {e.tags.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{e.tags.map(t => <span key={t} className="chip">{t}</span>)}</div>}
-            </button>
-          ))}
+          {g.entries.map(e => {
+            const d = new Date(e.createdAt), isToday = dayKey(d) === today
+            return (
+              <button key={e.id} className={`card jentry jcal ${isToday ? 'today' : ''}`} onClick={() => onOpen(e)} aria-label={`Journal entry: ${e.title || previewOf(e, 40) || 'untitled'}`}>
+                <span className="jc-date" aria-hidden="true">
+                  <b>{d.getDate()}</b><span>{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                  {e.mood ? <Face mood={e.mood} size={34} /> : <i className="jc-dot"><PenLine size={15} /></i>}
+                </span>
+                <span className="jc-body">
+                  <span className="jc-meta muted small">{d.toLocaleDateString(undefined, { month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })} · {d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}{e.audio && <Mic size={14} aria-label="Has a voice note" />}</span>
+                  {e.title && <b className="jc-title">{e.title}</b>}
+                  <span className="jc-text">{previewOf(e)}</span>
+                  {e.tags.length > 0 && <span className="chips" style={{ marginTop: 6 }}>{e.tags.map(t => <span key={t} className="chip">{t}</span>)}</span>}
+                </span>
+              </button>
+            )
+          })}
         </section>
       ))}
       <div style={{ height: 110 }} aria-hidden="true" />

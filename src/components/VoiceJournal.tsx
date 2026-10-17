@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Mic, Square, X } from 'lucide-react'
+import { Mic, Square, Timer, X } from 'lucide-react'
 import Pal from './Pal'
 import Support from './Support'
 import { fmtDuration, MAX_RECORD_SEC } from '../lib/audio'
@@ -67,30 +67,34 @@ export default function VoiceJournal({ onClose, onDone }: { onClose: () => void;
   }
   function leave() { finished.current = true; rec.current?.cancel(); rec.current = null; void live.current?.stop(); live.current = null; onClose() }
 
-  return (
-    <div className="overlay voicej" role="dialog" aria-modal aria-label="Voice journal"><div className="inner">
-      <div className="vj-bar"><button className="glass round" aria-label="Close voice journal" onClick={leave}><X size={22} /></button><span className="title">Voice journal</span><span className="round" aria-hidden="true" /></div>
+  const words = (t: string) => t.split(/\s+/).filter(Boolean)
+  const done = words(caps.final), open = words(caps.interim)
 
-      <div className="vj-stage">
-        <div className={`vj-ring ${recording ? 'live' : ''}`} ref={ring}><Pal pose={recording ? 'think' : 'wave'} size={150} motion={recording ? 'none' : 'bob'} /></div>
-        <div className="vj-time" role="timer" aria-label={`Recording time ${fmtDuration(sec)}`}>{recording ? fmtDuration(sec) : '0:00'}<span className="muted small"> / {fmtDuration(MAX_RECORD_SEC)}</span></div>
-        <p className="vj-say">{recording ? 'I’m listening. Take your time.' : 'Just talk. Say whatever is on your mind.'}</p>
+  return (
+    <div className="voicej" data-state={recording ? 'live' : 'idle'} role="dialog" aria-modal aria-label="Voice journal" ref={ring} style={{ ['--lvl' as string]: 0 }}>
+      <i className="vj-bg vj-bg-idle" /><i className="vj-bg vj-bg-live" />
+      <div className="vj-top"><button className="glass round" aria-label="Close voice journal" onClick={leave}><X size={22} /></button><span className="vj-title">Voice journal</span><span className="round" aria-hidden="true" /></div>
+
+      <div className="vj-core">
+        <i className="vj-ringl r3" /><i className="vj-ringl r2" /><i className="vj-ringl r1" /><i className="vj-glow" />
+        <div className="vj-pal"><Pal pose={recording ? 'think' : 'wave'} size={190} motion={recording ? 'none' : 'bob'} /></div>
       </div>
+      <p className="vj-say">{recording ? 'I’m listening. Take your time.' : 'Just talk. Say whatever is on your mind.'}</p>
 
       <div className="vj-caps" ref={scroller} role="log" aria-live="polite" aria-label="Live captions">
-        {spoken ? <p><span>{caps.final}</span>{caps.interim && <span className="interim"> {caps.interim}</span>}</p>
-          : <p className="muted small">{source === 'checking' ? '' : source ? (recording ? 'Captions will appear here as you speak…' : 'Captions appear here as you speak, worked out on your phone only.') : 'Your voice is recorded and saved. There are no live captions on this device, and you can type or transcribe it afterwards.'}</p>}
+        {spoken
+          ? <p>{done.map((w, i) => <span key={i} className="w">{w} </span>)}{open.map((w, i) => <span key={`o${i}`} className="w interim">{w} </span>)}</p>
+          : <p className="vj-hint">{source === 'checking' ? '' : source ? (recording ? 'Your words will unfold here as you speak…' : 'Your words unfold here as you speak, worked out on your phone only.') : 'Your voice is recorded and saved. There are no live captions on this device, and you can type or transcribe it afterwards.'}</p>}
       </div>
-      {looksLikeCrisis(spoken) && <div role="alert"><Support /></div>}
-      {note && <p className="muted small" role="status" style={{ textAlign: 'center', margin: '6px 0' }}>{note}</p>}
-      {err && <p role="alert" style={{ color: 'var(--danger)', textAlign: 'center', margin: '6px 0' }}>{err}</p>}
+      {looksLikeCrisis(spoken) && <div role="alert" className="vj-support"><Support /></div>}
+      {note && <p className="vj-note" role="status">{note}</p>}
+      {err && <p role="alert" className="vj-note" style={{ color: '#ff9aa8' }}>{err}</p>}
 
-      <div className="vj-foot">
-        {recording
-          ? <button className="vj-btn stop" aria-label="Stop and keep" onClick={stop}><Square size={30} fill="currentColor" /></button>
-          : <button className="vj-btn" aria-label="Start recording" onClick={start}><Mic size={34} /></button>}
-        <span className="muted small">{recording ? 'Tap to stop' : 'Tap to start'}</span>
+      <div className="vj-bar">
+        <div className="vj-side" aria-hidden="true" />
+        <button className={`vj-btn ${recording ? 'stop' : ''}`} aria-label={recording ? 'Stop and keep' : 'Start recording'} onClick={recording ? stop : start}>{recording ? <Square size={30} fill="currentColor" /> : <Mic size={34} />}</button>
+        <div className="vj-side vj-clock" role="timer" aria-label={`Recording time ${fmtDuration(sec)}`}><Timer size={24} /><span>{recording ? fmtDuration(sec) : fmtDuration(MAX_RECORD_SEC)}</span><small>{recording ? 'recording' : 'max'}</small></div>
       </div>
-    </div></div>
+    </div>
   )
 }
