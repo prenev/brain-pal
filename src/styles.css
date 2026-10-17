@@ -1072,3 +1072,9 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .wiz-foot.inpage { position: static; inset: auto; padding: 6px 0 calc(var(--safe-b, 0px) + 18px); background: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-top: 0; transition: none; }
 .wiz:has(.wiz-foot.inpage) .wiz-body { padding-bottom: 8px !important; flex: none; }
 .wiz-foot.inpage .btn.back { flex: none; width: 56px; padding-left: 0; padding-right: 0; display: grid; place-items: center; }
+/* slider, exact centring: the input is as tall as the thumb, the track is its own 14px bar, the thumb sits -7px up (border-box) */
+.slider { height: 28px; margin: 4px 0; background: none; box-shadow: none; }
+.slider::-webkit-slider-runnable-track { height: 14px; border-radius: 99px; background: linear-gradient(90deg, var(--accent) var(--p, 50%), var(--card2) var(--p, 50%)); box-shadow: inset 0 2px 0 rgba(0,0,0,.25); }
+.slider::-webkit-slider-thumb { box-sizing: border-box; width: 28px; height: 28px; margin-top: -7px; box-shadow: 0 0 0 4px rgba(53,208,127,.18), 0 3px 8px rgba(0,0,0,.35); }
+.slider::-moz-range-track { height: 14px; border-radius: 99px; background: linear-gradient(90deg, var(--accent) var(--p, 50%), var(--card2) var(--p, 50%)); }
+.slider::-moz-range-thumb { box-sizing: border-box; width: 28px; height: 28px; }
