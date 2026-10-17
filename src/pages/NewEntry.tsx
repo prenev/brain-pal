@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Camera, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
+import { Camera, ChevronRight, Plus, X } from 'lucide-react'
 import { NameIcon } from '../lib/icons'
 import { IconGrid } from '../components/ui'
 import { PalSays } from '../components/Pal'
@@ -131,6 +131,7 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
         <button className="wiz-face" aria-label="Change mood" onClick={() => setMood(null)}><Face mood={mood} size={42} /></button>
       </div>
 
+      {at > 0 && <p className="wiz-hint">Tap a step above to go back</p>}
       <div className="wiz-body" key={step}>
         <PalSays pose={say[step].pose} size={72}>{say[step].text}</PalSays>
         {crisis && <div role="alert"><Support /></div>}
@@ -192,7 +193,6 @@ export default function NewEntry({ date, onClose, onSaved, initialMood = null, e
       </div>
 
       <div className="wiz-foot inpage">
-        <button className="btn back" aria-label="Back" onClick={() => (at === 0 ? setMood(null) : setStep(steps[at - 1]))}><ChevronLeft size={22} style={{ display: 'block' }} /></button>
         {step === 'next'
           ? <button className="btn primary" style={{ flex: 1 }} disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
           : <>

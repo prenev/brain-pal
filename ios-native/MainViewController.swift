@@ -8,5 +8,11 @@ class MainViewController: CAPBridgeViewController {
         // An app, not a web page: no scroll bars.
         webView?.scrollView.showsVerticalScrollIndicator = false
         webView?.scrollView.showsHorizontalScrollIndicator = false
+        // When the keyboard opens the web view shrinks; what shows behind it (under the keyboard's rounded corners) is this view: paint it the app's navy, not black.
+        let navy = UIColor(red: 14 / 255, green: 23 / 255, blue: 38 / 255, alpha: 1)
+        view.backgroundColor = navy
+        webView?.backgroundColor = navy
+        webView?.scrollView.backgroundColor = navy
+        webView?.isOpaque = false
     }
 }
