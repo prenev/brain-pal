@@ -11,9 +11,13 @@ import { execSync } from 'node:child_process'
 const args = process.argv.slice(2), has = f => args.includes(`--${f}`)
 const env = {}
 if (fs.existsSync('.env.release')) for (const l of fs.readFileSync('.env.release', 'utf8').split('\n')) { const m = l.match(/^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/); if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '') }
+// just drop Apple's AuthKey_<KEYID>.p8 in this folder: the file and its key id are found by themselves
+if (!env.ASC_KEY_FILE) env.ASC_KEY_FILE = fs.readdirSync('.').find(f => /^AuthKey_[A-Z0-9]+\.p8$/.test(f)) ?? ''
+if (!env.ASC_KEY_ID && env.ASC_KEY_FILE) env.ASC_KEY_ID = env.ASC_KEY_FILE.match(/AuthKey_([A-Z0-9]+)\.p8/)?.[1] ?? ''
+if (!env.ASC_ISSUER_ID && process.env.ASC_ISSUER_ID) env.ASC_ISSUER_ID = process.env.ASC_ISSUER_ID
 const need = ['ASC_KEY_ID', 'ASC_ISSUER_ID', 'ASC_KEY_FILE']
 const missing = need.filter(k => !env[k])
-if (missing.length) { console.error(`Missing in .env.release: ${missing.join(', ')}\nCreate the API key in App Store Connect → Users and Access → Integrations → Team Keys (Admin), put the .p8 in this folder, then:\n  ASC_KEY_ID=…\n  ASC_ISSUER_ID=…\n  ASC_KEY_FILE=AuthKey_XXXX.p8\n  APPLE_TEAM_ID=ZY687MSU74`); process.exit(1) }
+if (missing.length) { console.error(`Missing in .env.release: ${missing.join(', ')}\nCreate the API key in App Store Connect → Users and Access → Integrations → Team Keys (Admin), drop the AuthKey_XXXX.p8 file in this folder, and put the Issuer ID (shown above the keys list) in .env.release:\n  ASC_ISSUER_ID=…`); process.exit(1) }
 if (!fs.existsSync(env.ASC_KEY_FILE)) { console.error(`Can't find the key file ${env.ASC_KEY_FILE}`); process.exit(1) }
 
 const run = (cmd, extra = {}) => { console.log(`\n▶ ${cmd}`); execSync(cmd, { stdio: 'inherit', env: { ...process.env, ...extra } }) }
