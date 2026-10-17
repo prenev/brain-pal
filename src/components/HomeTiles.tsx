@@ -6,7 +6,6 @@ import { useStore } from '../lib/store'
 import { usePomo } from '../lib/pomoStore'
 import { guardSupported } from '../lib/guardNative'
 import { dayKey } from '../lib/dates'
-import { pickPrompt } from '../lib/journal.ts'
 import { fmtClock, stepChoices } from '../lib/focus.ts'
 import { PHASE_LABEL, phaseMinutes, shouldBlock } from '../lib/pomodoro.ts'
 import type { PoseName } from '../lib/pal.ts'
@@ -38,15 +37,15 @@ export function FocusCard({ onOpen }: { onOpen: () => void }) {
 export function JournalCard({ onOpen }: { onOpen: () => void }) {
   const { journal } = useStore()
   const today = dayKey(new Date()), week = new Date(Date.now() - 6 * 864e5).toISOString()
-  const n = journal.filter(e => e.createdAt >= week).length
+  const n = new Set(journal.filter(e => e.createdAt >= week).map(e => dayKey(e.createdAt))).size   // days written, like the focus card's blocks
   const wrote = journal.some(e => dayKey(e.createdAt) === today)
   return (
     <button className="big-card journal-card" onClick={onOpen} aria-label="Journal">
       <span className="big-kicker">{wrote ? <><Check size={13} strokeWidth={3.4} /> Written today</> : 'Journal'}</span>
-      <b className="big-prompt">“{pickPrompt(today).text}”</b>
-      <span className="big-sub">{n ? `${n} ${n === 1 ? 'entry' : 'entries'} this week` : 'Write or talk it out'}</span>
+      <b className="big-title">{wrote ? <>Add to<br />today’s page</> : <>Write or<br />talk it out</>}</b>
+      <span className="big-sub">{n ? `${n}/7 days this week` : 'One line is enough'}</span>
       <span className="big-cta"><PenLine size={14} strokeWidth={3} /> Write</span>
-      <span className="big-art" aria-hidden="true"><Pal pose="read" size={112} motion="still" /></span>
+      <span className="big-art" aria-hidden="true"><Pal pose="read" size={118} motion="still" /></span>
     </button>
   )
 }
