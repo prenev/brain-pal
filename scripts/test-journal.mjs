@@ -84,3 +84,25 @@ console.log('journal formatting + topics ok')
   assert.deepEqual(filterByDay(list, '2026-10-15').map(x => x.id), ['a', 'b']); assert.equal(filterByDay(list, null).length, 4); assert.equal(filterByDay(list, '2026-01-01').length, 0)
   console.log('journal calendar ok')
 }
+
+// ---- the live-preview editor: Markdown-lite ⇄ rendered tree ----
+{
+  const { mdToTree, domToMd } = await import('../src/lib/htmlMd.ts')
+  const t = (v) => ({ nodeType: 3, nodeName: '#text', nodeValue: v, childNodes: [] }), el = (tag, kids = []) => ({ nodeType: 1, nodeName: tag, nodeValue: null, childNodes: kids })
+  const rt = md => domToMd({ nodeType: 1, nodeName: 'DIV', nodeValue: null, childNodes: mdToTree(md) })
+  // what you write is what you get back: every format the toolbar can make survives a round trip
+  for (const md of ['plain words', 'a **bold** word and *soft* ones and ~~gone~~', '# Big\n\nsome text', '> a quote\n\nthen more', '- one\n- two\n- three', '1. first\n2. second', 'two\n\nparagraphs', '**all bold**', '# Title\n\nbody with *italic*\n\n- a\n- b\n\n> end'])
+    assert.equal(rt(md), md, md)
+  assert.equal(rt(''), ''); assert.equal(rt('line one\nline two'), 'line one\nline two', 'a single newline stays a line break')
+  // what the browser's editor produces (divs, <b>/<i>/<strike>, nbsp, empty lines, loose text)
+  const dom = nodes => domToMd({ nodeType: 1, nodeName: 'DIV', nodeValue: null, childNodes: nodes })
+  assert.equal(dom([t('loose text')]), 'loose text'); assert.equal(dom([el('DIV', [t('one')]), el('DIV', [t('two')])]), 'one\n\ntwo'); assert.equal(dom([el('DIV', [t('one')]), el('DIV', [el('BR')]), el('DIV', [t('two')])]), 'one\n\ntwo', 'blank lines collapse')
+  assert.equal(dom([el('P', [t('a '), el('B', [t('bold')]), t(' b'), el('I', [t(' it ')]), el('STRIKE', [t('x')])])]), 'a **bold** b *it* ~~x~~', 'styled runs keep their spaces outside the markers')
+  assert.equal(dom([el('STRONG', [t('  padded  ')])]), '**padded**', 'edge spaces leave the markers (so the marker pair stays valid) and the line is trimmed')
+  assert.equal(dom([el('H1', [t('Head')]), el('UL', [el('LI', [t('x')]), el('LI', [t('y')])]), el('BLOCKQUOTE', [t('q')])]), '# Head\n\n- x\n- y\n\n> q')
+  assert.equal(dom([el('P', [t('nb sp')]), el('P', [t('zero​width')])]), 'nb sp\n\nzerowidth'); assert.equal(dom([el('DIV', [el('DIV', [t('nested')])])]), 'nested'); assert.equal(dom([el('OL', [el('LI', [t('a')]), el('LI', [el('B', [t('b')])])])]), '1. a\n2. **b**')
+  assert.equal(dom([el('B', [el('I', [t('both')])])]), '***both***', 'nested styles')
+  // text is text: markup typed in the editor is just words
+  assert.equal(dom([t('<img src=x onerror=alert(1)> hi')]), '<img src=x onerror=alert(1)> hi')
+  console.log('journal live editor bridge ok')
+}

@@ -818,3 +818,11 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .fab-fan.open .fan-voice { transform: translate(0, -158px) scale(1); transition-delay: .04s; } .fab-fan.open .fan-text { transform: translate(0, -84px) scale(1); }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .fan-item, .fab-plus { transition: none; } }
+
+/* ---- the live-preview editor (contenteditable): formatted as you type, no Markdown symbols ---- */
+.notes-body.rich { font-weight: 500; /* below 600, or the browser thinks every word is already bold and Bold would switch it off */ white-space: pre-wrap; word-break: break-word; cursor: text; -webkit-user-select: text; user-select: text; -webkit-tap-highlight-color: transparent; }
+.notes-body.rich:empty::before { content: attr(data-placeholder); color: #4b5d80; pointer-events: none; }
+.notes-body.rich p, .notes-body.rich div { margin: 0 0 12px; } .notes-body.rich h3 { font-size: 22px; margin: 18px 0 6px; }
+.notes-body.rich ul, .notes-body.rich ol { margin: 0 0 12px; padding-left: 24px; } .notes-body.rich li { margin: 4px 0; }
+.notes-body.rich blockquote { margin: 0 0 12px; padding: 4px 14px; border-left: 4px solid var(--accent); color: #c9d6f2; font-style: italic; }
+.notes-body.rich b, .notes-body.rich strong { font-weight: 900; }

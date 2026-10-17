@@ -424,20 +424,30 @@ test('journal: write, list, search, filter, edit, delete — and it persists', a
   await done(s)
 })
 
-test('journal editor: topic chips change each time, the formatting bar edits the selection, preview shows it rendered, a voice note can be added and played', async () => {
+test('journal editor: topic chips change each time; text is formatted as you type and Markdown symbols are never shown; a voice note can be added and played', async () => {
   const s = await open(); const p = s.page
+  const body = '[aria-label="Journal entry"]', draftBody = () => p.evaluate(() => JSON.parse(localStorage.getItem('bp.journal.draft') ?? '{}').body)
   await openJournal(p); await p.waitForSelector('.topic-row .chip')
   const topics = async () => (await p.locator('.topic-row .chip').allInnerTexts()).filter(Boolean)       // (the shuffle button has no text)
   const first = await topics(); await p.click('[aria-label="More topic ideas"]')
   const second = await topics(); assert.equal(first.filter(t => second.includes(t)).length, 0, 'the shuffle shows different topics')
   await p.click('.topic-row .chip >> nth=0'); assert.equal(await p.locator('.topic-row').count(), 0)
-  await p.waitForFunction(() => { const a = document.querySelector('[aria-label="Journal entry"]'); return a.selectionStart === a.value.length })      // the chip puts the cursor at the end on the next frame: wait for it, or it can overwrite the selection below
-  await p.fill('[aria-label="Journal entry"]', 'plain text'); await p.evaluate(() => { const a = document.querySelector('[aria-label="Journal entry"]'); a.focus(); a.setSelectionRange(0, 5) })
-  await p.click('[aria-label=Bold]'); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '**plain** text')
-  await p.click('[aria-label="Bulleted list"]'); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '- **plain** text')
-  await p.fill('[aria-label="Journal entry"]', '# Big\n\nsome *soft* words\n- one\n- two')
-  await p.click('[aria-label=Preview]'); await p.waitForSelector('.notes-preview h3 >> text=Big'); assert.equal(await p.locator('.notes-preview em').innerText(), 'soft'); assert.equal(await p.locator('.notes-preview li').count(), 2)
-  assert.equal(await p.locator('.fmt-bar').count(), 0, 'no formatting bar while previewing'); await p.click('[aria-label="Back to writing"]')
+  await p.waitForFunction(() => document.querySelector('[aria-label="Journal entry"]').textContent.length > 5)      // the chip starts the page
+  // toolbar buttons format the selection live
+  await p.click(body); await p.keyboard.press('Control+A'); await p.keyboard.type('plain text'); await p.keyboard.press('Home')
+  await p.keyboard.down('Shift'); for (let i = 0; i < 5; i++) await p.keyboard.press('ArrowRight'); await p.keyboard.up('Shift')
+  await p.click('[aria-label=Bold]'); await p.waitForSelector('.notes-body strong, .notes-body b'); assert.equal(await p.locator('.notes-body b, .notes-body strong').innerText(), 'plain')
+  assert.equal((await p.innerText(body)).includes('*'), false, 'no asterisks on the page'); await p.waitForFunction(() => JSON.parse(localStorage.getItem('bp.journal.draft') ?? '{}').body === '**plain** text')
+  await p.click('[aria-label="Bulleted list"]'); await p.waitForSelector('.notes-body ul li'); assert.equal(await p.locator('.notes-body li').innerText(), 'plain text'); await p.waitForFunction(() => JSON.parse(localStorage.getItem('bp.journal.draft') ?? '{}').body === '- **plain** text')
+  // Markdown typed as you go becomes formatting straight away
+  await p.click(body); await p.keyboard.press('Control+A'); await p.keyboard.press('Delete')
+  await p.keyboard.type('# Big'); await p.keyboard.press('Enter'); await p.keyboard.type('some *soft* words'); await p.keyboard.press('Enter'); await p.keyboard.type('- one'); await p.keyboard.press('Enter'); await p.keyboard.type('two')
+  await p.waitForSelector('.notes-body h3 >> text=Big'); assert.equal(await p.locator('.notes-body i, .notes-body em').innerText(), 'soft'); assert.equal(await p.locator('.notes-body li').count(), 2)
+  const shown = await p.innerText(body); for (const bad of ['#', '*', '- ']) assert.equal(shown.includes(bad), false, `"${bad}" is never shown`)
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('bp.journal.draft') ?? '{}').body === '# Big\n\nsome *soft* words\n\n- one\n- two'); assert.equal(await draftBody(), '# Big\n\nsome *soft* words\n\n- one\n- two', 'stored in the same Markdown-lite as before')
+  await p.keyboard.press('Control+A'); await p.keyboard.press('Delete'); await p.keyboard.type('**loud** and ~~gone~~'); await p.waitForSelector('.notes-body strong, .notes-body b'); assert.equal(await p.locator('.notes-body s, .notes-body strike').innerText(), 'gone')
+  await p.keyboard.press('Control+A'); await p.keyboard.press('Delete'); await p.keyboard.type('# Big'); await p.keyboard.press('Enter'); await p.keyboard.type('some *soft* words'); await p.keyboard.press('Enter'); await p.keyboard.type('- one'); await p.keyboard.press('Enter'); await p.keyboard.type('two')
+  assert.equal(await p.locator('[aria-label=Preview]').count(), 0, 'there is no separate preview: you always write on the preview')
   await p.click('[aria-label="Voice note"]'); await p.waitForSelector('button:has-text("● Record")'); await record(p, 1.2)
   await saveJournalEntry(p)
   await p.click('.journal-card'); await p.waitForSelector('.jentry [aria-label="Has a voice note"]'); assert.match(await p.locator('.jentry').innerText(), /Big some soft words one two/, 'list preview shows words, not markers')
@@ -518,13 +528,13 @@ test('journal: draft survives leaving, blank saves are refused, and text is only
   const s = await open(); const p = s.page
   await openJournal(p); await p.click('button:has-text("Save")'); await p.waitForSelector('[role=alert]:has-text("Write a few words first")')
   assert.equal(await p.locator('.celebrate').count(), 0)
-  await p.waitForSelector('.topic-row .chip'); await p.click('.topic-row .chip >> nth=0'); assert.ok((await p.inputValue('[aria-label="Journal entry"]')).length > 5, 'a topic chip starts the page')
+  await p.waitForSelector('.topic-row .chip'); await p.click('.topic-row .chip >> nth=0'); assert.ok((await p.innerText('[aria-label="Journal entry"]')).length > 5, 'a topic chip starts the page')
   assert.equal(await p.locator('.topic-row').count(), 0, 'chips step aside once there is text')
   await p.fill('[aria-label="Journal entry"]', '<img src=x onerror="window.__pwned=1"> half a thought'); await p.waitForTimeout(700)
   await reload(p); await openJournal(p)
-  await p.waitForSelector('text=Picked up where you left off'); assert.match(await p.inputValue('[aria-label="Journal entry"]'), /half a thought/)
+  await p.waitForSelector('text=Picked up where you left off'); assert.match(await p.innerText('[aria-label="Journal entry"]'), /half a thought/)
   await saveJournalEntry(p)
-  await openJournal(p); assert.equal(await p.inputValue('[aria-label="Journal entry"]'), '', 'draft is cleared once saved'); await p.click('.notes-back'); await p.click('.overlay .topbar [aria-label=Back]')
+  await openJournal(p); assert.equal(await p.innerText('[aria-label="Journal entry"]'), '', 'draft is cleared once saved'); await p.click('.notes-back'); await p.click('.overlay .topbar [aria-label=Back]')
   await tab(p, 'More'); await p.click('.li >> text=Journal')
   assert.equal(await p.locator('.jentry img').count(), 0); assert.equal(await p.evaluate(() => window.__pwned), undefined)
   assert.match(await p.locator('.jentry').innerText(), /<img src=x/, 'shown literally')

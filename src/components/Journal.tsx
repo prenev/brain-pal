@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Bold, ChevronLeft, Eye, Heading1, Italic, List, ListOrdered, Mic, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Bold, ChevronLeft, Heading1, Italic, List, ListOrdered, Mic, Quote, Shuffle, Smile, Strikethrough, Tag, Trash2 } from 'lucide-react'
 import Face from './Face'
 import Support from './Support'
 import VoiceRecorder from './VoiceRecorder'
 import AudioPlayer from './AudioPlayer'
-import { applyFormat, parseMd, type FormatKind, type Inline } from '../lib/mdlite.ts'
+import RichBody, { type RichHandle } from './RichBody'
+import { parseMd, stripMd, type FormatKind, type Inline } from '../lib/mdlite.ts'
 import { blobUrl, deleteBlob, putBlob } from '../lib/blobstore'
 import type { AudioClip } from '../lib/types'
 import { MOODS } from '../lib/mood'
@@ -54,7 +55,6 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
   const [tags, setTags] = useState<string[]>(entry?.tags ?? (hasDraft ? draft!.tags : []))
   const [prompt, setPrompt] = useState<string | null>(entry ? null : hasDraft ? draft!.prompt : null)
   const [topics, setTopics] = useState(() => pickTopics(4))
-  const [preview, setPreview] = useState(false)
   const [voiceOpen, setVoiceOpen] = useState(startVoice)
   const [clip, setClip] = useState<AudioClip | null>(null)
   const [dropAudio, setDropAudio] = useState(false)
@@ -63,7 +63,7 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
   const [restored] = useState(hasDraft)
   const [err, setErr] = useState('')
   const [panel, setPanel] = useState<'mood' | 'tags' | null>(null)
-  const area = useRef<HTMLTextAreaElement>(null)
+  const area = useRef<RichHandle>(null)
   const tagChoices = useMemo(() => [...new Set([...allJournalTags(journal), ...DEFAULT_TAGS.slice(0, 6), ...tags])].slice(0, 12), [journal, tags])
   const crisis = looksLikeCrisis(`${title} ${body}`)
 
@@ -73,9 +73,7 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
     const t = setTimeout(() => { isBlank(title, body) ? clearDraft() : saveDraft({ title, body, mood, tags, prompt }) }, 400)
     return () => clearTimeout(t)
   }, [entry, title, body, mood, tags, prompt])
-  useEffect(() => { area.current?.focus() }, [])
   useEffect(() => { if (entry?.audio) void blobUrl(entry.audio.ref).then(setOldAudioUrl) }, [entry])
-  useLayoutEffect(() => { const a = area.current; if (a) { a.style.height = 'auto'; a.style.height = `${a.scrollHeight}px` } }, [body])
 
   async function save() {
     const c = cleanText(title, body, tags)
@@ -94,13 +92,9 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
     deleteJournal(entry.id); onClose()
   }
 
-  const fmt = (kind: FormatKind) => {
-    const a = area.current; if (!a) return
-    const r = applyFormat(body, a.selectionStart, a.selectionEnd, kind)
-    setBody(r.text); requestAnimationFrame(() => { a.focus(); a.setSelectionRange(r.start, r.end) })
-  }
-  const useTopic = (t: { id: string; text: string }) => { setBody(b => (b.trim() ? `${b.replace(/\s+$/, '')}\n\n` : '') + t.text + '\n'); setPrompt(t.id); requestAnimationFrame(() => { const a = area.current; if (a) { a.focus(); a.setSelectionRange(a.value.length, a.value.length) } }) }
-  const words = wordCount(body)
+  const fmt = (kind: FormatKind) => area.current?.format(kind)
+  const useTopic = (t: { id: string; text: string }) => { setBody(b => (b.trim() ? `${b.replace(/\s+$/, '')}\n\n` : '') + t.text); setPrompt(t.id); requestAnimationFrame(() => area.current?.focus()) }
+  const words = wordCount(stripMd(body))
   const when = new Date(entry?.createdAt ?? Date.now()).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
 
   // Notes-style page: no boxes, the text is the page. Mood and tags live in a slim toolbar so they never get in the way.
@@ -118,12 +112,11 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
 
       <input className="notes-title" aria-label="Title" maxLength={MAX_TITLE} placeholder="Title" value={title} onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); area.current?.focus() } }} />
-      {!body.trim() && !preview && <div className="topic-row" role="group" aria-label="Topic ideas">
+      {!body.trim() && <div className="topic-row" role="group" aria-label="Topic ideas">
         {topics.map(t => <button key={t.id} type="button" className="chip" onClick={() => useTopic(t)}>{t.chip}</button>)}
         <button type="button" className="chip shuffle" aria-label="More topic ideas" onClick={() => setTopics(pickTopics(4, topics.map(t => t.id)))}><Shuffle size={14} /></button>
       </div>}
-      {preview ? <div className="notes-preview" aria-label="Preview"><Rendered text={body || '*Nothing written yet.*'} /></div>
-        : <textarea ref={area} className="notes-body" aria-label="Journal entry" maxLength={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={e => { setBody(e.target.value); setErr('') }} />}
+      <RichBody ref={area} autoFocus label="Journal entry" max={MAX_BODY} placeholder="Write whatever is on your mind…" value={body} onChange={v => { setBody(v); setErr('') }} />
       {(entry?.audio && !dropAudio && !clip) && <div className="notes-voice">{oldAudioUrl ? <AudioPlayer src={oldAudioUrl} durationSec={entry.audio.durationSec} label="Voice note" /> : <p className="muted small">This voice note was recorded on another device.</p>}
         <button className="linkbtn" onClick={() => setDropAudio(true)}>Remove voice note</button></div>}
 
@@ -139,10 +132,10 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
       </div>}
       {voiceOpen && <div className="notes-voicepanel"><VoiceRecorder clip={clip} onChange={c => { setClip(c); if (!c) setVoiceOpen(false) }} onFill={() => {}} /></div>}
       <div className="notes-row" role="toolbar" aria-label="Formatting and extras">
-        {!preview && <span className="fmt-bar">
+        <span className="fmt-bar">
           {FORMATS.map(({ kind, label, icon: Icon }) => <button key={kind} type="button" aria-label={label} onPointerDown={e => e.preventDefault()} onClick={() => fmt(kind)}><Icon size={20} /></button>)}
           <i className="vsep" />
-        </span>}
+        </span>
         <button aria-label="Mood" aria-expanded={panel === 'mood'} className={panel === 'mood' ? 'on' : ''} onClick={() => setPanel(panel === 'mood' ? null : 'mood')}>
           {mood ? <Face mood={mood} size={26} /> : <Smile size={22} />}
         </button>
@@ -150,7 +143,6 @@ export function JournalEditor({ entry, startVoice = false, onClose, onSaved }: {
           <Tag size={21} />{tags.length > 0 && <span className="small">{tags.length}</span>}
         </button>
         <button aria-label="Voice note" aria-expanded={voiceOpen} className={voiceOpen || clip ? 'on' : ''} onClick={() => setVoiceOpen(!voiceOpen)}><Mic size={21} /></button>
-        <button aria-label={preview ? 'Back to writing' : 'Preview'} aria-pressed={preview} className={preview ? 'on' : ''} onClick={() => setPreview(!preview)}><Eye size={21} /></button>
       </div>
       </div>
     </div></div>
