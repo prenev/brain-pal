@@ -13,6 +13,12 @@ export const routeEvent = 'bp:route'
 export async function initNative() {
   try { await StatusBar.setStyle({ style: Style.Dark }) } catch { /* light status-bar text on our dark UI */ }
   try { await Keyboard.setAccessoryBarVisible({ isVisible: false }) } catch { /* the ↑ ↓ ✓ bar only takes room from the writing */ }
+  // the keyboard slides over the app: everywhere, --kb is its height, so bottom sheets and bars can sit above it
+  try {
+    const root = document.documentElement
+    await Keyboard.addListener('keyboardWillShow', i => root.style.setProperty('--kb', `${Math.round(i.keyboardHeight)}px`))
+    await Keyboard.addListener('keyboardWillHide', () => root.style.setProperty('--kb', '0px'))
+  } catch { /* older build without the plugin */ }
   try {
     // brainpal://auth… opened from an email link (confirm / magic link / password reset)
     await App.addListener('appUrlOpen', async ({ url }) => {

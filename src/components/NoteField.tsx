@@ -51,7 +51,7 @@ export function useKeyboardInset() {
       for (const h of subs) void h.remove()
       vv?.removeEventListener('resize', fromViewport)
       document.removeEventListener('touchstart', down); document.removeEventListener('touchmove', move)
-      root.style.removeProperty('--kb')
+      if (!isNative()) root.style.removeProperty('--kb')   // in the app the global listener (nativeInit) owns --kb
     }
   }, [])
 }

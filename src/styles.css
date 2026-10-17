@@ -1160,3 +1160,6 @@ button.big-card:active, .big-card:active:not(:has(.big-cta:active)) { transform:
 .wt-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .wt-pills span { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--card); border: 2px solid var(--edge); font-weight: 900; }
 .wt-done .b-start { margin-top: 10px; }
+/* bottom sheets ride above the keyboard (--kb is set app-wide in the iPhone app) */
+.sheet { margin-bottom: calc(var(--safe-b) + 10px + var(--kb, 0px)); transition: margin-bottom .25s cubic-bezier(.2,.9,.3,1); }
+.sheet-wrap { max-height: 100dvh; }
